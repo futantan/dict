@@ -12,3 +12,6 @@
 /build/
 .swiftpm/
 xcuserdata/
+
+# Agent worktrees
+/.claude/

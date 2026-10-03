@@ -87,6 +87,11 @@ func readSelectionAttempt(app: AXUIElement) -> ReadAttempt<FoundSelection> {
   let marker =
     selectedMarkerText(focused) ?? webAreaAncestor(of: focused).flatMap(selectedMarkerText)
   if let marker, !marker.text.isEmpty { return .found(marker) }
+  // A web area whose markers fail still has its selected text (Chrome's read-only text).
+  if let selected, !selected.isEmpty {
+    return .found(
+      FoundSelection(text: selected, element: focused, range: AX.range(focused), markerRange: nil))
+  }
 
   if selected != nil || marker != nil {
     return .empty(fieldText: fieldText(focused))

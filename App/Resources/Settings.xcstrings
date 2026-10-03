@@ -1,0 +1,589 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "API key" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 密钥"
+          }
+        }
+      }
+    },
+    "Accent" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "口音"
+          }
+        }
+      }
+    },
+    "American English" : {
+      "comment" : "Accent choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "美式英语"
+          }
+        }
+      }
+    },
+    "Australian English" : {
+      "comment" : "Accent choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "澳大利亚英语"
+          }
+        }
+      }
+    },
+    "Base URL" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Base URL"
+          }
+        }
+      }
+    },
+    "British English" : {
+      "comment" : "Accent choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英式英语"
+          }
+        }
+      }
+    },
+    "Canadian English" : {
+      "comment" : "Accent choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加拿大英语"
+          }
+        }
+      }
+    },
+    "Choose a provider." : {
+      "comment" : "The model settings have no provider",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择服务商。"
+          }
+        }
+      }
+    },
+    "Click a shortcut and press the new keys. Press Delete to remove it, or Esc to cancel." : {
+      "comment" : "Footer under the shortcut fields",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点按快捷键，然后按下新的组合键。按 Delete 删除，按 Esc 取消。"
+          }
+        }
+      }
+    },
+    "Connected. The model answered in %@ s." : {
+      "comment" : "Test succeeded. The argument is a number of seconds",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接，模型在 %@ 秒内作出了回应。"
+          }
+        }
+      }
+    },
+    "Couldn’t access the Keychain (error %@)." : {
+      "comment" : "Reading or saving the API key failed. The argument is an error number",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法访问钥匙串（错误 %@）。"
+          }
+        }
+      }
+    },
+    "Couldn’t connect to the service (error %@). Check the base URL." : {
+      "comment" : "Connection test: a network error. The argument is its code",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接到服务（错误 %@）。请检查 Base URL。"
+          }
+        }
+      }
+    },
+    "Custom (OpenAI-compatible)" : {
+      "comment" : "Model provider choice for any service with an OpenAI-compatible API",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义（兼容 OpenAI）"
+          }
+        }
+      }
+    },
+    "Enter a URL that starts with https://, such as https://api.example.com/v1." : {
+      "comment" : "The base URL is not a valid web address",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入以 https:// 开头的地址，例如 https://api.example.com/v1。"
+          }
+        }
+      }
+    },
+    "Enter a model name." : {
+      "comment" : "The model name field is empty",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入模型名称。"
+          }
+        }
+      }
+    },
+    "Enter an API key." : {
+      "comment" : "The API key field is empty",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入 API 密钥。"
+          }
+        }
+      }
+    },
+    "Enter the base URL of the service." : {
+      "comment" : "The base URL field is empty",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入服务的 Base URL。"
+          }
+        }
+      }
+    },
+    "Get an API key from %@" : {
+      "comment" : "Link to the provider's key page. The argument is its name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 %@ 获取 API 密钥"
+          }
+        }
+      }
+    },
+    "Hide API key" : {
+      "comment" : "Help tag",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏 API 密钥"
+          }
+        }
+      }
+    },
+    "Indian English" : {
+      "comment" : "Accent choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "印度英语"
+          }
+        }
+      }
+    },
+    "Language I’m learning" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我在学的语言"
+          }
+        }
+      }
+    },
+    "Languages" : {
+      "comment" : "Settings tab title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语言"
+          }
+        }
+      }
+    },
+    "Model" : {
+      "comment" : "Settings tab title and field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型"
+          }
+        }
+      }
+    },
+    "My language" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的语言"
+          }
+        }
+      }
+    },
+    "None" : {
+      "comment" : "Model provider choice meaning no model is used",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不使用"
+          }
+        }
+      }
+    },
+    "Optional" : {
+      "comment" : "Placeholder of an optional field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选"
+          }
+        }
+      }
+    },
+    "Provider" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务商"
+          }
+        }
+      }
+    },
+    "Required" : {
+      "comment" : "Placeholder of a required field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "必填"
+          }
+        }
+      }
+    },
+    "Send a short request to check these settings." : {
+      "comment" : "Shown next to the Test button before a test",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送一个简短的请求来检查这些设置。"
+          }
+        }
+      }
+    },
+    "Settings…" : {
+      "comment" : "Menu item that opens Settings",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置…"
+          }
+        }
+      }
+    },
+    "Shortcuts" : {
+      "comment" : "Settings tab title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷键"
+          }
+        }
+      }
+    },
+    "Show API key" : {
+      "comment" : "Help tag",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示 API 密钥"
+          }
+        }
+      }
+    },
+    "Simplified Chinese" : {
+      "comment" : "Language name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "简体中文"
+          }
+        }
+      }
+    },
+    "Test" : {
+      "comment" : "Button that tests the model",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试"
+          }
+        }
+      }
+    },
+    "Testing…" : {
+      "comment" : "Test in progress",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在测试…"
+          }
+        }
+      }
+    },
+    "Text in your language is translated into the language you’re learning, and everything else into your language." : {
+      "comment" : "Footer under the language pickers",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的语言会译成你在学的语言，其他语言都会译成你的语言。"
+          }
+        }
+      }
+    },
+    "Text you look up or translate is sent to %@." : {
+      "comment" : "Privacy note for a provider without a key. The argument is the provider name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你查询或翻译的文字会发送给 %@。"
+          }
+        }
+      }
+    },
+    "Text you look up or translate is sent to %@. Your API key is kept in the Keychain." : {
+      "comment" : "Privacy note under the model settings. The argument is the provider name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你查询或翻译的文字会发送给 %@。API 密钥保存在钥匙串中。"
+          }
+        }
+      }
+    },
+    "Text you look up or translate is sent to the service at this base URL. Your API key is kept in the Keychain." : {
+      "comment" : "Privacy note under the settings of a custom provider",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你查询或翻译的文字会发送给这个 Base URL 上的服务。API 密钥保存在钥匙串中。"
+          }
+        }
+      }
+    },
+    "The service didn’t answer in time." : {
+      "comment" : "Connection test: the request timed out",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务没有及时回应。"
+          }
+        }
+      }
+    },
+    "The service has a problem (HTTP %@). Try again later." : {
+      "comment" : "Connection test: HTTP 5xx. The argument is the status",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务出现问题（HTTP %@）。请稍后再试。"
+          }
+        }
+      }
+    },
+    "The service has no model with this name." : {
+      "comment" : "Connection test: HTTP 404",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务上没有这个名称的模型。"
+          }
+        }
+      }
+    },
+    "The service is limiting requests, or the account is out of credit. Try again later." : {
+      "comment" : "Connection test: HTTP 429",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务正在限制请求，或者账户余额不足。请稍后再试。"
+          }
+        }
+      }
+    },
+    "The service rejected the API key. Check that it is correct and active." : {
+      "comment" : "Connection test: HTTP 401 or 403",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务拒绝了这个 API 密钥。请确认它正确并且仍然有效。"
+          }
+        }
+      }
+    },
+    "The service rejected the request: %@" : {
+      "comment" : "Connection test: HTTP 400. The argument is the service's own message",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务拒绝了请求：%@"
+          }
+        }
+      }
+    },
+    "The service returned an empty answer." : {
+      "comment" : "Connection test: no content came back",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务返回了空的回应。"
+          }
+        }
+      }
+    },
+    "The service’s answer couldn’t be read. Check that the base URL is an OpenAI-compatible API." : {
+      "comment" : "Connection test: the response was not Chat Completions",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取服务的回应。请确认 Base URL 指向兼容 OpenAI 的 API。"
+          }
+        }
+      }
+    },
+    "This Mac is offline." : {
+      "comment" : "Connection test: no network connection",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 Mac 没有联网。"
+          }
+        }
+      }
+    },
+    "This provider is no longer available. Choose another one." : {
+      "comment" : "The saved provider is not in the preset table",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个服务商已不再可用，请选择其他服务商。"
+          }
+        }
+      }
+    },
+    "Traditional Chinese" : {
+      "comment" : "Language name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "繁体中文"
+          }
+        }
+      }
+    },
+    "Use https://. Plain http:// is only allowed for services on this Mac." : {
+      "comment" : "The base URL uses http to another computer",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请使用 https://。只有这台 Mac 上的服务才允许使用 http://。"
+          }
+        }
+      }
+    },
+    "Used when Dict reads English words and sentences aloud." : {
+      "comment" : "Footer under the accent picker",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 朗读英文单词和句子时使用。"
+          }
+        }
+      }
+    },
+    "Without a model, Dict translates with Apple Translation on this Mac. Correcting and polishing your writing need a model." : {
+      "comment" : "Footer when no model provider is chosen",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不使用模型时，Dict 在这台 Mac 上用 Apple 翻译。纠错和润色需要模型。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

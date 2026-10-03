@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import Foundation
+
+/// The model the user chose (architecture 6.2). Text fields are kept as typed and checked
+/// when an endpoint is built; empty means "the preset's value". The key is not here: it
+/// lives in the Keychain under the provider id.
+public struct ModelPreferences: Codable, Sendable, Equatable {
+  /// A preset id; nil means no model, so the zero-configuration engines are used.
+  public var providerID: String?
+  /// Empty means the preset's default model.
+  public var model: String
+  /// Empty means the preset's base URL. Required for the custom provider.
+  public var baseURL: String
+
+  public init(providerID: String? = nil, model: String = "", baseURL: String = "") {
+    self.providerID = providerID
+    self.model = model
+    self.baseURL = baseURL
+  }
+
+  private enum CodingKeys: String, CodingKey { case providerID, model, baseURL }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    providerID = try container.decodeIfPresent(String.self, forKey: .providerID)
+    model = try container.decodeIfPresent(String.self, forKey: .model) ?? ""
+    baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
+  }
+}
+
+/// Why the model preferences do not yet make a usable endpoint.
+public enum ModelSetupIssue: Error, Sendable, Equatable {
+  case noProvider
+  case unknownProvider
+  case missingBaseURL
+  /// Not an http or https URL with a host.
+  case invalidBaseURL
+  /// Plain http to a host other than this Mac (architecture 12).
+  case insecureBaseURL
+  case missingModel
+  case missingKey
+}
+
+/// What a `ChatCompletionsModel` needs besides the key.
+public struct ModelConfiguration: Sendable, Equatable {
+  public var endpoint: ModelEndpoint
+  /// The thinking rules of the endpoint's preset.
+  public var rules: [ThinkingRule]
+
+  public init(endpoint: ModelEndpoint, rules: [ThinkingRule]) {
+    self.endpoint = endpoint
+    self.rules = rules
+  }
+}
+
+extension ModelPreferences {
+  /// The endpoint for these preferences, or the first problem with them.
+  ///
+  /// - Parameter hasKey: whether the Keychain holds a non-empty key for the provider. A
+  ///   custom provider without a key is called with no authentication.
+  public func configuration(
+    presets: [ProviderPreset], hasKey: Bool
+  ) throws(ModelSetupIssue) -> ModelConfiguration {
+    guard let providerID else { throw .noProvider }
+    guard let preset = presets.first(where: { $0.id == providerID }) else {
+      throw .unknownProvider
+    }
+    let isCustom = providerID == ProviderPreset.customID
+    let typedURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    let url = typedURL.isEmpty && !isCustom ? preset.baseURL : try validatedBaseURL(typedURL)
+    let typedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+    let modelName = typedModel.isEmpty ? preset.defaultModel : typedModel
+    guard !modelName.isEmpty else { throw .missingModel }
+    if preset.requiresKey && !hasKey { throw .missingKey }
+
+    var endpoint = preset.endpoint(model: modelName)
+    endpoint.baseURL = url
+    if isCustom { endpoint.auth = hasKey ? preset.auth : .none }
+    return ModelConfiguration(endpoint: endpoint, rules: preset.thinkingRules)
+  }
+}
+
+/// Parses a base URL typed by the user: https anywhere, plain http only to this Mac.
+public func validatedBaseURL(_ text: String) throws(ModelSetupIssue) -> URL {
+  let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+  guard !text.isEmpty else { throw .missingBaseURL }
+  guard let url = URL(string: text), let scheme = url.scheme?.lowercased(),
+    let host = url.host(percentEncoded: false), !host.isEmpty
+  else { throw .invalidBaseURL }
+  switch scheme {
+  case "https": return url
+  case "http" where isLoopback(host): return url
+  case "http": throw .insecureBaseURL
+  default: throw .invalidBaseURL
+  }
+}
+
+private func isLoopback(_ host: String) -> Bool {
+  let host = host.lowercased()
+  if host == "localhost" || host == "::1" || host == "[::1]" { return true }
+  let octets = host.split(separator: ".", omittingEmptySubsequences: false)
+  return octets.count == 4 && octets.first == "127"
+    && octets.allSatisfy { UInt8($0) != nil }
+}

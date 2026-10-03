@@ -51,11 +51,12 @@ private let complete = StreamEvent.finished(.complete, nil)
 @MainActor
 private func states(
   model: ScriptedModel?, apple: FakeApple = FakeApple(.success("你好，世界")),
-  appleSupports: Bool = true, text: String = "Hello, world", direction: Direction = .intoMine
+  availability: AppleTranslationAvailability = .installed, text: String = "Hello, world",
+  direction: Direction = .intoMine
 ) async -> [PanelState] {
   let engine = TranslationEngine(
     model: model.map { ModelTranslator(model: $0) }, apple: apple,
-    appleSupports: { _, _ in appleSupports })
+    appleAvailability: { _, _ in availability })
   var states: [PanelState] = []
   await engine.translate(text, direction: direction, pair: LanguagePair()) { states.append($0) }
   return states
@@ -109,7 +110,7 @@ struct TranslationEngineTests {
   @Test func modelFailureWithoutAppleShowsTheError() async {
     let error = ModelError.timedOut(.firstEvent)
     #expect(
-      await states(model: ScriptedModel(error: error), appleSupports: false) == [
+      await states(model: ScriptedModel(error: error), availability: .unsupported) == [
         state(.generating("")), state(.failure(TranslationStrings.modelFailure(error))),
       ])
   }
@@ -132,9 +133,27 @@ struct TranslationEngineTests {
 
   @Test func withoutAnyEngineAsksForSetup() async {
     #expect(
-      await states(model: nil, appleSupports: false) == [
+      await states(model: nil, availability: .unsupported) == [
         state(.needsSetup(TranslationStrings.unsupportedPair))
       ])
+  }
+
+  @Test func missingLanguagesOfferTheDownloadWithoutTranslating() async {
+    let apple = FakeApple(.success("你好，世界"))
+    #expect(
+      await states(model: nil, apple: apple, availability: .needsDownload) == [
+        state(.needsSetup(TranslationStrings.languagesNotDownloaded))
+      ])
+    #expect(apple.calls.withLock { $0.isEmpty })
+  }
+
+  @Test func modelFailureWithoutDownloadedLanguagesShowsTheError() async {
+    let error = ModelError.network(code: -1009)
+    let apple = FakeApple(.success("你好，世界"))
+    #expect(
+      await states(model: ScriptedModel(error: error), apple: apple, availability: .needsDownload)
+        == [state(.generating("")), state(.failure(TranslationStrings.modelFailure(error)))])
+    #expect(apple.calls.withLock { $0.isEmpty })
   }
 
   @Test func appleFailureIsShown() async throws {
@@ -147,7 +166,7 @@ struct TranslationEngineTests {
   @Test func cancellingStopsUpdates() async {
     let engine = TranslationEngine(
       model: ModelTranslator(model: ScriptedModel(events: [.text("你好"), complete])),
-      apple: FakeApple(.success("")), appleSupports: { _, _ in true })
+      apple: FakeApple(.success("")), appleAvailability: { _, _ in .installed })
     var states: [PanelState] = []
     let task = Task { @MainActor in
       withUnsafeCurrentTask { $0?.cancel() }

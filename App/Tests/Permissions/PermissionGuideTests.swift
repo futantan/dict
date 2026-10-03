@@ -97,13 +97,22 @@ struct PermissionGuideTests {
   // MARK: - Actions
 
   @MainActor @Test func actionsOpenSettingsOrCopyTheCommand() {
+    var events: [String] = []
     var opened: [URL] = []
     var copied: [String] = []
     let guide = PermissionGuide(
-      app: app, openURL: { opened.append($0) }, copy: { copied.append($0) })
+      app: app,
+      openURL: {
+        opened.append($0)
+        events.append("open")
+      },
+      copy: { copied.append($0) },
+      requestTrust: { events.append("register") })
 
     #expect(guide.perform(PermissionGuide.ActionID.openSettings))
     #expect(opened == [PermissionGuide.settingsURL])
+    // The click adds Dict to the Accessibility list before System Settings opens.
+    #expect(events == ["register", "open"])
     #expect(guide.perform(PermissionGuide.ActionID.copyResetCommand))
     #expect(copied == ["tccutil reset Accessibility au.ibra.dict.dev"])
     #expect(guide.perform("retry") == false)

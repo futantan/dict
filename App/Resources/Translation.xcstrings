@@ -34,13 +34,24 @@
         }
       }
     },
-    "Download them in System Settings → General → Language & Region → Translation Languages." : {
+    "Download Languages…" : {
+      "comment" : "Button that opens the window that downloads translation languages",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载语言…"
+          }
+        }
+      }
+    },
+    "Download them to translate on this Mac, or in System Settings → General → Language & Region → Translation Languages." : {
       "comment" : "How to download Apple Translation languages",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请在“系统设置 → 通用 → 语言与地区 → 翻译语言”中下载。"
+            "value" : "下载后即可在本机翻译；也可以在“系统设置 → 通用 → 语言与地区 → 翻译语言”中下载。"
           }
         }
       }

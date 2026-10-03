@@ -37,13 +37,15 @@ final class AppleTranslator {
     case panel
   }
 
-  /// Whether the framework translates between the two languages, downloaded or not. Without a
-  /// known source language the framework recognizes it when translating, so it counts.
-  nonisolated static func supports(from source: Locale.Language?, to target: Locale.Language)
-    async -> Bool
+  /// Whether the framework translates between the two languages and has them downloaded.
+  /// Without a known source language the framework recognizes it when translating, so the
+  /// pair counts as installed and any problem surfaces as a translation error.
+  nonisolated static func availability(from source: Locale.Language?, to target: Locale.Language)
+    async -> AppleTranslationAvailability
   {
-    guard let source else { return true }
-    return await LanguageAvailability().status(from: source, to: target) != .unsupported
+    guard let source else { return .installed }
+    return AppleTranslationAvailability(
+      await LanguageAvailability().status(from: source, to: target))
   }
 
   /// Translates `text`; throws the framework's `TranslationError`, or `CancellationError`.
@@ -107,6 +109,23 @@ final class AppleTranslator {
     guard let job = pending, job.id == id else { return }
     pending = nil
     job.continuation.resume(throwing: CancellationError())
+  }
+}
+
+/// What Apple Translation can do for a language pair right now.
+enum AppleTranslationAvailability: Sendable, Equatable {
+  case installed
+  /// Supported, but the languages are not downloaded yet.
+  case needsDownload
+  case unsupported
+
+  init(_ status: LanguageAvailability.Status) {
+    switch status {
+    case .installed: self = .installed
+    case .supported: self = .needsDownload
+    case .unsupported: self = .unsupported
+    @unknown default: self = .unsupported
+    }
   }
 }
 

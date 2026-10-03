@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import AppKit
 import SwiftUI
 
 /// The panel's observable state, owned by `PanelController`.
@@ -54,6 +55,8 @@ private enum Metrics {
   static let sectionSpacing: CGFloat = 12
   static let bodyFont = Font.system(size: 14)
   static let sourceFont = Font.system(size: 12.5)
+  static var bodyNSFont: NSFont { .systemFont(ofSize: 14) }
+  static var sourceNSFont: NSFont { .systemFont(ofSize: 12.5) }
   static let bodyLineSpacing: CGFloat = 3
 }
 
@@ -107,18 +110,11 @@ private struct SourceText: View {
 
   var body: some View {
     // Blank lines between paragraphs would waste the few lines the source gets.
-    Text(text.replacing(/\n\s*\n/, with: "\n"))
-      .font(Metrics.sourceFont)
-      .foregroundStyle(.secondary)
-      .lineSpacing(2)
-      .lineLimit(4)
-      .truncationMode(.tail)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .textSelection(.enabled)
-      .accessibilityLabel(
-        String(localized: "Original text", table: "Panel", comment: "Accessibility label")
-      )
-      .accessibilityValue(text)
+    SelectableText(
+      text: text.replacing(/\n\s*\n/, with: "\n"), font: Metrics.sourceNSFont,
+      color: .secondaryLabelColor, lineSpacing: 2, maximumLines: 4,
+      accessibilityLabel: String(
+        localized: "Original text", table: "Panel", comment: "Accessibility label"))
   }
 }
 
@@ -127,11 +123,7 @@ private struct ResultText: View {
   let isStreaming: Bool
 
   var body: some View {
-    Text(text)
-      .font(Metrics.bodyFont)
-      .lineSpacing(Metrics.bodyLineSpacing)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .textSelection(.enabled)
+    SelectableText(text: text, font: Metrics.bodyNSFont, lineSpacing: Metrics.bodyLineSpacing)
       .overlay(alignment: .bottomTrailing) {
         if isStreaming {
           ProgressView()

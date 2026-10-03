@@ -7,7 +7,8 @@ import Testing
 
 @MainActor
 struct StatusMenuTests {
-  @Test func hasAboutSettingsSeparatorAndQuit() {
+  /// Architecture 11.4: Settings comes before About, and Quit is last.
+  @Test func hasSettingsAboutSeparatorAndQuit() {
     let menu = StatusMenu.make(appName: "Sample")
 
     #expect(menu.items.count == 4)
@@ -15,7 +16,7 @@ struct StatusMenuTests {
   }
 
   @Test func settingsItemOpensSettingsWithCommandComma() {
-    let settings = StatusMenu.make(appName: "Sample").items[1]
+    let settings = StatusMenu.make(appName: "Sample").items[0]
 
     #expect(settings.action == #selector(AppDelegate.showSettings(_:)))
     #expect(settings.keyEquivalent == ",")
@@ -24,7 +25,7 @@ struct StatusMenuTests {
   }
 
   @Test func aboutItemShowsAboutPanel() {
-    let about = StatusMenu.make(appName: "Sample").items[0]
+    let about = StatusMenu.make(appName: "Sample").items[1]
 
     #expect(about.action == #selector(AppDelegate.showAbout(_:)))
     #expect(about.title.contains("Sample"))
@@ -37,5 +38,16 @@ struct StatusMenuTests {
     #expect(quit.keyEquivalent == "q")
     #expect(quit.keyEquivalentModifierMask == .command)
     #expect(quit.title.contains("Sample"))
+  }
+
+  @Test func shortcutWarningsComeFirstAndOpenTheShortcutSettings() {
+    let warning = HotkeyRole.read.warning(.registrationFailed(-9878))
+    let menu = StatusMenu.make(appName: "Sample", warnings: [warning])
+
+    #expect(menu.items.count == 6)
+    #expect(menu.items[0].title == warning)
+    #expect(menu.items[0].action == #selector(AppDelegate.showShortcutSettings(_:)))
+    #expect(menu.items[1].isSeparatorItem)
+    #expect(menu.items[2].action == #selector(AppDelegate.showSettings(_:)))
   }
 }

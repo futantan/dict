@@ -51,6 +51,8 @@ guard AXIsProcessTrusted() else {
 
 let process = Process()
 process.executableURL = executable
+// Keep the first-run window closed: the smoke test must not take focus.
+process.arguments = ["--no-onboarding"]
 do { try process.run() } catch { fail("could not launch: \(error)") }
 launched = process
 let pid = process.processIdentifier

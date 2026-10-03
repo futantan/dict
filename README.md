@@ -2,7 +2,10 @@
 
 Dict is a native macOS menu bar app, written in Swift; the planned UI is AppKit windows hosting SwiftUI views.
 It requires macOS 15 or later and is licensed under GPL-3.0-or-later.
-The app is at the skeleton stage: a menu bar icon with About and Quit.
+Select text in any app and press the Read shortcut: Dict reads the selection and shows its translation in a panel next to it.
+It translates with Apple Translation on the Mac, or streams from a model when an API key is set in Settings.
+A first-run window asks for Accessibility permission, the two shortcuts and Apple Translation's languages.
+Writing help (the Write shortcut), word lookup and the vocabulary come in later milestones.
 
 ## Layout
 
@@ -26,9 +29,9 @@ make test       # DictCore tests, app unit tests, end-to-end smoke test
 make lint       # swift format lint (Xcode's bundled swift-format)
 make format     # apply swift format in place
 make package    # Release build zipped into build/dist/
-make e2e        # capture and replace scenarios on the fixture app (not implemented yet)
-make matrix     # capture and replace matrix on real apps (not implemented yet)
-make eval       # prompt evaluation against a real model (not implemented yet)
+make e2e        # capture scenarios on the fixture app (takes focus)
+make matrix     # capture matrix on real apps (takes focus)
+make eval SUITE=direction  # prompt evaluation against a real model (reads .env)
 ```
 
 Pass `CONFIG=Release` to `build`, `run` or `smoke` to use the Release build ("Dict", bundle id `au.ibra.dict`).
@@ -36,7 +39,7 @@ Debug and Release builds have different names and bundle identifiers, so both ca
 Builds are signed with the local Apple Development certificate, with the Hardened Runtime and without the App Sandbox.
 The stable signing identity keeps Accessibility grants across rebuilds.
 
-The smoke test launches the app, finds its menu bar item through the Accessibility API, and quits it.
+The smoke test launches the app with `--no-onboarding`, finds its menu bar item through the Accessibility API, and quits it.
 It never takes focus or sends key events, but the terminal running it needs Accessibility permission.
 
 ## Distribution

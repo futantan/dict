@@ -40,15 +40,20 @@ final class ResultPanel: NSPanel {
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { false }
 
-  override func sendEvent(_ event: NSEvent) {
-    guard event.type == .keyDown else { return super.sendEvent(event) }
+  /// What a key press does, given the first responder: a selection in the source or result
+  /// text, or in the input field, is copied instead of the whole result.
+  func route(for event: NSEvent) -> PanelKeyRoute {
     let textView = firstResponder as? NSTextView
-    let route = PanelKeys.route(
+    return PanelKeys.route(
       keyCode: event.keyCode, characters: event.charactersIgnoringModifiers,
       modifiers: event.modifierFlags, hasMarkedText: textView?.hasMarkedText() ?? false,
       hasSelectedText: (textView?.selectedRange().length ?? 0) > 0,
       hasResult: copyableText() != nil)
-    switch route {
+  }
+
+  override func sendEvent(_ event: NSEvent) {
+    guard event.type == .keyDown else { return super.sendEvent(event) }
+    switch route(for: event) {
     case .dismiss:
       onEscape()
     case .copyResult:

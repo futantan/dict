@@ -6,8 +6,10 @@ import AppKit
 /// 11.1). The session coordinator shows `notice(for:)` in the panel's needs-setup phase and
 /// passes `PanelController.onAction` ids to `perform(_:)`.
 ///
-/// No path here asks macOS for a permission: the system's own alert would cover the panel,
-/// so the user turns Dict on in System Settings and `PermissionMonitor` notices.
+/// Nothing here asks macOS for a permission on its own. Only when the user clicks "Open
+/// System Settings" does the guide call `AXIsProcessTrustedWithOptions` with the prompt
+/// option, which adds Dict to the Accessibility list, before opening System Settings
+/// (architecture 11.1). The user turns Dict on there and `PermissionMonitor` notices.
 @MainActor
 struct PermissionGuide {
   /// The ids of the buttons in permission notices.
@@ -39,15 +41,18 @@ struct PermissionGuide {
   let app: AppIdentity
   private let openURL: (URL) -> Void
   private let copy: (String) -> Void
+  private let requestTrust: () -> Void
 
   init(
     app: AppIdentity = .current,
     openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) },
-    copy: @escaping (String) -> Void = PermissionGuide.copyToPasteboard
+    copy: @escaping (String) -> Void = PermissionGuide.copyToPasteboard,
+    requestTrust: @escaping () -> Void = PermissionGuide.registerForAccessibility
   ) {
     self.app = app
     self.openURL = openURL
     self.copy = copy
+    self.requestTrust = requestTrust
   }
 
   func notice(for issue: PermissionIssue) -> PanelNotice {
@@ -60,6 +65,7 @@ struct PermissionGuide {
     switch actionID {
     case ActionID.openSettings:
       Log.ui.info("permissions: opening System Settings")
+      requestTrust()
       openURL(Self.settingsURL)
     case ActionID.copyResetCommand:
       copy(Self.resetCommand(app))
@@ -137,6 +143,15 @@ struct PermissionGuide {
           open,
         ])
     }
+  }
+
+  /// Adds Dict to the Accessibility list in System Settings so the user only has to turn it
+  /// on. The prompt option may show the system's alert, so this runs only from a click.
+  nonisolated static func registerForAccessibility() {
+    guard !AXIsProcessTrusted() else { return }
+    // The value of `kAXTrustedCheckOptionPrompt`, a global var Swift 6 will not read.
+    let options = ["AXTrustedCheckOptionPrompt": true]
+    _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
   }
 
   nonisolated static func copyToPasteboard(_ text: String) {

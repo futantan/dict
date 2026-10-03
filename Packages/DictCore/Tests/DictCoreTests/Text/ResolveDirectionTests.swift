@@ -108,6 +108,35 @@ struct ResolveDirectionTests {
     #expect(resolveDirection(text, pair: pair("en-US", "en-GB")) == .undecided)
   }
 
+  /// A third language written in my script falls back to mine when the recognizer, limited
+  /// to the languages of that script, is sure (architecture 5.2, rule 3).
+  @Test(arguments: [
+    // Japanese with enough kanji to pass the one-third rule
+    (LanguagePair(), "私は学生です", Direction.intoMine),
+    (LanguagePair(), "日本国憲法第九条は戦争の放棄を定めている。", .intoMine),
+    (LanguagePair(), "会議は明日の午後三時に開始します。", .intoMine),
+    (LanguagePair(), "人工知能の研究", .intoMine),
+    // Chinese stays Chinese, including Traditional and mixed text
+    (LanguagePair(), "我们明天下午三点开会。", .intoLearning),
+    (LanguagePair(), "人工智能的研究", .intoLearning),
+    (LanguagePair(), "這是繁體中文。", .intoLearning),
+    (LanguagePair(), "我用 Python 写", .intoLearning),
+    // Too short to tell apart: the recognizer does not commit
+    (LanguagePair(), "日本語", .intoLearning),
+    (LanguagePair(), "漢字", .intoLearning),
+    // Latin script: an English speaker learning Chinese
+    (pair("en", "zh-Hans"), "Je voudrais un café, s'il vous plaît.", .intoMine),
+    (pair("en", "zh-Hans"), "Guten Morgen, wie geht es dir heute?", .intoMine),
+    (pair("en", "zh-Hans"), "The cat is on the table.", .intoLearning),
+    (pair("en", "zh-Hans"), "hotel", .intoLearning),
+    (pair("en", "zh-Hans"), "cat", .intoLearning),
+    // Han script: a Japanese speaker reading Chinese
+    (pair("ja", "en"), "这是一个关于国际经济发展的报告。", .intoMine),
+  ])
+  func thirdLanguageInMyScript(pair: LanguagePair, text: String, expected: Direction) {
+    #expect(resolveDirection(text, pair: pair) == expected)
+  }
+
   @Test(arguments: [
     (pair("ja", "en"), "これは日本語の文章です", Direction.intoLearning),
     (pair("ja", "en"), "日本語", .intoLearning),

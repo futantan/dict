@@ -9,6 +9,8 @@ enum TranslationStrings {
   /// Action ids reported through `PanelController.onAction`.
   static let retryAction = "translation.retry"
   static let openSettingsAction = "translation.openSettings"
+  /// Opens the window that downloads the translation languages.
+  static let downloadLanguagesAction = "translation.downloadLanguages"
 
   static func fallbackNote(_ error: any Error) -> String {
     String(
@@ -46,16 +48,7 @@ enum TranslationStrings {
       return .needsSetup(unsupportedPair)
     }
     if #available(macOS 26, *), TranslationError.notInstalled ~= error {
-      return .needsSetup(
-        PanelNotice(
-          symbol: "arrow.down.circle.fill",
-          title: String(
-            localized: "Translation languages aren’t downloaded", table: "Translation",
-            comment: "Title when Apple Translation lacks a language pack"),
-          message: String(
-            localized:
-              "Download them in System Settings → General → Language & Region → Translation Languages.",
-            table: "Translation", comment: "How to download Apple Translation languages")))
+      return .needsSetup(languagesNotDownloaded)
     }
     let message =
       TranslationError.unableToIdentifyLanguage ~= error
@@ -72,6 +65,25 @@ enum TranslationStrings {
           comment: "Title of the error when Apple Translation failed"),
         message: message, actions: [retry]))
   }
+
+  /// Apple Translation supports the pair but its languages are not downloaded.
+  static let languagesNotDownloaded = PanelNotice(
+    symbol: "arrow.down.circle.fill",
+    title: String(
+      localized: "Translation languages aren’t downloaded", table: "Translation",
+      comment: "Title when Apple Translation lacks a language pack"),
+    message: String(
+      localized:
+        "Download them to translate on this Mac, or in System Settings → General → Language & Region → Translation Languages.",
+      table: "Translation", comment: "How to download Apple Translation languages"),
+    actions: [
+      PanelAction(
+        id: downloadLanguagesAction,
+        title: String(
+          localized: "Download Languages…", table: "Translation",
+          comment: "Button that opens the window that downloads translation languages"),
+        isDefault: true)
+    ])
 
   /// Neither a model nor Apple Translation can translate this pair.
   static let unsupportedPair = PanelNotice(

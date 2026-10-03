@@ -1,6 +1,39 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ and %@ are ready." : {
+      "comment" : "Onboarding: both languages are downloaded; the arguments are language names",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@和%2$@已就绪。"
+          }
+        }
+      }
+    },
+    "%@ reads the text you select through Accessibility. Turn on %@ in System Settings → Privacy & Security → Accessibility; this window moves on by itself." : {
+      "comment" : "Onboarding accessibility explanation; both arguments are the app name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 通过辅助功能读取你选中的文字。请在“系统设置 → 隐私与安全性 → 辅助功能”中打开 %2$@，打开后这个窗口会自动进入下一步。"
+          }
+        }
+      }
+    },
+    "%@ shortcut: %@" : {
+      "comment" : "Menu item for a shortcut problem; the arguments are the shortcut name and the problem",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@”快捷键：%2$@"
+          }
+        }
+      }
+    },
     "About %@" : {
       "comment" : "Menu item that opens the About panel",
       "localizations" : {
@@ -12,6 +45,149 @@
         }
       }
     },
+    "Accessibility is on." : {
+      "comment" : "Onboarding: the permission is granted",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助功能权限已打开。"
+          }
+        }
+      }
+    },
+    "Allow %@ to read selected text" : {
+      "comment" : "Title of the onboarding accessibility step; the argument is the app name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许 %@ 读取选中的文字"
+          }
+        }
+      }
+    },
+    "Apple Translation doesn’t support %@ and %@. Set up a model in Settings instead." : {
+      "comment" : "Onboarding: the pair is not supported; the arguments are language names",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple 翻译不支持%1$@和%2$@。请改在设置中配置模型。"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "comment" : "Onboarding button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一步"
+          }
+        }
+      }
+    },
+    "Checking…" : {
+      "comment" : "Onboarding: checking the languages",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在检查…"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "comment" : "Onboarding button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
+          }
+        }
+      }
+    },
+    "Couldn’t read the selection" : {
+      "comment" : "Panel title when the selected text could not be read",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取选中的文字"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "comment" : "Onboarding button that finishes it",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "Download Languages…" : {
+      "comment" : "Onboarding button that asks macOS to download the translation languages",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载语言…"
+          }
+        }
+      }
+    },
+    "Download translation languages" : {
+      "comment" : "Title of the onboarding step that downloads Apple Translation languages",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载翻译语言"
+          }
+        }
+      }
+    },
+    "For streaming translations from OpenAI or another provider, add an API key in Settings." : {
+      "comment" : "Onboarding note about setting up a model",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想用 OpenAI 等服务商的模型流式翻译，请在设置中填入 API Key。"
+          }
+        }
+      }
+    },
+    "Open Settings…" : {
+      "comment" : "Onboarding button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置…"
+          }
+        }
+      }
+    },
+    "Open System Settings" : {
+      "comment" : "Onboarding button that opens the Accessibility settings",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开系统设置"
+          }
+        }
+      }
+    },
     "Quit %@" : {
       "comment" : "Menu item that quits the app",
       "localizations" : {
@@ -19,6 +195,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出 %@"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld" : {
+      "comment" : "Onboarding progress; the arguments are the step number and the step count",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %1$lld 步，共 %2$lld 步"
+          }
+        }
+      }
+    },
+    "Waiting for the download…" : {
+      "comment" : "Onboarding: the system is downloading the languages",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在等待下载…"
+          }
+        }
+      }
+    },
+    "Welcome to %@" : {
+      "comment" : "Title of the first-run window; the argument is the app name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欢迎使用 %@"
+          }
+        }
+      }
+    },
+    "Without a model, Dict translates on this Mac with Apple Translation. It needs %@ and %@ downloaded once." : {
+      "comment" : "Onboarding translation explanation; the arguments are two language names",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有配置模型时，Dict 在本机用 Apple 翻译。需要先下载一次%1$@和%2$@。"
           }
         }
       }

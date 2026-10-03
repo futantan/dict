@@ -12,17 +12,19 @@ final class TranslationEngine {
   /// The configured model; nil uses Apple Translation only.
   var model: ModelTranslator?
   private let apple: any Translator
-  private let appleSupports: @Sendable (Locale.Language?, Locale.Language) async -> Bool
+  private let appleAvailability:
+    @Sendable (Locale.Language?, Locale.Language) async -> AppleTranslationAvailability
 
   init(
     model: ModelTranslator? = nil,
     apple: any Translator = AppleTranslator.shared,
-    appleSupports: @escaping @Sendable (Locale.Language?, Locale.Language) async -> Bool =
-      AppleTranslator.supports
+    appleAvailability:
+      @escaping @Sendable (Locale.Language?, Locale.Language) async ->
+      AppleTranslationAvailability = AppleTranslator.availability
   ) {
     self.model = model
     self.apple = apple
-    self.appleSupports = appleSupports
+    self.appleAvailability = appleAvailability
   }
 
   /// Translates `text` and reports every state to show, starting with an empty
@@ -34,10 +36,11 @@ final class TranslationEngine {
   ) async {
     let languages = appleLanguages(
       direction: direction, pair: pair, detected: dominantLanguage(of: text))
-    let appleSupported = await appleSupports(languages.source, languages.target)
+    let availability = await appleAvailability(languages.source, languages.target)
     guard !Task.isCancelled else { return }
     let chosen = engine(
-      for: .translate, modelConfigured: model != nil, appleTranslationSupportsPair: appleSupported)
+      for: .translate, modelConfigured: model != nil,
+      appleTranslationSupportsPair: availability != .unsupported)
     Log.model.info("translation engine: \(String(describing: chosen), privacy: .public)")
 
     func show(_ phase: PanelPhase, note: String? = nil) {
@@ -45,6 +48,12 @@ final class TranslationEngine {
       update(PanelState(source: text, phase: phase, note: note))
     }
     func translateWithApple(note: String?) async {
+      // Without its languages the framework would wait for a download prompt that may never
+      // show on the panel, so the panel offers the download instead (architecture 6.5).
+      guard availability == .installed else {
+        show(.needsSetup(TranslationStrings.languagesNotDownloaded))
+        return
+      }
       show(.generating(""), note: note)
       var result = ""
       do {
@@ -74,7 +83,8 @@ final class TranslationEngine {
         Log.model.error("model translation failed: \(errorKind(error), privacy: .public)")
         let hasText = !shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         switch translationRecovery(
-          after: error, hasText: hasText, appleTranslationSupportsPair: appleSupported)
+          after: error, hasText: hasText,
+          appleTranslationSupportsPair: availability == .installed)
         {
         case .stop: return
         case .keepPartial: show(.result(shown), note: TranslationStrings.truncatedNote)

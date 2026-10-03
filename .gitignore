@@ -1,0 +1,8 @@
+# Local research, drafts and secrets that predate the repository.
+.env
+/docs/
+/research/
+/spikes/
+
+.build/
+.DS_Store

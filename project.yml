@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# XcodeGen spec. Run `make generate` to produce DictApp.xcodeproj (not tracked).
+# Names, bundle identifiers and signing live in Config/*.xcconfig.
+
+name: DictApp
+
+options:
+  developmentLanguage: en
+  deploymentTarget:
+    macOS: "15.0"
+
+configs:
+  Debug: debug
+  Release: release
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+
+packages:
+  DictCore:
+    path: Packages/DictCore
+
+targets:
+  DictApp:
+    type: application
+    platform: macOS
+    sources:
+      - App/Sources
+      - App/Resources
+    dependencies:
+      - package: DictCore
+    settings:
+      base:
+        PRODUCT_NAME: $(DICT_APP_NAME)
+        PRODUCT_MODULE_NAME: DictApp
+        PRODUCT_BUNDLE_IDENTIFIER: $(DICT_APP_BUNDLE_ID)
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: $(DICT_APP_NAME)
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.reference
+        INFOPLIST_KEY_NSHumanReadableCopyright: Licensed under GPL-3.0-or-later.
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        ENABLE_APP_SANDBOX: NO
+        COMBINE_HIDPI_IMAGES: YES
+
+  DictAppTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - App/Tests
+    dependencies:
+      - target: DictApp
+      - package: DictCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(DICT_APP_BUNDLE_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/$(DICT_APP_NAME).app/Contents/MacOS/$(DICT_APP_NAME)
+        BUNDLE_LOADER: $(TEST_HOST)
+
+schemes:
+  DictApp:
+    build:
+      targets:
+        DictApp: all
+    test:
+      targets:
+        - DictAppTests

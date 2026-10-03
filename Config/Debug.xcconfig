@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Development build: installs side by side with the release build and has its own
+// bundle identifier, so privacy grants such as Accessibility stay separate.
+
+#include "Base.xcconfig"
+
+DICT_APP_NAME = $(DICT_PRODUCT_NAME) Dev
+DICT_APP_BUNDLE_ID = $(DICT_BUNDLE_ID).dev

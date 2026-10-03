@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#include "Base.xcconfig"
+
+DICT_APP_NAME = $(DICT_PRODUCT_NAME)
+DICT_APP_BUNDLE_ID = $(DICT_BUNDLE_ID)
+
+// Release builds are not debuggable: no get-task-allow entitlement (required for notarization).
+CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO

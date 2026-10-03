@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Single source of truth for the product name, bundle identifier and signing team.
+// Rename the app by changing DICT_PRODUCT_NAME and DICT_BUNDLE_ID here only.
+
+DICT_PRODUCT_NAME = Dict
+DICT_BUNDLE_ID = au.ibra.dict
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+DEVELOPMENT_TEAM = M5ZVXWJNK8
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+ENABLE_HARDENED_RUNTIME = YES
+
+MACOSX_DEPLOYMENT_TARGET = 15.0
+SWIFT_VERSION = 6.0
+SWIFT_STRICT_CONCURRENCY = complete

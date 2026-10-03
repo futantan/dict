@@ -1,0 +1,94 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ needs Accessibility permission to read the text you select. Turn on %@ in System Settings → Privacy & Security → Accessibility." : {
+      "comment" : "Panel message when accessibility is off; both arguments are the app name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 需要辅助功能权限才能读取你选中的文字。请在「系统设置 → 隐私与安全性 → 辅助功能」里打开 %2$@。"
+          }
+        }
+      }
+    },
+    "%@ sends ⌘C and ⌘V to apps it can’t read directly. In System Settings → Privacy & Security → Accessibility, turn on %@, or turn it off and on again." : {
+      "comment" : "Panel message when posting keystrokes is not allowed; both arguments are the app name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 需要向无法直接读取的应用发送 ⌘C 和 ⌘V。请在「系统设置 → 隐私与安全性 → 辅助功能」里打开 %2$@；如果已经打开，请关闭后再重新打开。"
+          }
+        }
+      }
+    },
+    "Accessibility permission needed" : {
+      "comment" : "Panel title when the app is not allowed to use accessibility",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要辅助功能权限"
+          }
+        }
+      }
+    },
+    "Accessibility permission needs a reset" : {
+      "comment" : "Panel title when System Settings shows the app as allowed but macOS refuses it",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助功能权限需要重置"
+          }
+        }
+      }
+    },
+    "Copy Command" : {
+      "comment" : "Button that copies the Terminal command that resets the permission",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷贝命令"
+          }
+        }
+      }
+    },
+    "Open System Settings" : {
+      "comment" : "Button that opens the Accessibility pane of System Settings",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开系统设置"
+          }
+        }
+      }
+    },
+    "Permission to send keystrokes needed" : {
+      "comment" : "Panel title when the app may not post ⌘C or ⌘V to other apps",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要发送按键的权限"
+          }
+        }
+      }
+    },
+    "System Settings shows %@ as allowed, but macOS no longer accepts it, usually after an update. Remove %@ from the Accessibility list and turn it on again, or run this in Terminal: %@" : {
+      "comment" : "Panel message for a stale accessibility grant; the first two arguments are the app name, the last is a Terminal command",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统设置显示 %1$@ 已获允许，但 macOS 已不再认可，通常发生在更新之后。请把 %2$@ 从辅助功能列表中移除后重新添加并打开，或在终端里运行：%3$@"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

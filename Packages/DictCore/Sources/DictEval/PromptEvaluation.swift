@@ -1,32 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import DictCore
 import Foundation
 
-// Prompt evaluation against a `TextModel` (architecture 14.5). It lives in DictCore rather than
-// in the DictEval executable so the checks and the runner can be unit-tested with a stub model;
-// DictEval only holds the case data and the command line.
+// Prompt evaluation against a `TextModel` (architecture 14.5). It lives in the DictEval
+// executable so it never ships with the app; DictCoreTests imports DictEval to unit-test the
+// checks and the runner with a stub model.
 
 // MARK: Cases and checks
 
 /// One evaluation input: a source text, the direction the device decided, and the invariants the
 /// translation must keep.
-public struct EvalCase: Sendable {
-  public var id: String
-  public var source: String
-  public var direction: Direction
-  public var checks: [EvalCheck]
-
-  public init(id: String, source: String, direction: Direction, checks: [EvalCheck]) {
-    self.id = id
-    self.source = source
-    self.direction = direction
-    self.checks = checks
-  }
+struct EvalCase: Sendable {
+  var id: String
+  var source: String
+  var direction: Direction
+  var checks: [EvalCheck]
 }
 
 /// A property of the output that is checked deterministically. Checks test invariants, never
 /// exact wording.
-public enum EvalInvariant: String, Sendable, CaseIterable {
+enum EvalInvariant: String, Sendable, CaseIterable {
   /// The stream ended with `.complete` and no error. When it fails, nothing else is checked.
   case completed
   /// No tag, rule or task sentence of the prompt shows up in the output. Always checked.
@@ -43,7 +37,7 @@ public enum EvalInvariant: String, Sendable, CaseIterable {
 }
 
 /// The writing system the output must be in.
-public enum ExpectedScript: Sendable, Equatable {
+enum ExpectedScript: Sendable, Equatable {
   /// At least half of the letters outside quotes, code and links are Han characters.
   case han
   /// Letters outside quotes, code and links are Latin, with no Han characters.
@@ -51,7 +45,7 @@ public enum ExpectedScript: Sendable, Equatable {
 }
 
 /// A check a case asks for, on top of the ones every case gets.
-public enum EvalCheck: Sendable, Equatable {
+enum EvalCheck: Sendable, Equatable {
   case targetLanguage(ExpectedScript)
   /// The output still contains a question mark.
   case keepsQuestion
@@ -69,19 +63,14 @@ public enum EvalCheck: Sendable, Equatable {
 }
 
 /// The outcome of one invariant on one output.
-public struct EvalResult: Sendable, Equatable {
-  public var invariant: EvalInvariant
+struct EvalResult: Sendable, Equatable {
+  var invariant: EvalInvariant
   /// Why it failed; nil when it passed.
-  public var failure: String?
-
-  public init(invariant: EvalInvariant, failure: String?) {
-    self.invariant = invariant
-    self.failure = failure
-  }
+  var failure: String?
 }
 
 /// Checks a complete output against the invariants every case gets, then against `checks`.
-public func evaluate(_ output: String, source: String, checks: [EvalCheck]) -> [EvalResult] {
+func evaluate(_ output: String, source: String, checks: [EvalCheck]) -> [EvalResult] {
   [
     EvalResult(invariant: .noPromptLeak, failure: promptLeak(output, source: source)),
     EvalResult(invariant: .sameLineCount, failure: lineCountChange(output, source: source)),
@@ -184,47 +173,42 @@ private func proseOnly(_ text: String) -> String {
 // MARK: Running
 
 /// Dollars per million tokens.
-public struct EvalPrice: Sendable, Equatable {
-  public var inputPerMillion: Double
-  public var outputPerMillion: Double
+struct EvalPrice: Sendable, Equatable {
+  var inputPerMillion: Double
+  var outputPerMillion: Double
 
-  public init(inputPerMillion: Double, outputPerMillion: Double) {
-    self.inputPerMillion = inputPerMillion
-    self.outputPerMillion = outputPerMillion
-  }
-
-  public func cost(of usage: Usage) -> Double {
+  func cost(of usage: Usage) -> Double {
     (Double(usage.inputTokens) * inputPerMillion + Double(usage.outputTokens) * outputPerMillion)
       / 1_000_000
   }
 }
 
 /// One call of one case.
-public struct EvalRun: Sendable {
-  public var caseID: String
+struct EvalRun: Sendable {
+  var caseID: String
   /// 1-based.
-  public var attempt: Int
-  public var output: String
-  public var finish: FinishReason?
-  public var error: String?
-  public var usage: Usage?
+  var attempt: Int
+  var output: String
+  var finish: FinishReason?
+  var error: String?
+  var usage: Usage?
   /// From sending the request to the first non-empty text delta.
-  public var firstContent: Duration?
+  var firstContent: Duration?
   /// From sending the request to the end of the stream; nil when it threw.
-  public var completion: Duration?
-  public var results: [EvalResult]
+  var completion: Duration?
+  var results: [EvalResult]
 }
 
 /// Runs cases against a model, one call at a time, so latencies are not skewed by concurrency.
-public struct EvalRunner: Sendable {
-  public var model: any TextModel
-  public var pair: LanguagePair
-  public var price: EvalPrice
+struct EvalRunner: Sendable {
+  var model: any TextModel
+  var pair: LanguagePair
+  var price: EvalPrice
   /// In dollars. No new call starts once the accumulated cost reaches it.
-  public var costLimit: Double
-  public var makeNonce: @Sendable () -> String
+  var costLimit: Double
+  var makeNonce: @Sendable () -> String
 
-  public init(
+  init(
     model: any TextModel, pair: LanguagePair = LanguagePair(), price: EvalPrice,
     costLimit: Double = 1,
     makeNonce: @escaping @Sendable () -> String = { PromptBuilder.makeNonce() }
@@ -237,7 +221,7 @@ public struct EvalRunner: Sendable {
   }
 
   /// Runs every case `runs` times; `onRun` sees each run as it finishes, for progress output.
-  public func run(
+  func run(
     _ cases: [EvalCase], runs: Int, onRun: @Sendable (EvalRun) -> Void = { _ in }
   ) async -> EvalReport {
     var report = EvalReport(plannedRuns: cases.count * max(runs, 0))
@@ -275,6 +259,10 @@ public struct EvalRunner: Sendable {
             run.firstContent = start.duration(to: clock.now)
           }
           run.output += delta
+        case .discardText:
+          // What came before was leaked thinking: the answer starts over.
+          run.output = ""
+          run.firstContent = nil
         case .finished(let reason, let usage):
           run.finish = reason
           run.usage = usage
@@ -299,22 +287,18 @@ public struct EvalRunner: Sendable {
 // MARK: Reporting
 
 /// Everything one evaluation produced.
-public struct EvalReport: Sendable {
-  public var runs: [EvalRun] = []
-  public var plannedRuns: Int
+struct EvalReport: Sendable {
+  var runs: [EvalRun] = []
+  var plannedRuns: Int
   /// In dollars, from the usage the provider reported.
-  public var cost: Double = 0
-  public var stoppedByCostLimit = false
-
-  public init(plannedRuns: Int) {
-    self.plannedRuns = plannedRuns
-  }
+  var cost: Double = 0
+  var stoppedByCostLimit = false
 
   /// Runs whose provider reported no usage, so their cost is not counted.
-  public var usageMissing: Int { runs.count { $0.usage == nil } }
+  var usageMissing: Int { runs.count { $0.usage == nil } }
 
   /// Pass counts per invariant, in declaration order, for invariants that were checked at all.
-  public func tally() -> [(invariant: EvalInvariant, passed: Int, total: Int)] {
+  func tally() -> [(invariant: EvalInvariant, passed: Int, total: Int)] {
     let results = runs.flatMap(\.results)
     return EvalInvariant.allCases.compactMap { invariant in
       let checked = results.filter { $0.invariant == invariant }
@@ -325,14 +309,14 @@ public struct EvalReport: Sendable {
 
   /// True when every planned run happened and every invariant passed at least `threshold` of
   /// the time.
-  public func passes(threshold: Double) -> Bool {
+  func passes(threshold: Double) -> Bool {
     !stoppedByCostLimit && !runs.isEmpty
       && tally().allSatisfy { Double($0.passed) >= threshold * Double($0.total) }
   }
 
   /// A plain-text summary: pass rates, latency percentiles, cost, then every failure with its
   /// output.
-  public func rendered(title: String, threshold: Double) -> String {
+  func rendered(title: String, threshold: Double) -> String {
     var lines = ["\(title): \(runs.count)/\(plannedRuns) runs, $\(format(cost, digits: 4))"]
     if stoppedByCostLimit { lines.append("stopped at the cost limit") }
     if usageMissing > 0 { lines.append("\(usageMissing) runs reported no usage") }
@@ -370,7 +354,7 @@ public struct EvalReport: Sendable {
 }
 
 /// The nearest-rank percentile; nil for no values.
-public func percentile(_ values: [Duration], _ fraction: Double) -> Duration? {
+func percentile(_ values: [Duration], _ fraction: Double) -> Duration? {
   guard !values.isEmpty else { return nil }
   let sorted = values.sorted()
   let rank = Int((fraction * Double(sorted.count)).rounded(.up))

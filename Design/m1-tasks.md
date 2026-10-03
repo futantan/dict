@@ -21,6 +21,7 @@
 
 - `CaptureFixture` target（`Fixtures/CaptureFixture/Sources`，可选资源目录 `Fixtures/CaptureFixture/Resources`）已在 `project.yml` 里，随 `DictApp` scheme 一起构建，`make build` 会编译它。
 - `DictEval` 可执行 target 已在 `Package.swift` 里，源码目录 `Packages/DictCore/Sources/DictEval/`。
+- 评测框架（`PromptEvaluation.swift`）在 `DictEval` 里，不进 `DictCore`；`DictCoreTests` 依赖 `DictEval` 来测它。
 - `DictCore` target 已声明资源目录 `Packages/DictCore/Sources/DictCore/Resources/`（`.process`），预设表是其中的 `ProviderPresets.json`，用 `Bundle.module` 读取。
 - `make e2e`、`make matrix`、`make eval` 分别调用 `scripts/e2e.sh`、`scripts/matrix.sh`、`scripts/eval.sh`；任务只改脚本，不改 `Makefile`。
 - `make e2e` 和 `make matrix` 先跑 `make build`，脚本的第一个参数是 `CONFIG`；`make eval` 把 `SUITE`、`RUNS` 作为环境变量传给脚本。

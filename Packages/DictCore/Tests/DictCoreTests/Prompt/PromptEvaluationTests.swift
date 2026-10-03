@@ -5,6 +5,7 @@ import Synchronization
 import Testing
 
 @testable import DictCore
+@testable import DictEval
 
 struct PromptEvaluationCheckTests {
   private func failures(
@@ -174,6 +175,21 @@ struct PromptEvaluationRunnerTests {
     let report = await runner.run([question], runs: 1)
 
     #expect(report.runs[0].output == "法国的首都是哪里？")
+    #expect(report.passes(threshold: 1))
+  }
+
+  @Test func discardedTextIsDroppedFromTheOutput() async {
+    let runner = runner { _ in
+      .events([
+        .text("I should translate"), .text(" this."), .discardText, .text("法国的首都是哪里？"),
+        .finished(.complete, nil),
+      ])
+    }
+
+    let report = await runner.run([question], runs: 1)
+
+    #expect(report.runs[0].output == "法国的首都是哪里？")
+    #expect(report.runs[0].firstContent != nil)
     #expect(report.passes(threshold: 1))
   }
 

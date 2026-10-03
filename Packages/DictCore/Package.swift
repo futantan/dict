@@ -12,6 +12,6 @@ let package = Package(
   targets: [
     .target(name: "DictCore", resources: [.process("Resources")]),
     .executableTarget(name: "DictEval", dependencies: ["DictCore"]),
-    .testTarget(name: "DictCoreTests", dependencies: ["DictCore"]),
+    .testTarget(name: "DictCoreTests", dependencies: ["DictCore", "DictEval"]),
   ]
 )

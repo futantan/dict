@@ -88,14 +88,22 @@ func parseOptions(_ arguments: [String]) throws(UsageError) -> Options {
   return options
 }
 
-/// The seam to the real model client. The OpenAI-compatible `ChatCompletionsModel` comes from
-/// M1.2; once it is merged, this builds it from the OpenAI preset with `model` and `apiKey`,
-/// using the same `requestBody` as the app.
+/// The OpenAI client the app uses, with thinking off (`reasoning_effort: none` on gpt-6).
 func makeModel(model: String, apiKey: String) throws(UsageError) -> any TextModel {
-  throw UsageError(
-    message:
-      "no model client yet: ChatCompletionsModel arrives with M1.2, then makeModel(model:apiKey:) "
-      + "in Sources/DictEval/main.swift is wired to it")
+  let preset: ProviderPreset
+  do {
+    guard let openAI = try ProviderPreset.all().first(where: { $0.id == "openai" }) else {
+      throw UsageError(message: "the preset table has no OpenAI row")
+    }
+    preset = openAI
+  } catch let error as UsageError {
+    throw error
+  } catch {
+    throw UsageError(message: "cannot read the preset table: \(error)")
+  }
+  return ChatCompletionsModel(
+    endpoint: preset.endpoint(model: model, thinking: .off), rules: preset.thinkingRules,
+    apiKey: apiKey)
 }
 
 func fail(_ message: String) -> Never {

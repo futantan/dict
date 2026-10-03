@@ -12,6 +12,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let app = NSApplication.shared
     let delegate = AppDelegate()
     app.delegate = delegate
+    #if DEBUG
+      E2ERunner.startIfRequested()
+    #endif
     app.run()
   }
 

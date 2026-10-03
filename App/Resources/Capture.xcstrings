@@ -1,0 +1,72 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ has turned on secure input, so Dict cannot copy from it." : {
+      "comment" : "Secure input is on in the named app; the copy fallback stops",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 开启了安全输入，Dict 无法从中拷贝。"
+          }
+        }
+      }
+    },
+    "An app has turned on secure input, so Dict cannot copy from it." : {
+      "comment" : "Secure input is on in an unknown app; the copy fallback stops",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有应用开启了安全输入，Dict 无法从中拷贝。"
+          }
+        }
+      }
+    },
+    "Dict could not read the selection in this app. Copy it and paste it here." : {
+      "comment" : "Neither accessibility nor copying gave the selected text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 读不到这个应用里的选中文字。请复制后粘贴到这里。"
+          }
+        }
+      }
+    },
+    "Dict is not allowed to read the clipboard. Copy the text and paste it here." : {
+      "comment" : "The clipboard privacy setting denies Dict",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 没有读取剪贴板的权限。请复制文字后粘贴到这里。"
+          }
+        }
+      }
+    },
+    "Dict never reads password fields." : {
+      "comment" : "The focused field is a password field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 从不读取密码框。"
+          }
+        }
+      }
+    },
+    "Nothing is selected." : {
+      "comment" : "The focused field has no selection",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有选中文字。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

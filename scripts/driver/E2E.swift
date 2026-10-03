@@ -1,0 +1,186 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// `make e2e` (architecture 14.3, acceptance 15.1 item 2): for each scenario the fixture is
+// brought to the front, the app under test runs `select` then `capture` through its `--e2e`
+// entry point, and the driver checks the captured text, source or failure, the fixture's
+// copy and paste events, and that the clipboard hash is unchanged.
+
+import Foundation
+
+struct E2EScenario: Decodable {
+  struct Expectation: Decodable {
+    var source: String?
+    var text: String?
+    /// A `CaptureFailure` case name; when set, the capture must fail with it.
+    var failure: String?
+    var copyEvents: Int?
+  }
+
+  var name: String
+  var control: String
+  var text: String
+  var content: String?
+  var policy: String
+  var expect: Expectation
+}
+
+struct E2EScenarioFile: Decodable {
+  var scenarios: [E2EScenario]
+}
+
+struct ScenarioOutcome {
+  enum Status: String { case pass = "PASS", fail = "FAIL", skip = "SKIP" }
+  let name: String
+  let status: Status
+  let notes: [String]
+  var ms: Double? = nil
+
+  var line: String {
+    let timing = ms.map { String(format: " (capture %.1f ms)", $0) } ?? ""
+    let details = notes.isEmpty ? "" : ": " + notes.joined(separator: "; ")
+    return "\(status.rawValue)  \(name)\(timing)\(details)"
+  }
+}
+
+struct E2EReport {
+  var outcomes: [ScenarioOutcome] = []
+  var entryPoint: String = ""
+
+  func count(_ status: ScenarioOutcome.Status) -> Int {
+    outcomes.filter { $0.status == status }.count
+  }
+  var passed: Bool { !outcomes.isEmpty && outcomes.allSatisfy { $0.status == .pass } }
+  var summary: String {
+    "\(count(.pass)) passed, \(count(.fail)) failed, \(count(.skip)) skipped"
+  }
+}
+
+@MainActor
+struct E2E {
+  let app: URL
+  let fixtureApp: URL
+  let scenarios: [E2EScenario]
+  let workDirectory: URL
+  /// The self-test's fake apps capture nothing, so they can run on a locked screen.
+  var needsUnlockedScreen = true
+
+  static func loadScenarios(_ url: URL) throws -> [E2EScenario] {
+    try JSONDecoder().decode(E2EScenarioFile.self, from: Data(contentsOf: url)).scenarios
+  }
+
+  /// Runs every scenario, holding the UI lock and guarding the clipboard throughout.
+  func run() throws -> E2EReport {
+    try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+    var runner = DictRunner(app: app, workDirectory: workDirectory)
+    var report = E2EReport()
+
+    // The probe launches the app in the background only; it needs no lock.
+    switch runner.probe() {
+    case .finished:
+      report.entryPoint = "present"
+    case .noEntryPoint:
+      report.entryPoint =
+        "not implemented: \(app.lastPathComponent) kept running without writing a result "
+        + "(the --e2e entry point is M1.4's)"
+      report.outcomes = scenarios.map {
+        ScenarioOutcome(name: $0.name, status: .skip, notes: ["no --e2e entry point"])
+      }
+      return report
+    case .noResult(let reason):
+      report.entryPoint = "broken: \(reason)"
+      report.outcomes = scenarios.map {
+        ScenarioOutcome(name: $0.name, status: .fail, notes: ["probe failed: \(reason)"])
+      }
+      return report
+    }
+
+    if needsUnlockedScreen { try requireUnlockedScreen() }
+    try UILock.with("make e2e") {
+      try Clipboard.guarded {
+        let fixture = Fixture(
+          app: fixtureApp, log: workDirectory.appendingPathComponent("fixture.jsonl"))
+        try fixture.launch()
+        for scenario in scenarios {
+          let outcome = runScenario(scenario, fixture: fixture, runner: &runner)
+          say(outcome.line)
+          report.outcomes.append(outcome)
+        }
+      }
+    }
+    return report
+  }
+
+  private func runScenario(
+    _ scenario: E2EScenario, fixture: Fixture, runner: inout DictRunner
+  ) -> ScenarioOutcome {
+    fixture.activate()
+    let hashBefore = Clipboard.hash()
+    let mark = fixture.mark
+    var select: [String: Any] = ["control": scenario.control, "text": scenario.text]
+    select["content"] = scenario.content
+    let outcome = runner.run(
+      [["select": select], ["capture": ["policy": scenario.policy]]], name: scenario.name)
+    let events = fixture.entries(since: mark)
+    var notes: [String] = []
+    var ms: Double?
+
+    if Clipboard.hash() != hashBefore { notes.append("clipboard hash changed") }
+    let selected = events.first { $0.event == "select" && $0.control == scenario.control }
+    if let selected, selected.detail.hasPrefix("error:") {
+      notes.append("fixture could not select: \(selected.detail)")
+    } else if selected == nil {
+      notes.append("the fixture never received the select command")
+    }
+    let copies = events.filter { $0.event == "copy" }.count
+    let pastes = events.filter { $0.event == "paste" }.count
+    let expectedCopies = scenario.expect.copyEvents ?? 0
+    if copies != expectedCopies {
+      notes.append("copy events \(copies), expected \(expectedCopies)")
+    }
+    if pastes != 0 { notes.append("paste events \(pastes), expected 0") }
+
+    switch outcome {
+    case .noEntryPoint:
+      notes.append("no --e2e entry point")
+    case .noResult(let reason):
+      notes.append(reason)
+    case .finished(let steps):
+      if let capture = steps.last(where: { $0.step == "capture" }) {
+        ms = capture.ms
+        notes += check(capture, against: scenario.expect)
+      } else {
+        notes.append("the result has no capture step")
+      }
+    }
+    return ScenarioOutcome(
+      name: scenario.name, status: notes.isEmpty ? .pass : .fail, notes: notes, ms: ms)
+  }
+
+  private func check(_ capture: StepResult, against expect: E2EScenario.Expectation) -> [String] {
+    let got =
+      capture.ok
+      ? "ok, source \(capture.source ?? "nil"), \(Self.quote(capture.text))"
+      : "failure \(capture.failure ?? "nil")"
+    var notes: [String] = []
+    if let failure = expect.failure {
+      if capture.ok || capture.failure != failure {
+        notes.append("expected failure \(failure), got \(got)")
+      }
+      return notes
+    }
+    guard capture.ok else { return ["expected success, got \(got)"] }
+    if let source = expect.source, capture.source != source {
+      notes.append("expected source \(source), got \(capture.source ?? "nil")")
+    }
+    if let text = expect.text, capture.text != text {
+      notes.append("expected text \(Self.quote(text)), got \(Self.quote(capture.text))")
+    }
+    return notes
+  }
+
+  static func quote(_ text: String?) -> String {
+    guard let text else { return "nil" }
+    let escaped = text.replacingOccurrences(of: "\n", with: "\\n")
+    return "\"\(escaped)\""
+  }
+}

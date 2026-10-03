@@ -1,0 +1,95 @@
+{
+  "scenarios": [
+    {
+      "name": "plain text view",
+      "control": "textView.plain",
+      "text": "quick brown fox",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "quick brown fox", "copyEvents": 0 }
+    },
+    {
+      "name": "rich text view",
+      "control": "textView.rich",
+      "text": "black quartz",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "black quartz", "copyEvents": 0 }
+    },
+    {
+      "name": "text field",
+      "control": "textField",
+      "text": "five dozen liquor jugs",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "five dozen liquor jugs", "copyEvents": 0 }
+    },
+    {
+      "name": "web read-only paragraph",
+      "control": "web.paragraph",
+      "text": "jumps over the lazy dog",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "jumps over the lazy dog", "copyEvents": 0 }
+    },
+    {
+      "name": "web read-only text across an inline tag",
+      "control": "web.paragraph",
+      "text": "a bright cold day",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "a bright cold day", "copyEvents": 0 }
+    },
+    {
+      "name": "web textarea",
+      "control": "web.textarea",
+      "text": "five dozen liquor jugs",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "five dozen liquor jugs", "copyEvents": 0 }
+    },
+    {
+      "name": "web contenteditable",
+      "control": "web.contenteditable",
+      "text": "daft zebras jump",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "daft zebras jump", "copyEvents": 0 }
+    },
+    {
+      "name": "plain text view, clipboard never",
+      "control": "textView.plain",
+      "text": "lazy dog",
+      "policy": "never",
+      "expect": { "source": "accessibility", "text": "lazy dog", "copyEvents": 0 }
+    },
+    {
+      "name": "custom view via menu Copy",
+      "control": "custom.noSelectedText",
+      "text": "big sphinx",
+      "policy": "allowed",
+      "expect": { "source": "menuCopy", "text": "big sphinx", "copyEvents": 1 }
+    },
+    {
+      "name": "custom view, clipboard never",
+      "control": "custom.noSelectedText",
+      "text": "big sphinx",
+      "policy": "never",
+      "expect": { "failure": "unreadable", "copyEvents": 0 }
+    },
+    {
+      "name": "custom view without selection",
+      "control": "custom.empty",
+      "text": "",
+      "policy": "allowed",
+      "expect": { "failure": "nothingSelected", "copyEvents": 0 }
+    },
+    {
+      "name": "custom view that copies the whole line",
+      "control": "custom.copiesLine",
+      "text": "let second",
+      "policy": "allowed",
+      "expect": { "failure": "nothingSelected", "copyEvents": 1 }
+    },
+    {
+      "name": "password field",
+      "control": "secureField",
+      "text": "horse",
+      "policy": "allowed",
+      "expect": { "failure": "secureField", "copyEvents": 0 }
+    }
+  ]
+}

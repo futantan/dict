@@ -1,0 +1,161 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  Web fixture page (architecture 14.3, 14.4). CaptureFixture loads it into a WKWebView and
+  selects through window.dictFixture.select(); scripts/matrix.sh serves it over local HTTP to
+  real browsers and selects through the query string: ?control=<id>&text=<text to select>.
+  Element ids are the control ids, which browsers expose as AXDOMIdentifier.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Dict fixture</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.5 -apple-system, system-ui, sans-serif; margin: 12px; }
+  h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; opacity: 0.6; margin: 12px 0 4px; }
+  p { margin: 0 0 6px; }
+  textarea, [contenteditable] { box-sizing: border-box; width: 100%; font: inherit; padding: 6px; }
+  textarea { height: 64px; resize: none; }
+  [contenteditable] { border: 1px solid #8888; border-radius: 4px; }
+  [contenteditable] p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<h2>Read-only text</h2>
+<div id="web.paragraph">
+  <p>The quick brown fox jumps over the lazy dog. It was a <b>bright</b> cold day in April.</p>
+  <p>Second paragraph with a <a href="#top">link</a> inside it.</p>
+</div>
+<h2>Textarea</h2>
+<textarea id="web.textarea" aria-label="Textarea">Pack my box with five dozen liquor jugs.
+Second line of the textarea.</textarea>
+<h2>Contenteditable</h2>
+<div id="web.contenteditable" contenteditable="true" aria-label="Contenteditable">
+  <p>How vexingly quick daft zebras jump. Sphinx of black quartz, judge my vow.</p>
+  <p>Another editable paragraph.</p>
+</div>
+<script>
+"use strict";
+(() => {
+  const BLOCKS = "p, div, li, h1, h2, h3, h4, blockquote, pre";
+
+  // Text nodes under root, flattened into one string with "\n" between blocks.
+  function flatten(root) {
+    const nodes = [];
+    let flat = "";
+    let lastBlock = null;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.data.trim()) continue;
+      const block = node.parentElement.closest(BLOCKS);
+      if (lastBlock && block !== lastBlock) flat += "\n";
+      lastBlock = block;
+      nodes.push({ node, start: flat.length });
+      flat += node.data;
+    }
+    return { nodes, flat };
+  }
+
+  function locate(nodes, offset, isEnd) {
+    for (const { node, start } of nodes) {
+      const end = start + node.data.length;
+      if (isEnd ? start < offset && offset <= end : start <= offset && offset < end) {
+        return { node, offset: offset - start };
+      }
+    }
+    return null;
+  }
+
+  function setParagraphs(root, content) {
+    root.replaceChildren(...content.split(/\n+/).map((line) => {
+      const p = document.createElement("p");
+      p.textContent = line;
+      return p;
+    }));
+  }
+
+  function selectText(root, text) {
+    const { nodes, flat } = flatten(root);
+    const wanted = text.replace(/\n+/g, "\n");
+    const index = flat.indexOf(wanted);
+    if (!wanted || index < 0) return "error: text not found";
+    const start = locate(nodes, index, false);
+    const end = locate(nodes, index + wanted.length, true);
+    if (!start || !end) return "error: text not found";
+    const range = document.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return selection.toString();
+  }
+
+  // Selects the first occurrence of text in the control; content, when given, replaces the
+  // control's text first. Returns the selected text, or "error: …".
+  function select(control, text, content) {
+    const element = document.getElementById(control);
+    if (!element) return "error: unknown control " + control;
+    if (document.activeElement && document.activeElement !== element) {
+      document.activeElement.blur();
+    }
+    if (element instanceof HTMLTextAreaElement) {
+      if (content != null) element.value = content;
+      const index = text ? element.value.indexOf(text) : -1;
+      if (index < 0) return "error: text not found";
+      element.focus();
+      element.setSelectionRange(index, index + text.length);
+      return element.value.substring(index, index + text.length);
+    }
+    if (content != null) setParagraphs(element, content);
+    if (element.isContentEditable) element.focus();
+    return selectText(element, text);
+  }
+
+  function controlOf(node) {
+    const element = node && (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement);
+    const owner = element && element.closest("[id^='web.']");
+    return owner ? owner.id : "";
+  }
+
+  function selectedText() {
+    const active = document.activeElement;
+    if (active instanceof HTMLTextAreaElement) {
+      return active.value.substring(active.selectionStart, active.selectionEnd);
+    }
+    return getSelection().toString();
+  }
+
+  function report(event, detail) {
+    const handler = window.webkit && window.webkit.messageHandlers
+      && window.webkit.messageHandlers.fixture;
+    if (!handler) return;
+    const control = controlOf(document.activeElement !== document.body
+      ? document.activeElement : getSelection().anchorNode);
+    handler.postMessage({ event, control, detail });
+  }
+
+  document.addEventListener("copy", () => report("copy", selectedText()), true);
+  document.addEventListener("paste", (e) => {
+    report("paste", e.clipboardData ? e.clipboardData.getData("text/plain") : "");
+  }, true);
+
+  window.dictFixture = { select };
+
+  // Real browsers: select from the query string once the page has settled.
+  const params = new URLSearchParams(location.search);
+  const control = params.get("control");
+  if (control) {
+    document.title = "Dict fixture " + control;
+    addEventListener("load", () => setTimeout(() => {
+      const result = select(control, params.get("text") || "", params.get("content"));
+      document.title = (result.startsWith("error:") ? "Dict fixture error " : "Dict fixture ")
+        + control;
+    }, 200));
+  }
+})();
+</script>
+</body>
+</html>

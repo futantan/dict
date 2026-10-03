@@ -7,11 +7,20 @@ import Testing
 
 @MainActor
 struct StatusMenuTests {
-  @Test func hasAboutSeparatorAndQuit() {
+  @Test func hasAboutSettingsSeparatorAndQuit() {
     let menu = StatusMenu.make(appName: "Sample")
 
-    #expect(menu.items.count == 3)
-    #expect(menu.items[1].isSeparatorItem)
+    #expect(menu.items.count == 4)
+    #expect(menu.items[2].isSeparatorItem)
+  }
+
+  @Test func settingsItemOpensSettingsWithCommandComma() {
+    let settings = StatusMenu.make(appName: "Sample").items[1]
+
+    #expect(settings.action == #selector(AppDelegate.showSettings(_:)))
+    #expect(settings.keyEquivalent == ",")
+    #expect(settings.keyEquivalentModifierMask == .command)
+    #expect(!settings.title.isEmpty)
   }
 
   @Test func aboutItemShowsAboutPanel() {
@@ -22,7 +31,7 @@ struct StatusMenuTests {
   }
 
   @Test func quitItemTerminatesWithCommandQ() {
-    let quit = StatusMenu.make(appName: "Sample").items[2]
+    let quit = StatusMenu.make(appName: "Sample").items[3]
 
     #expect(quit.action == #selector(NSApplication.terminate(_:)))
     #expect(quit.keyEquivalent == "q")

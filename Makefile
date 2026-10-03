@@ -7,7 +7,7 @@ XCODEBUILD := xcodebuild -project DictApp.xcodeproj -scheme DictApp -configurati
 SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/Sources \
 	Packages/DictCore/Tests scripts
 
-.PHONY: generate build test test-core test-app smoke e2e matrix eval run package lint format clean
+.PHONY: generate build test test-core test-app smoke window-test e2e matrix eval run package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -25,6 +25,10 @@ test-app: generate
 
 smoke: build
 	swift scripts/smoke-test.swift "$$(scripts/app-path.sh $(CONFIG))"
+
+# Takes focus: brings the app's windows to the front, so it is not part of `make test`.
+window-test: build
+	swift scripts/window-test.swift "$$(scripts/app-path.sh $(CONFIG))"
 
 # The scripts are owned by the tasks named in Design/m1-tasks.md; until implemented they
 # print "not implemented" and fail.

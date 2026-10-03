@@ -174,8 +174,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
   }
 
   @objc func showAbout(_ sender: Any?) {
-    NSApp.activate()
     NSApp.orderFrontStandardAboutPanel(sender)
+    NSApp.activateFromFrontApp()
   }
 
   @objc func showShortcutSettings(_ sender: Any?) {

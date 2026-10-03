@@ -35,8 +35,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     guard let window else { return }
     prepare()
     if let pane { select(pane) }
-    NSApp.activate()
     window.makeKeyAndOrderFront(nil)
+    NSApp.activateFromFrontApp()
   }
 
   /// Builds the tabs once, sized to the first pane and centered, without showing the window.

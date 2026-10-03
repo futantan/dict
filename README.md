@@ -29,6 +29,7 @@ make test       # DictCore tests, app unit tests, end-to-end smoke test
 make lint       # swift format lint (Xcode's bundled swift-format)
 make format     # apply swift format in place
 make package    # Release build zipped into build/dist/
+make window-test  # first-run, Settings and About windows come up in front (takes focus)
 make e2e        # capture scenarios on the fixture app (takes focus)
 make matrix     # capture matrix on real apps (takes focus)
 make eval SUITE=direction  # prompt evaluation against a real model (reads .env)
@@ -41,6 +42,9 @@ The stable signing identity keeps Accessibility grants across rebuilds.
 
 The smoke test launches the app with `--no-onboarding`, finds its menu bar item through the Accessibility API, and quits it.
 It never takes focus or sends key events, but the terminal running it needs Accessibility permission.
+The window test launches the app through Launch Services as `open` does and checks that the first-run window, and Settings and About opened from the menu bar item, come up as the frontmost, key window.
+It forces the first-run window with the launch argument `-onboarding.completed NO`, so the user's preferences are never written.
+It takes focus, so it is not part of `make test` and holds `/private/tmp/dict-ui.lock` while it runs.
 
 ## Distribution
 

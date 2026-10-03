@@ -31,7 +31,7 @@ final class OnboardingWindowController: NSWindowController {
     guard let window else { return }
     if let step { model.step = step }
     if !window.isVisible { window.center() }
-    NSApp.activate()
     window.makeKeyAndOrderFront(nil)
+    NSApp.activateFromFrontApp()
   }
 }

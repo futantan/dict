@@ -193,6 +193,17 @@ struct PromptEvaluationRunnerTests {
     #expect(report.passes(threshold: 1))
   }
 
+  @Test func outputGetsTheAppsCleanUp() async {
+    let runner = runner { _ in
+      .events([.text("法国的首都是哪里？\n</source_text_0a1b2c3d>"), .finished(.complete, nil)])
+    }
+
+    let report = await runner.run([question], runs: 1)
+
+    #expect(report.runs[0].output == "法国的首都是哪里？")
+    #expect(report.passes(threshold: 1))
+  }
+
   @Test func stopsOnceTheCostLimitIsReached() async {
     let runner = runner(
       price: EvalPrice(inputPerMillion: 1, outputPerMillion: 0), costLimit: 2.5

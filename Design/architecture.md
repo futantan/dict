@@ -746,6 +746,8 @@ public enum TimeoutStage: Sendable, Equatable { case firstEvent, idle, total }
 - **错误文案**：Key 无效、模型不存在（提供「列出可用模型」）、额度或频率限制、服务商故障、网络离线、超时；错误信息和日志里出现的 Key 一律替换成 `••••`。
 - **降级**：
   - 句子翻译：模型失败且 Apple 翻译框架支持这对语言时，自动改用它，并在面板上注明。
+    注明方式是译文下方一行说明（`PanelState.note`），写出模型失败的原因；模型译文被截断（`.truncated`）时保留已得译文并注明，不降级。
+    决策是 `DictCore` 的纯函数 `translationRecovery(after:hasText:appleTranslationSupportsPair:)`。
   - 查词：模型失败时词典层仍在，卡片区显示错误和重试。
   - 纠错：模型失败时提供「只检查拼写」（系统拼写检查）。
   - 润色：没有替代，显示错误。
@@ -786,6 +788,8 @@ Apple 翻译框架：
 - 支持的语言以运行时的 `LanguageAvailability` 为准；评审在本机查到 21 种，含简体和繁体中文【实测，评审】。
 - `LSUIElement` 应用和非沙盒应用里能否使用，没有官方说明；参考项目的代码表明可行，但没有编译运行【源码】，所以列为第一个里程碑的验证项。
 - 实现放在 `DictApp`（依赖 Translation 和 SwiftUI），`DictCore` 只有 `Translator` 协议。
+- `Translator` 表达不了 `.undecided`：模型翻译器 `ModelTranslator`（`DictCore`）另有 `translate(_:direction:pair:)`；Apple 翻译这时按系统识别出的原文语言决定目标，是我的语言就译成学习语言，否则译成我的语言。
+- 本机实测【实测，macOS 26.5.2，`LSUIElement` 的 Dict Dev，屏幕锁定】：`.translationTask` 挂在非激活面板的视图上，面板显示后约 1 ms 就交出会话；英中语言包状态是 `.supported`（未下载），`translate` 在 20 s 内没有返回，下载提示能否在非激活面板上出现、译文能否产出仍未验证。
 
 系统拼写检查（`NSSpellChecker`）：用学习语言检查拼写，每个错误取第一个建议，转换成 `Edit(kind: .spelling, wrong:, right:)`。
 它只抓拼写，语法检查的质量【未验证】，v1 不用。
@@ -815,6 +819,11 @@ Apple 翻译框架：
 | 查词卡片，strict `json_schema` | 170/170 严格解码；多义词按上下文选对义项 40/40；非词识别 24/25 |
 
 随机后缀标签只在翻译上测过；纠错、润色、译成外语、查词卡片也统一使用它，这是未测的改动【未验证】，由第 14.5 节的评测覆盖。
+
+**译文后处理**：原文以没闭合的伪造标签结尾时，模型几乎每次都另起一行补一个闭合标签（真实标签 `</source_text_<随机后缀>>` 或伪造的 `</source_text>`）。
+`DictCore` 的纯函数 `removingAddedClosingTag` 删掉这一行：译文最后一行只是一个闭合标签，且这个标签在译文里出现的次数多于原文。
+流式显示时可能长成单独闭合标签的末行暂缓显示（`streamingTranslation`），结束时再定。
+评测对输出应用同一函数；注入套件 `gpt-6-luna` RUNS=10 的 `sameLineCount`：只删原文里没有的标签时 89/100，按出现次数判断后 96/100，其余失败是模型在伪造标签前另起一行，后处理不处理【实测】。
 
 #### 句子翻译（本机已定方向）
 
@@ -1614,6 +1623,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 平台与数据：
 
 - Apple 翻译框架在 `LSUIElement`、非沙盒应用里能否使用；非激活面板上的语言包下载提示。
+  已测到非激活面板上的 `.translationTask` 能交出会话；译文产出和下载提示要在解锁、已下载或可确认下载的机器上重跑 `AppleTranslationLiveTests`。
 - `localhost` 是否被应用传输安全默认放行。
 - compact 系统音色的听感；多音词 IPA 读法。
 - ICU 繁转简的词级准确度。

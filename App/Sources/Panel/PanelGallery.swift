@@ -18,6 +18,10 @@
         ("result-long", PanelState(source: text.longSource, phase: .result(text.longResult))),
         ("failure", PanelState(source: text.source, phase: .failure(text.failure))),
         ("needs-setup", PanelState(phase: .needsSetup(text.setup))),
+        (
+          "result-note",
+          PanelState(source: text.source, phase: .result(text.result), note: text.note)
+        ),
       ]
     }
 
@@ -33,6 +37,7 @@
       let longResult: String
       let failure: PanelNotice
       let setup: PanelNotice
+      let note: String
 
       /// A Chinese UI: the user reads English and gets Chinese.
       static let chinese = Sample(
@@ -52,7 +57,8 @@
           actions: [
             PanelAction(id: "later", title: "以后再说"),
             PanelAction(id: "open", title: "打开系统设置", isDefault: true),
-          ]))
+          ]),
+        note: "模型出错（网络错误），已改用 Apple 翻译。")
 
       /// An English UI: the user reads Chinese and gets English.
       static let english = Sample(
@@ -76,7 +82,8 @@
           actions: [
             PanelAction(id: "later", title: "Not Now"),
             PanelAction(id: "open", title: "Open System Settings", isDefault: true),
-          ]))
+          ]),
+        note: "The model failed (network error), so Apple Translation was used.")
 
       static let longEnglish =
         "Language models read text as tokens, and a sentence that looks short to a person "

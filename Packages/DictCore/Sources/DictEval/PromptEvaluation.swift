@@ -269,6 +269,8 @@ struct EvalRunner: Sendable {
         }
       }
       run.completion = start.duration(to: clock.now)
+      // The same clean-up the app applies before showing the translation.
+      run.output = removingAddedClosingTag(run.output, source: evalCase.source)
     } catch {
       run.error = String(describing: error)
     }

@@ -8,10 +8,14 @@ struct PanelState: Sendable, Equatable {
   /// The captured or typed text, shown above the result; nil while it is still being read.
   var source: String?
   var phase: PanelPhase
+  /// A remark under a generating or finished result, for example that Apple Translation
+  /// stood in for a failed model.
+  var note: String?
 
-  init(source: String? = nil, phase: PanelPhase) {
+  init(source: String? = nil, phase: PanelPhase, note: String? = nil) {
     self.source = source
     self.phase = phase
+    self.note = note
   }
 
   /// The empty panel with a text field (architecture 10.4).

@@ -43,8 +43,9 @@ struct PanelView: View {
     .frame(width: PanelLayout.width)
     .accessibilityElement(children: .contain)
     .accessibilityLabel(
-      String(localized: "Dict panel", table: "Panel", comment: "Accessibility label of the panel"))
-    // M1.8 attaches `.translationTask` here.
+      String(localized: "Dict panel", table: "Panel", comment: "Accessibility label of the panel")
+    )
+    .appleTranslationHost()
   }
 }
 
@@ -93,6 +94,9 @@ private struct PanelContent: View {
         NoticeView(
           notice: notice, defaultSymbol: "gearshape.fill", tint: .accentColor, onAction: onAction)
       }
+      if let note = state.note, state.phase.showsNote {
+        NoteLine(text: note)
+      }
     }
     .padding(state.phase == .input ? 0 : Metrics.padding)
   }
@@ -139,6 +143,18 @@ private struct ResultText: View {
                 comment: "Shown until the first words of the result arrive"))
         }
       }
+  }
+}
+
+private struct NoteLine: View {
+  let text: String
+
+  var body: some View {
+    Label(text, systemImage: "info.circle")
+      .font(Metrics.sourceFont)
+      .foregroundStyle(.secondary)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .fixedSize(horizontal: false, vertical: true)
   }
 }
 
@@ -237,6 +253,16 @@ private struct ActionButton: View {
     } else {
       Button(action.title, action: perform)
         .buttonStyle(.bordered)
+    }
+  }
+}
+
+extension PanelPhase {
+  /// Only a result, streaming or finished, carries a note.
+  fileprivate var showsNote: Bool {
+    switch self {
+    case .generating, .result: true
+    case .input, .reading, .failure, .needsSetup: false
     }
   }
 }

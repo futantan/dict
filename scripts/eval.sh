@@ -7,11 +7,13 @@
 # the pass threshold, or when DictEval cannot run.
 #
 # Extra DictEval flags (for example `--model` or `--max-cost`) can be passed in EVAL_ARGS.
+# ENV_FILE reads the key from another file, for example the main checkout's .env when running
+# from a git worktree.
 
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-env_file="$root/.env"
+env_file="${ENV_FILE:-$root/.env}"
 
 if [[ -z "${SUITE:-}" ]]; then
   echo "make eval: SUITE is required (direction, injection, fallback or all)" >&2

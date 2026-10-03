@@ -1,0 +1,292 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Apple Translation couldn’t translate this" : {
+      "comment" : "Title of the error when Apple Translation failed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple 翻译没能翻译这段文字"
+          }
+        }
+      }
+    },
+    "Apple Translation doesn’t support these languages" : {
+      "comment" : "Title when no engine can translate the text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple 翻译不支持这两种语言"
+          }
+        }
+      }
+    },
+    "Couldn’t tell which language the text is in." : {
+      "comment" : "Apple Translation could not recognize the source language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法识别这段文字的语言。"
+          }
+        }
+      }
+    },
+    "Download them in System Settings → General → Language & Region → Translation Languages." : {
+      "comment" : "How to download Apple Translation languages",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在“系统设置 → 通用 → 语言与地区 → 翻译语言”中下载。"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "comment" : "Button that opens Settings",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置"
+          }
+        }
+      }
+    },
+    "Reason: %@." : {
+      "comment" : "Why the model failed; the argument is a short reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原因：%@。"
+          }
+        }
+      }
+    },
+    "Set up a model in Settings to translate them." : {
+      "comment" : "How to translate a language pair Apple Translation does not support",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置里配置模型后即可翻译。"
+          }
+        }
+      }
+    },
+    "Something went wrong in Apple Translation." : {
+      "comment" : "Apple Translation failed for another reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple 翻译出错了。"
+          }
+        }
+      }
+    },
+    "The model couldn’t translate this" : {
+      "comment" : "Title of the error when the model translation failed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型没能翻译这段文字"
+          }
+        }
+      }
+    },
+    "The model failed (%@), so Apple Translation was used." : {
+      "comment" : "Under a translation by Apple Translation after the model failed; %@ is the reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型出错（%@），已改用 Apple 翻译。"
+          }
+        }
+      }
+    },
+    "The translation was cut off at the length limit." : {
+      "comment" : "Shown under a translation the model stopped early",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文超出长度上限，已被截断。"
+          }
+        }
+      }
+    },
+    "Translation languages aren’t downloaded" : {
+      "comment" : "Title when Apple Translation lacks a language pack",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译语言尚未下载"
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "comment" : "Retry button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        }
+      }
+    },
+    "blocked by the content filter" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "被内容过滤拦截"
+          }
+        }
+      }
+    },
+    "model not found" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到模型"
+          }
+        }
+      }
+    },
+    "network error" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络错误"
+          }
+        }
+      }
+    },
+    "no API key" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有 API Key"
+          }
+        }
+      }
+    },
+    "rate or usage limit reached" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "达到频率或额度限制"
+          }
+        }
+      }
+    },
+    "the API key was rejected" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API Key 无效"
+          }
+        }
+      }
+    },
+    "the answer was cut off" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答被截断"
+          }
+        }
+      }
+    },
+    "the connection was interrupted" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接中断"
+          }
+        }
+      }
+    },
+    "the provider had an error" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务商出错"
+          }
+        }
+      }
+    },
+    "the request was rejected" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求被拒绝"
+          }
+        }
+      }
+    },
+    "timed out" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求超时"
+          }
+        }
+      }
+    },
+    "unexpected error" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知错误"
+          }
+        }
+      }
+    },
+    "unexpected response" : {
+      "comment" : "Model failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "响应异常"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -4,5 +4,12 @@
 public func engine(
   for capability: Capability, modelConfigured: Bool, appleTranslationSupportsPair: Bool
 ) -> Engine {
-  fatalError("engine(for:) is not implemented yet (M1.8)")
+  if modelConfigured { return .model }
+  switch capability {
+  case .translate, .equivalents, .translateOut:
+    return appleTranslationSupportsPair ? .appleTranslation : .unavailable
+  case .lookup: return .dictionaryOnly
+  case .proofread: return .spellChecker
+  case .improve: return .unavailable
+  }
 }

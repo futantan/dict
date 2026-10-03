@@ -27,6 +27,9 @@ public enum StreamEvent: Sendable, Equatable {
   case thinking
   /// A delta of the answer text.
   case text(String)
+  /// Thinking leaked into the answer (an unopened `</think>` arrived): drop all text received
+  /// so far; the answer continues with the next `.text`.
+  case discardText
   case finished(FinishReason, Usage?)
 }
 

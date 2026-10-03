@@ -1,1 +1,66 @@
-[]
+[
+  {
+    "id": "openai",
+    "displayName": "OpenAI",
+    "baseURL": "https://api.openai.com/v1",
+    "auth": { "bearer": {} },
+    "requiresKey": true,
+    "keyHelpURL": "https://platform.openai.com/api-keys",
+    "defaultModel": "gpt-6-luna",
+    "jsonMode": "schema",
+    "tokenLimitField": "max_completion_tokens",
+    "thinkingRules": [
+      {
+        "modelPrefix": "",
+        "off": { "reasoning_effort": "none" },
+        "lowest": { "reasoning_effort": "minimal" }
+      },
+      {
+        "modelPrefix": "gpt-6",
+        "off": { "reasoning_effort": "none" },
+        "lowest": { "reasoning_effort": "none" }
+      },
+      {
+        "modelPrefix": "gpt-5-nano",
+        "off": null,
+        "lowest": { "reasoning_effort": "minimal" }
+      }
+    ]
+  },
+  {
+    "id": "ollama",
+    "displayName": "Ollama",
+    "baseURL": "http://localhost:11434/v1",
+    "auth": { "none": {} },
+    "requiresKey": false,
+    "keyHelpURL": null,
+    "defaultModel": "",
+    "jsonMode": "schema",
+    "tokenLimitField": "max_tokens",
+    "thinkingRules": [
+      {
+        "modelPrefix": "",
+        "off": { "reasoning_effort": "none" },
+        "lowest": null
+      }
+    ]
+  },
+  {
+    "id": "custom",
+    "displayName": "Custom",
+    "baseURL": "https://example.com/v1",
+    "auth": { "bearer": {} },
+    "requiresKey": false,
+    "keyHelpURL": null,
+    "defaultModel": "",
+    "jsonMode": "schema",
+    "tokenLimitField": "max_tokens",
+    "thinkingRules": [
+      {
+        "modelPrefix": "",
+        "off": { "reasoning_effort": "none" },
+        "lowest": { "reasoning_effort": "minimal" }
+      }
+    ]
+  }
+]

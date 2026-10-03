@@ -85,6 +85,13 @@ struct SettingsWindowTests {
 
   @Test(.enabled(if: showsDemo))
   func demoOnScreen() async throws {
+    // The test host starts in the background, and macOS ignores `NSApp.activate()` from an
+    // app that was never active; activation through Launch Services is honoured, like the
+    // user's click on the status menu in the real app.
+    let configuration = NSWorkspace.OpenConfiguration()
+    configuration.activates = true
+    _ = try await NSWorkspace.shared.openApplication(
+      at: Bundle.main.bundleURL, configuration: configuration)
     let controller = try makeController()
     let window = try #require(controller.window)
     controller.show()

@@ -63,8 +63,9 @@ struct AppleTranslationLiveTests {
     }
     print("panel session: \(text)")
     #expect(text.unicodeScalars.contains { $0.properties.isIdeographic })
-    #expect(!NSApp.isActive, "Dict must not become the active app")
-    #expect(NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder")
+    // The key panel makes `NSApp.isActive` true; not activating means Finder keeps the
+    // menu bar.
+    #expect(NSWorkspace.shared.menuBarOwningApplication?.bundleIdentifier == "com.apple.finder")
 
     // A second request for the same pair needs a new session from the same modifier.
     let again = try await withTimeout {
@@ -101,7 +102,7 @@ struct AppleTranslationLiveTests {
       return
     }
     #expect(text.contains { $0.isLetter && $0.isASCII })
-    #expect(!NSApp.isActive)
+    #expect(NSWorkspace.shared.menuBarOwningApplication?.bundleIdentifier == front)
   }
 }
 

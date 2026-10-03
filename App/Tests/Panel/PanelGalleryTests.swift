@@ -80,9 +80,11 @@ struct PanelGalleryTests {
     for (_, state) in PanelGallery.states() {
       controller.show(state, near: .selection(selection))
       try await Task.sleep(for: .milliseconds(1200))
+      // A key non-activating panel makes `NSApp.isActive` true, yet the other app stays
+      // frontmost and keeps the menu bar, which is what "not activating" means here.
       #expect(controller.window.isKeyWindow)
-      #expect(!NSApp.isActive)
       #expect(NSWorkspace.shared.frontmostApplication?.bundleIdentifier == front)
+      #expect(NSWorkspace.shared.menuBarOwningApplication?.bundleIdentifier == front)
       #expect(controller.window.frame.maxY == selection.minY - PanelLayout.gap)
     }
 
@@ -111,6 +113,10 @@ struct PanelGalleryTests {
     #expect(!controller.isVisible)
     #expect(dismissals == [.escape])
     #expect(NSWorkspace.shared.frontmostApplication?.bundleIdentifier == front)
+    // Key focus goes back to the frontmost app.
+    try await Task.sleep(for: .milliseconds(300))
+    #expect(!NSApp.isActive)
+    #expect(NSApp.keyWindow == nil)
   }
 
   // MARK: - Offscreen rendering

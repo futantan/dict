@@ -117,8 +117,15 @@ final class SelfTest {
   }
 
   private func testMenuCopyAndPaste(_ fixture: Fixture) {
-    func copyAndExpect(_ control: String, _ text: String, clipboard: String) {
-      _ = fixture.select(control, text)
+    // The selection tests replace some controls' content, so each step sets its own.
+    func copyAndExpect(
+      _ control: String, _ text: String, content: String? = nil, clipboard: String
+    ) {
+      let selected = fixture.select(control, text, content: content)
+      // A control without selections reports an empty selection (just a caret).
+      check(
+        selected.map { !$0.hasPrefix("error:") } == true,
+        "\(control): placed the selection on \(E2E.quote(text)) (got \(E2E.quote(selected)))")
       let mark = fixture.mark
       guard let copy = AX.menuItem(fixture.pid, key: "C") else {
         return check(false, "menu bar has a ⌘C item")
@@ -134,9 +141,13 @@ final class SelfTest {
         "\(control): clipboard holds \(E2E.quote(clipboard)) (got \(E2E.quote(Clipboard.string())))"
       )
     }
-    copyAndExpect("textView.plain", "lazy dog", clipboard: "lazy dog")
+    copyAndExpect(
+      "textView.plain", "lazy dog", content: "The quick brown fox jumps over the lazy dog.",
+      clipboard: "lazy dog")
     copyAndExpect("textField", "five dozen", clipboard: "five dozen")
-    copyAndExpect("web.textarea", "liquor jugs", clipboard: "liquor jugs")
+    copyAndExpect(
+      "web.textarea", "liquor jugs", content: "Pack my box with five dozen liquor jugs.",
+      clipboard: "liquor jugs")
     copyAndExpect("web.paragraph", "quick brown", clipboard: "quick brown")
     copyAndExpect("custom.noSelectedText", "big sphinx", clipboard: "big sphinx")
     copyAndExpect("custom.copiesLine", "let second", clipboard: "let second = 2\n")
@@ -149,7 +160,9 @@ final class SelfTest {
           + (enabled ? "(AppKit did not revalidate the menu)" : "(validated on query)"))
     }
 
-    _ = fixture.select("textView.plain", "lazy dog")
+    check(
+      fixture.select("textView.plain", "lazy dog", content: "The lazy dog.") == "lazy dog",
+      "textView.plain: selected \"lazy dog\" for Paste")
     let mark = fixture.mark
     if let paste = AX.menuItem(fixture.pid, key: "V") {
       check(AX.press(paste) == .success, "textView.plain: Paste pressed")

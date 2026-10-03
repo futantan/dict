@@ -1,0 +1,61 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Dict panel" : {
+      "comment" : "Accessibility label of the panel",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 面板"
+          }
+        }
+      }
+    },
+    "Original text" : {
+      "comment" : "Accessibility label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原文"
+          }
+        }
+      }
+    },
+    "Reading the selection…" : {
+      "comment" : "Shown while the selected text is being read",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在读取选中的文字…"
+          }
+        }
+      }
+    },
+    "Translating…" : {
+      "comment" : "Shown until the first words of the result arrive",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在翻译…"
+          }
+        }
+      }
+    },
+    "Type text to translate" : {
+      "comment" : "Placeholder of the panel's text field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入要翻译的文字"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

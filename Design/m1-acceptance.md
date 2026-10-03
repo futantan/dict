@@ -1,7 +1,7 @@
 # M1 验收记录
 
 本文逐条列出 `Design/architecture.md` 第 15.1 节的 8 条验收，写明当前状态、证据，以及还没验证的条目由谁、用哪条命令或哪些步骤来验证。
-记录时间：2026-10-04，main 工作区（M1.11 串联的改动尚未提交）。
+记录时间：2026-10-04，main 分支。
 记录时屏幕处于锁定状态（`ioreg -n Root -d1 -a | grep -A1 IOConsoleLocked` 为 true），所以需要真实屏幕的条目都没有跑。
 
 ## 前置条件（人工，一次性）
@@ -18,6 +18,9 @@
    引导窗口显示「英语和中文（简体）已就绪。」后点「完成」。
 5. 验收第 5 条之前在设置里填 Key：菜单栏图标 → 设置… → 模型 → 服务商选 OpenAI → 粘贴 Key → 点「测试」应显示成功。
    第 4 条要在没有配置模型时做：服务商选「无」，或先做第 4 条再填 Key。
+
+`make e2e` 和 `make matrix` 用 `open -g -n` 启动 Dict Dev，走的是应用自己的签名身份，不借用终端的辅助功能授权。
+所以在完成上面第 2 步之前，它们会报 `noAccessibilityPermission`，这不是代码缺陷。
 
 所有会显示窗口、抢焦点、合成按键或占用剪贴板的脚本运行，前后都要加全机互斥锁：
 `until mkdir /private/tmp/dict-ui.lock 2>/dev/null; do sleep 2; done; <命令>; rmdir /private/tmp/dict-ui.lock`。

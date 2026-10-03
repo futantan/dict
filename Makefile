@@ -4,10 +4,10 @@ CONFIG ?= Debug
 DERIVED_DATA := build/DerivedData
 XCODEBUILD := xcodebuild -project DictApp.xcodeproj -scheme DictApp -configuration $(CONFIG) \
 	-derivedDataPath $(DERIVED_DATA) -destination 'platform=macOS,arch=$(shell uname -m)' -quiet
-SWIFT_SOURCES := App Packages/DictCore/Package.swift Packages/DictCore/Sources \
+SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/Sources \
 	Packages/DictCore/Tests scripts
 
-.PHONY: generate build test test-core test-app smoke run package lint format clean
+.PHONY: generate build test test-core test-app smoke e2e matrix eval run package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -25,6 +25,17 @@ test-app: generate
 
 smoke: build
 	swift scripts/smoke-test.swift "$$(scripts/app-path.sh $(CONFIG))"
+
+# The scripts are owned by the tasks named in Design/m1-tasks.md; until implemented they
+# print "not implemented" and fail.
+e2e: build
+	scripts/e2e.sh $(CONFIG)
+
+matrix: build
+	scripts/matrix.sh $(CONFIG)
+
+eval:
+	SUITE="$(SUITE)" RUNS="$(RUNS)" scripts/eval.sh
 
 run: build
 	open "$$(scripts/app-path.sh $(CONFIG))"

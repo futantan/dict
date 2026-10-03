@@ -127,6 +127,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 ### 2.3 并发模型
 
 工程设置是 Swift 6、`SWIFT_STRICT_CONCURRENCY = complete`，本文所有契约都按这个设置写，必须能编译。
+`DictCore` 的 public 值类型在代码里都带逐成员的 public init（Swift 自动生成的只是 internal），文中的契约略去不写。
 
 - 界面、剪贴板、合成按键、全局快捷键、系统语音、键盘布局查询都在主 actor 上。
   其中键盘布局查询（`TISCopyCurrentKeyboardLayoutInputSource`、`UCKeyTranslate`）要求主线程。
@@ -230,9 +231,10 @@ enum CaptureSource: Sendable, Equatable {
   case typed              // 用户在面板里输入，只读
 }
 
-struct ContextSentence: Sendable, Equatable {
-  let sentence: String
-  let termRange: Range<String.Index>   // 选中文字在 sentence 里的位置，用于高亮和填空
+// 这一个类型在 DictCore（public），因为 DictCore 的 sentence(containing:in:) 返回它
+public struct ContextSentence: Sendable, Equatable {
+  public let sentence: String
+  public let termRange: Range<String.Index>   // 选中文字在 sentence 里的位置，用于高亮和填空
 }
 
 struct Selection: Sendable {
@@ -272,7 +274,7 @@ protocol SelectionReader {
 `AppKind` 由一个纯函数从 bundle 信息判定：
 
 - `ownApp`：pid 等于自己。
-- `terminal`：bundle id 在终端名单里（Terminal、iTerm2、Ghostty、kitty、WezTerm、Alacritty、Warp），名单是 `DictCore` 里的数据，有单测。
+- `terminal`：bundle id 在终端名单里（Terminal、iTerm2、Ghostty、kitty、WezTerm、Alacritty、Warp）；`AppKind` 是 `DictApp` 的类型，所以名单和判定函数也在 `DictApp`，判定函数的输入是 pid、bundle id 和包内框架名，是纯函数，有应用单测。
 - `electron`：应用包内有 `Contents/Frameworks/Electron Framework.framework`。
 - `chromium`：bundle id 在 Chromium 浏览器名单里，或包内有名字以 `Chromium Framework`、`Chrome Framework` 结尾的框架。
 - 其余是 `native`。
@@ -564,6 +566,8 @@ public func classify(_ text: String) -> SelectionKind
 public struct LanguagePair: Sendable, Equatable, Codable {
   public var mine: Locale.Language       // 默认 zh-Hans
   public var learning: Locale.Language   // 默认 en
+  public init(mine: Locale.Language = Locale.Language(identifier: "zh-Hans"),
+              learning: Locale.Language = Locale.Language(identifier: "en"))
 }
 public enum Direction: Sendable, Equatable { case intoMine, intoLearning, undecided }
 public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
@@ -586,11 +590,12 @@ public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
 
 | 函数 | 用途 |
 |---|---|
-| `normalizedKey(_:)` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
-| `sentence(containing:in:)` | 第 3.5 节的切句与定位 |
-| `writeAction(for:pair:)` | 「写」键的默认动作：选中文字主要是我的语言就「译成外语」，否则「纠错」 |
-| `appContext(bundleID:)` | 把应用归成 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据 |
-| `AppKind` 判定 | 第 3.3 节 |
+| `normalizedKey(_ text: String) -> String` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
+| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index` |
+| `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节） |
+| `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据 |
+
+`AppKind` 判定不在这里：`AppKind` 是 `DictApp` 的类型，判定函数也在 `DictApp`（第 3.3 节）。
 
 ## 6. 模型接入
 
@@ -1400,11 +1405,12 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - 日志用 `os.Logger`，子系统是 bundle id，分类为 `capture`、`replace`、`model`、`store`、`ui`。
   记录每个阶段的耗时、走了哪条途径、无障碍错误码、HTTP 状态、token 用量、应用 bundle id；从不记录用户的文字和 Key。
   查看：`log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"'`。
+- 这五个 `Logger` 只在 `App/Sources/Support/Log.swift` 的 `Log` 里定义；`DictCore` 不写日志，模型请求的耗时、HTTP 状态和用量由 `DictApp` 里的调用方记录。
 - Ollama 的 `http://localhost` 是否被应用传输安全默认放行【未验证】；不放行就在工程里加一个 Info.plist 片段设置 `NSAllowsLocalNetworking`；自定义服务商的非本机 `http://` 地址在表单里直接拒绝。
 
 ## 13. 本地化与语言设置
 
-- 界面语言：简体中文和英文，跟随系统；字符串全部在 `App/Resources/Localizable.xcstrings`，代码里用 `String(localized:comment:)`。
+- 界面语言：简体中文和英文，跟随系统；字符串在 `App/Resources/` 下按界面区域分表的 String Catalog 里（`Localizable.xcstrings` 放菜单等全局文案，其余区域各用一张表，例如 `Panel.xcstrings`），代码里用 `String(localized:table:comment:)`；分表让并行开发的任务不改同一个文件。
 - `DictCore` 不含面向用户的文案，只返回枚举和数据，由应用目标映射成本地化文字；这也让以后的 iOS 版自带文案。
 - 提示词内部是英文，语言名作为参数代入。
 - 用户设置：我的语言（默认简体中文）、学习语言（默认英语）、口音（默认美音）；都可以改。
@@ -1461,7 +1467,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 ### 14.5 模型评测
 
 - `DictEval` 是 `DictCore` 包里的可执行目标，用和应用完全相同的 `PromptBuilder`、`requestBody` 和 `ChatCompletionsModel`。
-- `make eval SUITE=<套件> RUNS=<次数>`：Makefile 从 `.env` 读出 `OPENAI_API_KEY` 放进子进程环境，不打印；每次运行有花费上限（默认 1 美元），按每次返回的用量累计。
+- `make eval SUITE=<套件> RUNS=<次数>`：`scripts/eval.sh` 从 `.env` 读出 `OPENAI_API_KEY` 放进子进程环境，不打印；每次运行有花费上限（默认 1 美元），按每次返回的用量累计。
 - 套件：方向（问句、被提及的词）、注入（每种操作）、纠错（正确输入原样、错误改对、逗号连接分句第一遍改掉、第二遍无改动）、润色、译成外语、查词卡片、找外语说法。
 - 用例是我们自己写的文字；每个用例跑 N 次，报告通过率和首个内容、完成耗时的 p50 / p90。
 - 判定的是不变量，不是具体文字：目标语言正确、不含答案、不含标签和提示词片段、链接和代码逐字保留、行数不变、错处能应用、严格解码成功、词元与选中词同一书写系统等。
@@ -1483,9 +1489,9 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 | 任务 | 内容 | 依赖 | 可并行 |
 |---|---|---|---|
-| M1.0 契约落地 | 把本文第 3.2、4.2、5、6.2、6.3、6.5 节的类型和协议原样写进 `DictCore` 和 `DictApp`，实现留空或抛「未实现」，能编译能通过 lint | 无 | 先做，其余都等它 |
+| M1.0 契约落地 | 把本文第 3.2、4.2、5、6.1（`TextModel`）、6.2、6.3、6.5 节的类型和协议原样写进 `DictCore` 和 `DictApp`，实现留空或抛「未实现」，能编译能通过 lint；`JSONValue` 因为契约类型的 `Codable` 依赖它，在这一步完整实现；预建 `CaptureFixture`、`DictEval` 空壳和 `make e2e`、`matrix`、`eval` 占位；文件归属见 `Design/m1-tasks.md` | 无 | 先做，其余都等它 |
 | M1.1 方向判定 | `resolveDirection`、`normalizedKey`，表驱动单测（中英、混写、同书写系统、第三种语言） | M1.0 | 是 |
-| M1.2 模型客户端 | `JSONValue`、`requestBody`、预设表（OpenAI、Ollama、自定义）、SSE 解析、`ChatCompletionsModel`、错误映射、去参数重试、看门狗、取消；`URLProtocol` 桩测试和 SSE 夹具 | M1.0 | 是 |
+| M1.2 模型客户端 | `requestBody`、预设表（OpenAI、Ollama、自定义）、SSE 解析、`ChatCompletionsModel`、错误映射、去参数重试、看门狗、取消；`URLProtocol` 桩测试和 SSE 夹具 | M1.0 | 是 |
 | M1.3 翻译提示词 | `PromptBuilder` 的两种翻译提示词、随机后缀；快照测试；`DictEval` 的方向和注入套件 | M1.0（评测部分依赖 M1.2） | 是 |
 | M1.4 取词 | 无障碍队列与超时、`AppKind` 判定、预热、第一段读取、选区矩形、菜单栏拷贝项、定向 ⌘C、`ClipboardGateway`、安全输入与权限失败、各阶段耗时日志、`--e2e` 调试入口的取词部分 | M1.0 | 是 |
 | M1.5 夹具与驱动 | `CaptureFixture` target（M1 只需非撒谎的控件和网页三种）、命令通道、事件日志；`make e2e`、`make matrix` 脚本与本机 HTTP 夹具页 | M1.0 | 是（与 M1.4 约定场景格式后并行） |

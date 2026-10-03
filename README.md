@@ -7,10 +7,12 @@ The app is at the skeleton stage: a menu bar icon with About and Quit.
 ## Layout
 
 - `App/` holds the macOS app target: sources, resources (String Catalog with English and Simplified Chinese) and unit tests.
-- `Packages/DictCore/` is a local Swift package for platform-independent logic, shared with a future iOS app.
+- `Packages/DictCore/` is a local Swift package for platform-independent logic, shared with a future iOS app; it also holds the `DictEval` prompt-evaluation tool.
+- `Fixtures/CaptureFixture/` is a test app for end-to-end capture and replace tests; `make build` builds it too.
 - `Config/` holds the xcconfig files; the product name, bundle identifier and signing team are defined only in `Config/Base.xcconfig`.
 - `project.yml` is the XcodeGen spec; the generated `DictApp.xcodeproj` is not tracked.
-- `scripts/` holds the smoke test and packaging scripts.
+- `scripts/` holds the smoke test, packaging and end-to-end driver scripts.
+- `Design/` holds the architecture document and the M1 file-ownership plan.
 
 ## Build and run
 
@@ -24,6 +26,9 @@ make test       # DictCore tests, app unit tests, end-to-end smoke test
 make lint       # swift format lint (Xcode's bundled swift-format)
 make format     # apply swift format in place
 make package    # Release build zipped into build/dist/
+make e2e        # capture and replace scenarios on the fixture app (not implemented yet)
+make matrix     # capture and replace matrix on real apps (not implemented yet)
+make eval       # prompt evaluation against a real model (not implemented yet)
 ```
 
 Pass `CONFIG=Release` to `build`, `run` or `smoke` to use the Release build ("Dict", bundle id `au.ibra.dict`).

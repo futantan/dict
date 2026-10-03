@@ -61,11 +61,29 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/$(DICT_APP_NAME).app/Contents/MacOS/$(DICT_APP_NAME)
         BUNDLE_LOADER: $(TEST_HOST)
 
+  # End-to-end test fixture (architecture 14.3). Built with the DictApp scheme so that
+  # `make build` keeps it compiling; it is never embedded in the app.
+  CaptureFixture:
+    type: application
+    platform: macOS
+    sources:
+      - Fixtures/CaptureFixture/Sources
+      - path: Fixtures/CaptureFixture/Resources
+        optional: true
+    settings:
+      base:
+        PRODUCT_NAME: CaptureFixture
+        PRODUCT_BUNDLE_IDENTIFIER: $(DICT_BUNDLE_ID).fixture
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSHumanReadableCopyright: Licensed under GPL-3.0-or-later.
+        ENABLE_APP_SANDBOX: NO
+
 schemes:
   DictApp:
     build:
       targets:
         DictApp: all
+        CaptureFixture: all
     test:
       targets:
         - DictAppTests

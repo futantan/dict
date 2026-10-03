@@ -10,7 +10,8 @@ let package = Package(
     .library(name: "DictCore", targets: ["DictCore"])
   ],
   targets: [
-    .target(name: "DictCore"),
+    .target(name: "DictCore", resources: [.process("Resources")]),
+    .executableTarget(name: "DictEval", dependencies: ["DictCore"]),
     .testTarget(name: "DictCoreTests", dependencies: ["DictCore"]),
   ]
 )

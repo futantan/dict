@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import Carbon.HIToolbox
+import Foundation
+import Testing
+
+@testable import DictApp
+
+/// Registers real Carbon hotkeys on obscure combinations (⌃⌥⌘ with F16–F19) and always
+/// unregisters them. Serialized because hotkeys are process-wide.
+@MainActor
+@Suite(.serialized)
+final class HotkeyCenterTests {
+  private let suiteName = "HotkeyCenterTests.\(UUID().uuidString)"
+  private let defaults: UserDefaults
+  private var centers: [HotkeyCenter] = []
+
+  private static let hyper: KeyCombo.Modifiers = [.control, .option, .command]
+  private let f16 = KeyCombo(keyCode: UInt16(kVK_F16), modifiers: hyper)
+  private let f17 = KeyCombo(keyCode: UInt16(kVK_F17), modifiers: hyper)
+  private let f18 = KeyCombo(keyCode: UInt16(kVK_F18), modifiers: hyper)
+  private let f19 = KeyCombo(keyCode: UInt16(kVK_F19), modifiers: hyper)
+
+  init() throws {
+    defaults = try #require(UserDefaults(suiteName: suiteName))
+  }
+
+  deinit {
+    UserDefaults.standard.removePersistentDomain(forName: suiteName)
+  }
+
+  private func makeCenter() -> HotkeyCenter {
+    let center = HotkeyCenter(defaults: defaults)
+    centers.append(center)
+    center.start()
+    return center
+  }
+
+  private func stopAll() {
+    centers.forEach { $0.stop() }
+  }
+
+  /// Whether `combo` is currently held by this process: registering it again must fail.
+  private func isHeld(_ combo: KeyCombo) -> Bool {
+    do {
+      try CarbonHotkey.register(combo) {}.unregister()
+      return false
+    } catch {
+      return error.status == eventHotKeyExistsErr
+    }
+  }
+
+  @Test func assigningRegistersAndPersists() {
+    defer { stopAll() }
+    let center = makeCenter()
+
+    #expect(center.assign(f18, to: .read) == nil)
+    #expect(center.combos[.read] == f18)
+    #expect(isHeld(f18))
+
+    center.stop()
+    #expect(!isHeld(f18))
+
+    let restored = makeCenter()
+    #expect(restored.combos[.read] == f18)
+    #expect(restored.problems.isEmpty)
+    #expect(isHeld(f18))
+  }
+
+  @Test func changingTheComboReleasesTheOldOne() {
+    defer { stopAll() }
+    let center = makeCenter()
+
+    #expect(center.assign(f18, to: .write) == nil)
+    #expect(center.assign(f19, to: .write) == nil)
+
+    #expect(!isHeld(f18))
+    #expect(isHeld(f19))
+  }
+
+  @Test func theTwoRolesCannotShareACombo() {
+    defer { stopAll() }
+    let center = makeCenter()
+
+    #expect(center.assign(f18, to: .read) == nil)
+    #expect(center.assign(f18, to: .write) == .usedBy(.read))
+    #expect(center.combos[.write] == nil)
+  }
+
+  @Test func failedRegistrationRollsBackToTheOldCombo() throws {
+    defer { stopAll() }
+    let center = makeCenter()
+    #expect(center.assign(f16, to: .read) == nil)
+
+    let squatter = try CarbonHotkey.register(f17) {}
+    defer { squatter.unregister() }
+
+    #expect(center.assign(f17, to: .read) == .registrationFailed(OSStatus(eventHotKeyExistsErr)))
+    #expect(center.combos[.read] == f16)
+    #expect(isHeld(f16))
+
+    let reloaded = HotkeyStore(defaults: defaults).load()
+    #expect(reloaded[.read] == f16)
+  }
+
+  @Test func clearingUnregistersAndForgets() {
+    defer { stopAll() }
+    let center = makeCenter()
+    #expect(center.assign(f18, to: .read) == nil)
+
+    center.clear(.read)
+
+    #expect(center.combos[.read] == nil)
+    #expect(!isHeld(f18))
+    #expect(HotkeyStore(defaults: defaults).load().isEmpty)
+  }
+
+  @Test func pausingReleasesTheCombosUntilResumed() {
+    defer { stopAll() }
+    let center = makeCenter()
+    #expect(center.assign(f18, to: .read) == nil)
+
+    center.isPaused = true
+    #expect(!isHeld(f18))
+
+    center.isPaused = false
+    #expect(isHeld(f18))
+  }
+
+  @Test func aComboTakenAtLaunchIsReportedNotDropped() throws {
+    defer { stopAll() }
+    HotkeyStore(defaults: defaults).save([.read: f18])
+    let squatter = try CarbonHotkey.register(f18) {}
+    defer { squatter.unregister() }
+
+    let center = makeCenter()
+
+    #expect(center.combos[.read] == f18)
+    #expect(center.problems[.read] == .registrationFailed(OSStatus(eventHotKeyExistsErr)))
+  }
+
+  /// Sends the Carbon "hotkey pressed" event straight to the app's event target, which is
+  /// the path a real key press takes after the window server matches the hotkey.
+  /// Real key presses are on the manual checklist.
+  @Test func aHotkeyEventDispatchesTheRole() throws {
+    defer { stopAll() }
+    let center = makeCenter()
+    var pressed: [HotkeyRole] = []
+    center.onPress = { pressed.append($0) }
+    #expect(center.assign(f18, to: .write) == nil)
+    let id = try #require(center.registrations[.write]).id
+
+    var event: EventRef?
+    #expect(
+      CreateEvent(
+        nil, OSType(kEventClassKeyboard), UInt32(kEventHotKeyPressed), 0,
+        EventAttributes(kEventAttributeNone), &event) == noErr)
+    let created = try #require(event)
+    defer { ReleaseEvent(created) }
+    var hotKeyID = EventHotKeyID(signature: CarbonHotkey.signature, id: id)
+    #expect(
+      SetEventParameter(
+        created, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+        MemoryLayout<EventHotKeyID>.size, &hotKeyID) == noErr)
+
+    #expect(SendEventToEventTarget(created, GetApplicationEventTarget()) == noErr)
+    #expect(pressed == [.write])
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add ⌃, ⌥ or ⌘ so the key does not type text." : {
+      "comment" : "A shortcut was recorded without a modifier key",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请加上 ⌃、⌥ 或 ⌘，否则这个键会输入文字。"
+          }
+        }
+      }
+    },
+    "Choose your shortcuts" : {
+      "comment" : "Title of the onboarding step that picks the two shortcuts",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择快捷键"
+          }
+        }
+      }
+    },
+    "Correct, polish or translate what you are writing." : {
+      "comment" : "What the Write shortcut does",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纠错、润色或翻译你正在写的文字。"
+          }
+        }
+      }
+    },
+    "Look up or translate the selected text." : {
+      "comment" : "What the Read shortcut does",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查词或翻译选中的文字。"
+          }
+        }
+      }
+    },
+    "Press keys…" : {
+      "comment" : "Shown in the shortcut field while waiting for a key press",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请按下组合键…"
+          }
+        }
+      }
+    },
+    "Read" : {
+      "comment" : "Name of the shortcut that looks up or translates the selection",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读"
+          }
+        }
+      }
+    },
+    "Record Shortcut" : {
+      "comment" : "Shortcut field with no shortcut; clicking it starts recording",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录制快捷键"
+          }
+        }
+      }
+    },
+    "Remove shortcut" : {
+      "comment" : "Help tag of the button that removes a shortcut",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除快捷键"
+          }
+        }
+      }
+    },
+    "Select text in any app and press a shortcut. Pick combinations you do not use elsewhere, such as ⌃⌥ with a letter." : {
+      "comment" : "Explanation in the onboarding step that picks the two shortcuts",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在任意应用里选中文字，然后按快捷键。请选择别处没有用到的组合，例如 ⌃⌥ 加一个字母。"
+          }
+        }
+      }
+    },
+    "Shortcuts with only ⌘ clash with app menus. Add ⌃ or ⌥." : {
+      "comment" : "A shortcut used only Command (and maybe Shift)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只带 ⌘ 的快捷键会与应用菜单冲突，请加上 ⌃ 或 ⌥。"
+          }
+        }
+      }
+    },
+    "Space" : {
+      "comment" : "Name of the space bar key",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空格"
+          }
+        }
+      }
+    },
+    "The Read shortcut already uses this." : {
+      "comment" : "The other shortcut already has this combination",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「读」快捷键已经在用这个组合。"
+          }
+        }
+      }
+    },
+    "The Write shortcut already uses this." : {
+      "comment" : "The other shortcut already has this combination",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「写」快捷键已经在用这个组合。"
+          }
+        }
+      }
+    },
+    "This is an accent key in the %@ layout." : {
+      "comment" : "The shortcut is a dead key. The argument is a keyboard layout name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个组合在「%@」布局下是重音符号键。"
+          }
+        }
+      }
+    },
+    "This types “%@” with the %@ layout." : {
+      "comment" : "The shortcut would type a letter. The arguments are the letter and a keyboard layout name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This types “%1$@” with the %2$@ layout."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个组合在「%2$@」布局下会输入“%1$@”。"
+          }
+        }
+      }
+    },
+    "Write" : {
+      "comment" : "Name of the shortcut that corrects or translates what the user is writing",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写"
+          }
+        }
+      }
+    },
+    "You can change them later in Settings." : {
+      "comment" : "Footnote in the onboarding step that picks the two shortcuts",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之后可以在设置里更改。"
+          }
+        }
+      }
+    },
+    "macOS already uses this shortcut." : {
+      "comment" : "The shortcut is reserved by the system",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 已经在用这个快捷键。"
+          }
+        }
+      }
+    },
+    "macOS did not accept this shortcut (error %d). Try another one." : {
+      "comment" : "Registering the global shortcut failed. The argument is an error number",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 没有接受这个快捷键（错误 %d），请换一个。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

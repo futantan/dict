@@ -13,16 +13,17 @@ enum UILock {
   static let staleAfter: TimeInterval = 600
 
   /// Runs `body` while holding the lock, releasing it on every exit path.
-  static func with<T>(_ reason: String, _ body: () throws -> T) rethrows -> T {
-    acquire(reason)
+  static func with<T>(_ reason: String, _ body: () throws -> T) throws -> T {
+    try acquire(reason)
     let cleanup = Cleanup.add { release() }
     defer { Cleanup.run(cleanup) }
     return try body()
   }
 
-  private static func acquire(_ reason: String) {
+  private static func acquire(_ reason: String) throws {
     var announced = false
     while mkdir(path, 0o755) != 0 {
+      guard errno == EEXIST else { throw DriverError("cannot create \(path): errno \(errno)") }
       if let modified = try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate]
         as? Date, Date().timeIntervalSince(modified) > staleAfter
       {

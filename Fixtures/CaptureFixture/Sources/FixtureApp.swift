@@ -68,7 +68,7 @@ final class FixtureApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     let window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 560, height: 900),
+      contentRect: NSRect(x: 0, y: 0, width: 560, height: 820),
       styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered,
       defer: false)
     window.title = "CaptureFixture"

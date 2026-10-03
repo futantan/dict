@@ -19,7 +19,7 @@ final class WebControls: NSObject, WKScriptMessageHandler, WKNavigationDelegate 
     super.init()
     configuration.userContentController.add(self, name: "fixture")
     webView.navigationDelegate = self
-    webView.heightAnchor.constraint(equalToConstant: 330).isActive = true
+    webView.heightAnchor.constraint(equalToConstant: 280).isActive = true
     guard let page = Bundle.main.url(forResource: "page", withExtension: "html") else {
       fatalError("page.html is missing from the fixture's resources")
     }

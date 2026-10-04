@@ -3,10 +3,11 @@
 // Window activation test: launches the built app the way `open` does (Launch Services, not
 // activated) and checks that each of its own windows comes up in front and key:
 // - the first-run window on a fresh launch,
-// - Settings… and About from the menu bar item, pressed through the Accessibility API.
-// Each case runs in a new instance that is quit afterwards. The first-run case passes
-// `-onboarding.completed NO`, an argument-domain override, so the user's preferences are
-// read but never written.
+// - Settings… and About from the menu bar item, pressed through the Accessibility API,
+// - the first-run window or Settings when the running app is opened again (reopen event).
+// Each case runs in a new instance that is quit afterwards. The cases pass
+// `-onboarding.completed NO` or `YES`, an argument-domain override, so the user's
+// preferences are read but never written.
 // It takes focus, so it holds /private/tmp/dict-ui.lock while it runs. The process running
 // it (your terminal) needs Accessibility permission.
 //
@@ -214,6 +215,33 @@ for (what, pick) in [
 ] {
   let app = launch(["--no-onboarding"])
   pressMenuItem(app, what, pick)
+  passed.append(expectFrontAndKey(app, what))
+  quitLaunched()
+}
+
+// Opening Dict again while it runs, after launching it with no window: the reopen Apple
+// event is what Finder, Spotlight and `open` send to a running app. It goes to this
+// instance's pid, because another copy of the app may be running too.
+for (completed, what) in [
+  ("NO", "first-run window on reopen"), ("YES", "Settings window on reopen"),
+] {
+  let app = launch(["--no-onboarding", "-onboarding.completed", completed])
+  _ = waitFor(
+    "menu bar item \"\(appName)\" did not appear",
+    { menuBarItem(pid: app.processIdentifier, name: appName) })
+  spin(0.5)
+  if let front = normalWindows().first, front.pid == app.processIdentifier {
+    fail("a window showed before reopening")
+  }
+  let reopen = NSAppleEventDescriptor(
+    eventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEReopenApplication),
+    targetDescriptor: NSAppleEventDescriptor(processIdentifier: app.processIdentifier),
+    returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
+  do {
+    _ = try reopen.sendEvent(options: [.noReply], timeout: 5)
+  } catch {
+    fail("could not send the reopen event: \(error)")
+  }
   passed.append(expectFrontAndKey(app, what))
   quitLaunched()
 }

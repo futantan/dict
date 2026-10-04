@@ -5,13 +5,15 @@ import Foundation
 import SwiftUI
 import Translation
 
-/// Apple's on-device Translation framework, the zero-configuration engine (architecture 6.5).
+/// Apple's on-device Translation framework, used only for languages already installed on this
+/// Mac (architecture 6.5).
 ///
 /// On macOS 15 a `TranslationSession` only comes from SwiftUI's `.translationTask`, which the
 /// result panel's view carries through `appleTranslationHost()`. A request sets the
 /// configuration that modifier watches and waits until the session arrives. The panel is
-/// visible by then, so the system can attach its language download prompt to it. From macOS 26
-/// a session for languages that are already installed is constructed directly, with no view.
+/// visible by then. The engine only asks for installed languages, so no download prompt is
+/// ever needed. From macOS 26 a session for installed languages is constructed directly, with
+/// no view.
 @MainActor
 @Observable
 final class AppleTranslator {
@@ -38,14 +40,10 @@ final class AppleTranslator {
   }
 
   /// Whether the framework translates between the two languages and has them downloaded.
-  /// Without a known source language the framework recognizes it when translating, so the
-  /// pair counts as installed and any problem surfaces as a translation error.
-  nonisolated static func availability(from source: Locale.Language?, to target: Locale.Language)
+  nonisolated static func availability(from source: Locale.Language, to target: Locale.Language)
     async -> AppleTranslationAvailability
   {
-    guard let source else { return .installed }
-    return AppleTranslationAvailability(
-      await LanguageAvailability().status(from: source, to: target))
+    AppleTranslationAvailability(await LanguageAvailability().status(from: source, to: target))
   }
 
   /// Translates `text`; throws the framework's `TranslationError`, or `CancellationError`.
@@ -115,14 +113,14 @@ final class AppleTranslator {
 /// What Apple Translation can do for a language pair right now.
 enum AppleTranslationAvailability: Sendable, Equatable {
   case installed
-  /// Supported, but the languages are not downloaded yet.
-  case needsDownload
+  /// Supported, but the languages are not on this Mac; Dict treats the pair as unavailable.
+  case notInstalled
   case unsupported
 
   init(_ status: LanguageAvailability.Status) {
     switch status {
     case .installed: self = .installed
-    case .supported: self = .needsDownload
+    case .supported: self = .notInstalled
     case .unsupported: self = .unsupported
     @unknown default: self = .unsupported
     }
@@ -152,7 +150,7 @@ extension AppleTranslator: Translator {
 
 extension View {
   /// Lets `AppleTranslator.shared` obtain sessions through this view. The result panel's view
-  /// carries it, so the language download prompt has a visible window to attach to.
+  /// carries it.
   func appleTranslationHost() -> some View {
     translationTask(AppleTranslator.shared.configuration, action: AppleTranslator.serve)
   }

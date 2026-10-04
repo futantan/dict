@@ -24,10 +24,21 @@ private final class Gate {
   }
 }
 
-/// Answers each capture with the next scripted result, optionally after a gate.
+/// The user's clipboard, for a reader that copies the way the clipboard fallback does.
+@MainActor
+private final class FakeClipboard {
+  var text: String
+
+  init(_ text: String) { self.text = text }
+}
+
+/// Answers each capture with the next scripted result, optionally after a gate. With a
+/// clipboard it acts like the copy fallback: snapshot, copy the selection, wait at the gate
+/// for the copy, then restore the snapshot.
 @MainActor
 private final class StubReader: SelectionReader {
   var results: [(Result<Selection, CaptureFailure>, Gate?)]
+  var clipboard: FakeClipboard?
   private(set) var calls = 0
 
   init(_ results: [(Result<Selection, CaptureFailure>, Gate?)]) { self.results = results }
@@ -36,7 +47,10 @@ private final class StubReader: SelectionReader {
     #expect(policy == .allowed)
     calls += 1
     let (result, gate) = results.removeFirst()
+    let snapshot = clipboard?.text
+    if case .success(let selection) = result { clipboard?.text = selection.text }
     await gate?.wait()
+    if let snapshot { clipboard?.text = snapshot }
     return result
   }
 }
@@ -131,7 +145,6 @@ private final class Harness {
         return $0.hasPrefix("permissions.")
       },
       openSettings: { [unowned self] in opened.append("settings") },
-      openLanguageDownload: { [unowned self] in opened.append("languages") },
       mouseLocation: { mouse }))
 
   init(
@@ -280,22 +293,39 @@ struct SessionCoordinatorTests {
     #expect(harness.panel.calls.isEmpty)
   }
 
-  @Test func aNewPressCancelsTheCaptureInFlight() async {
-    let slow = Gate()
+  /// A second press while the first capture still waits for its copy would start a second
+  /// capture that snapshots the copied selection as "the user's clipboard" and restores it
+  /// last, leaving the selection on the clipboard. Presses before the panel shows are
+  /// ignored instead.
+  @Test func aPressWhileCapturingIsIgnored() async {
+    let copied = Gate()
     let harness = Harness([
-      (.success(selection("First")), slow), (.success(selection("Second")), nil),
+      (.success(selection("First")), copied), (.success(selection("Second")), copied),
     ])
+    let clipboard = FakeClipboard("the user's clipboard")
+    harness.reader.clipboard = clipboard
+
     harness.coordinator.hotkeyPressed(.read)
-    await Task.yield()
+    for _ in 0..<5 { await Task.yield() }
     harness.coordinator.hotkeyPressed(.read)
+    for _ in 0..<5 { await Task.yield() }
+    copied.open()
     await harness.coordinator.settle()
-    slow.open()
     for _ in 0..<10 { await Task.yield() }
 
-    #expect(harness.translator.requests.map(\.text) == ["Second"])
-    #expect(
-      !harness.panel.calls.contains(
-        .show(PanelState(source: "First", phase: .generating("")), .selection(bounds))))
+    #expect(clipboard.text == "the user's clipboard")
+    #expect(harness.reader.calls == 1)
+    #expect(harness.translator.requests.map(\.text) == ["First"])
+  }
+
+  /// Once the capture is over, presses work again.
+  @Test func aPressAfterTheCaptureEndedIsHandled() async {
+    let harness = Harness([(.failure(.ownApp), nil), (.success(selection("Hello")), nil)])
+    await harness.press()
+    await harness.press()
+
+    #expect(harness.reader.calls == 2)
+    #expect(harness.translator.requests.map(\.text) == ["Hello"])
   }
 
   @Test func theSameKeyWhileShownHidesAndCancels() async {
@@ -356,17 +386,30 @@ struct SessionCoordinatorTests {
     #expect(harness.translator.requests.map(\.text) == ["Hello", "Hello"])
   }
 
-  @Test func settingsAndDownloadActionsEndTheSession() async {
-    let harness = Harness([(.success(selection("Hello")), nil), (.success(selection("Hi")), nil)])
+  @Test func openSettingsEndsTheSession() async {
+    let harness = Harness([(.success(selection("Hello")), nil)])
     await harness.press()
     harness.coordinator.perform(TranslationStrings.openSettingsAction)
+
     #expect(harness.panel.calls.last == .hide)
-
-    await harness.press()
-    harness.coordinator.perform(TranslationStrings.downloadLanguagesAction)
-
-    #expect(harness.opened == ["settings", "languages"])
+    #expect(harness.opened == ["settings"])
     #expect(!harness.panel.isVisible)
+  }
+
+  /// The onboarding sample goes straight to the panel and the translator, without a capture.
+  @Test func sampleIsTranslatedWithoutReading() async {
+    let harness = Harness([])
+    let anchor = PanelAnchor.selection(CGRect(x: 10, y: 20, width: 300, height: 40))
+    harness.coordinator.translateSample("Hello", near: anchor)
+    await harness.coordinator.settle()
+
+    #expect(harness.reader.calls == 0)
+    #expect(
+      harness.panel.calls == [
+        .show(PanelState(source: "Hello", phase: .generating("")), anchor),
+        .update(PanelState(source: "Hello", phase: .generating("你"))),
+        .update(PanelState(source: "Hello", phase: .result("你好"))),
+      ])
   }
 
   @Test func permissionActionsGoToTheGuide() async {

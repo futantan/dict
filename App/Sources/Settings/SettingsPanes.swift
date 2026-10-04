@@ -94,11 +94,26 @@ struct LanguagesPane: View {
 struct ModelPane: View {
   let model: SettingsModel
 
+  var body: some View {
+    Form {
+      ModelSections(model: model)
+    }
+    .formStyle(.grouped)
+    .settingsPaneLayout()
+  }
+}
+
+/// The provider, model, key and "Test" sections of a grouped form, shared by the Model pane
+/// and the onboarding window. The key is saved when its field loses focus or the sections go
+/// away.
+struct ModelSections: View {
+  let model: SettingsModel
+
   @State private var isKeyVisible = false
   @FocusState private var isKeyFocused: Bool
 
   var body: some View {
-    Form {
+    Group {
       Section {
         Picker(
           String(localized: "Provider", table: "Settings", comment: "Settings field label"),
@@ -117,7 +132,7 @@ struct ModelPane: View {
           footnote(
             String(
               localized:
-                "Without a model, Dict translates with Apple Translation on this Mac. Correcting and polishing your writing need a model.",
+                "Dict translates with a model you choose, using your own API key or Ollama on this Mac. Correcting and polishing your writing need it too.",
               table: "Settings", comment: "Footer when no model provider is chosen"))
         }
       }
@@ -144,8 +159,6 @@ struct ModelPane: View {
         }
       }
     }
-    .formStyle(.grouped)
-    .settingsPaneLayout()
     .onChange(of: isKeyFocused) { _, focused in if !focused { model.commitKey() } }
     .onDisappear { model.commitKey() }
   }

@@ -13,11 +13,11 @@ public enum TranslationRecovery: Sendable, Equatable {
 }
 
 /// Decides how to recover from `error`, thrown by `ModelTranslator`. Any model failure falls
-/// back to Apple's framework when it supports the pair; a cut-off translation is kept.
+/// back to Apple's framework when its languages are installed; a cut-off translation is kept.
 public func translationRecovery(
-  after error: any Error, hasText: Bool, appleTranslationSupportsPair: Bool
+  after error: any Error, hasText: Bool, appleTranslationInstalled: Bool
 ) -> TranslationRecovery {
   if error is CancellationError { return .stop }
   if hasText, error as? ModelTranslationError == .truncated { return .keepPartial }
-  return appleTranslationSupportsPair ? .fallBack : .showError
+  return appleTranslationInstalled ? .fallBack : .showError
 }

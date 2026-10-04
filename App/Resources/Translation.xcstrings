@@ -12,17 +12,6 @@
         }
       }
     },
-    "Apple Translation doesn’t support these languages" : {
-      "comment" : "Title when no engine can translate the text",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple 翻译不支持这两种语言"
-          }
-        }
-      }
-    },
     "Couldn’t tell which language the text is in." : {
       "comment" : "Apple Translation could not recognize the source language",
       "localizations" : {
@@ -34,24 +23,13 @@
         }
       }
     },
-    "Download Languages…" : {
-      "comment" : "Button that opens the window that downloads translation languages",
+    "Dict translates with a model you choose, using your own API key. Add the key in Settings → Model, or use Ollama on this Mac." : {
+      "comment" : "How to set up a model for translating",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下载语言…"
-          }
-        }
-      }
-    },
-    "Download them to translate on this Mac, or in System Settings → General → Language & Region → Translation Languages." : {
-      "comment" : "How to download Apple Translation languages",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下载后即可在本机翻译；也可以在“系统设置 → 通用 → 语言与地区 → 翻译语言”中下载。"
+            "value" : "Dict 用你自己的 API 密钥请求你选择的模型来翻译。打开设置，在“模型”里填写密钥，或使用这台 Mac 上的 Ollama。"
           }
         }
       }
@@ -78,13 +56,13 @@
         }
       }
     },
-    "Set up a model in Settings to translate them." : {
-      "comment" : "How to translate a language pair Apple Translation does not support",
+    "Set up a model to translate" : {
+      "comment" : "Title when there is no model to translate with",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在设置里配置模型后即可翻译。"
+            "value" : "需要配置翻译模型"
           }
         }
       }
@@ -129,17 +107,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "译文超出长度上限，已被截断。"
-          }
-        }
-      }
-    },
-    "Translation languages aren’t downloaded" : {
-      "comment" : "Title when Apple Translation lacks a language pack",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "翻译语言尚未下载"
           }
         }
       }

@@ -8,7 +8,7 @@ private struct OtherError: Error {}
 
 struct TranslationRecoveryTests {
   @Test(arguments: [
-    // (error, has text, Apple supports the pair, expected)
+    // (error, has text, Apple Translation installed for the pair, expected)
     (ModelError.network(code: -1009) as any Error, false, true, TranslationRecovery.fallBack),
     (ModelError.network(code: -1009), true, true, .fallBack),
     (ModelError.missingKey, false, true, .fallBack),
@@ -20,7 +20,7 @@ struct TranslationRecoveryTests {
     (ModelTranslationError.refused, false, true, .fallBack),
     (ModelTranslationError.interrupted, true, true, .fallBack),
     (OtherError(), false, true, .fallBack),
-    // Without Apple Translation the error is shown
+    // Without installed Apple Translation languages the error is shown
     (ModelError.network(code: -1009), false, false, .showError),
     (ModelTranslationError.refused, false, false, .showError),
     (OtherError(), false, false, .showError),
@@ -35,7 +35,7 @@ struct TranslationRecoveryTests {
   ])
   func decision(error: any Error, hasText: Bool, apple: Bool, expected: TranslationRecovery) {
     #expect(
-      translationRecovery(after: error, hasText: hasText, appleTranslationSupportsPair: apple)
+      translationRecovery(after: error, hasText: hasText, appleTranslationInstalled: apple)
         == expected)
   }
 }

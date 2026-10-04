@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import SwiftUI
-import Translation
 
 /// The first-run window's content: one step at a time, with Back and Continue.
 struct OnboardingView: View {
@@ -16,7 +15,8 @@ struct OnboardingView: View {
         switch model.step {
         case .accessibility: AccessibilityStep(model: model, appName: appName)
         case .shortcuts: HotkeyStepView(center: model.hotkeys)
-        case .translation: TranslationStep(model: model)
+        case .model: ModelStep(model: model, appName: appName)
+        case .tryIt: TryItStep(model: model)
         }
       }
       .frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
@@ -34,20 +34,24 @@ struct OnboardingView: View {
         if model.step != .accessibility {
           Button(String(localized: "Back", comment: "Onboarding button")) { model.goBack() }
         }
-        Button(
-          model.step == .translation
-            ? String(localized: "Done", comment: "Onboarding button that finishes it")
-            : String(localized: "Continue", comment: "Onboarding button")
-        ) { model.goForward() }
-        .keyboardShortcut(.defaultAction)
-        .disabled(!model.canContinue)
+        Button(forwardTitle) { model.goForward() }
+          .keyboardShortcut(.defaultAction)
+          .disabled(!model.canContinue)
       }
       .padding(.horizontal, 24)
       .padding(.vertical, 16)
     }
     .frame(width: Self.width)
     .fixedSize(horizontal: false, vertical: true)
-    .translationTask(model.preparation, action: OnboardingModel.prepare)
+  }
+
+  private var forwardTitle: String {
+    if model.isSkipping {
+      return String(localized: "Not Now", comment: "Onboarding button that skips the model step")
+    }
+    return model.step == .tryIt
+      ? String(localized: "Done", comment: "Onboarding button that finishes it")
+      : String(localized: "Continue", comment: "Onboarding button")
   }
 }
 
@@ -62,21 +66,6 @@ private struct StepHeader: View {
       Text(message)
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
-    }
-  }
-}
-
-/// A line with a status symbol, for granted permissions and ready languages.
-private struct StatusLine: View {
-  let text: String
-  let symbol: String
-  let tint: Color
-
-  var body: some View {
-    Label {
-      Text(text).fixedSize(horizontal: false, vertical: true)
-    } icon: {
-      Image(systemName: symbol).foregroundStyle(tint)
     }
   }
 }
@@ -98,10 +87,13 @@ private struct AccessibilityStep: View {
             """,
           comment: "Onboarding accessibility explanation; both arguments are the app name"))
       if model.permissions.accessibility {
-        StatusLine(
-          text: String(
-            localized: "Accessibility is on.", comment: "Onboarding: the permission is granted"),
-          symbol: "checkmark.circle.fill", tint: .green)
+        Label {
+          Text(
+            String(
+              localized: "Accessibility is on.", comment: "Onboarding: the permission is granted"))
+        } icon: {
+          Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+        }
       } else {
         Button(
           String(
@@ -115,86 +107,82 @@ private struct AccessibilityStep: View {
   }
 }
 
-private struct TranslationStep: View {
+/// The provider, model and key, with the Settings window's own sections and "Test" button.
+private struct ModelStep: View {
   let model: OnboardingModel
-
-  /// "Chinese, Simplified" rather than "Chinese": Chinese is named with its script.
-  private func name(_ language: Locale.Language) -> String {
-    let script = language.languageCode == .chinese ? language.script?.identifier : nil
-    let identifier = [language.languageCode?.identifier, script].compactMap { $0 }
-      .joined(separator: "-")
-    return Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-  }
+  let appName: String
 
   var body: some View {
-    let learning = name(model.pair.learning)
-    let mine = name(model.pair.mine)
-    VStack(alignment: .leading, spacing: 20) {
+    VStack(alignment: .leading, spacing: 0) {
       StepHeader(
         title: String(
-          localized: "Download translation languages",
-          comment: "Title of the onboarding step that downloads Apple Translation languages"),
+          localized: "Add your API key",
+          comment: "Title of the onboarding step that sets up a model"
+        ),
         message: String(
           localized: """
-            Without a model, Dict translates on this Mac with Apple Translation. It needs \
-            \(learning) and \(mine) downloaded once.
+            \(appName) translates with a model you choose, using your own API key. Paste the key \
+            and press Test. You can also do this later in Settings.
             """,
-          comment: "Onboarding translation explanation; the arguments are two language names"))
-      status(learning: learning, mine: mine)
-      Divider()
-      HStack(alignment: .firstTextBaseline) {
-        Text(
-          String(
-            localized:
-              "For streaming translations from OpenAI or another provider, add an API key in Settings.",
-            comment: "Onboarding note about setting up a model")
-        )
-        .foregroundStyle(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
-        Spacer(minLength: 12)
-        Button(String(localized: "Open Settings…", comment: "Onboarding button")) {
-          model.openSettings()
+          comment: "Onboarding model explanation; the argument is the app name")
+      )
+      .padding([.horizontal, .top], 24)
+
+      Form {
+        ModelSections(model: model.settings)
+      }
+      .formStyle(.grouped)
+      .scrollDisabled(true)
+      // The grouped form insets its sections by 20 pt; 4 more line them up with the title.
+      .padding(.horizontal, 4)
+      .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+}
+
+/// A sample translated in the real result panel, before the window closes.
+private struct TryItStep: View {
+  let model: OnboardingModel
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 20) {
+      StepHeader(
+        title: String(localized: "Try it", comment: "Title of the onboarding step with a sample"),
+        message: message)
+
+      VStack(alignment: .leading, spacing: 12) {
+        Text(OnboardingModel.sample)
+          .font(.system(size: 14))
+          .lineSpacing(3)
+          .textSelection(.enabled)
+          .fixedSize(horizontal: false, vertical: true)
+        HStack {
+          Spacer()
+          Button(
+            String(
+              localized: "Translate Sample",
+              comment: "Onboarding button that translates the sample in the result panel")
+          ) { model.translateSample() }
         }
+      }
+      .padding(14)
+      .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+      .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) {
+        model.sampleFrame = $0
       }
     }
     .padding(24)
   }
 
-  @ViewBuilder
-  private func status(learning: String, mine: String) -> some View {
-    switch model.languages {
-    case .checking, .downloading:
-      HStack(spacing: 8) {
-        ProgressView().controlSize(.small)
-        Text(
-          model.languages == .checking
-            ? String(localized: "Checking…", comment: "Onboarding: checking the languages")
-            : String(
-              localized: "Waiting for the download…",
-              comment: "Onboarding: the system is downloading the languages")
-        )
-        .foregroundStyle(.secondary)
-      }
-    case .installed:
-      StatusLine(
-        text: String(
-          localized: "\(learning) and \(mine) are ready.",
-          comment: "Onboarding: both languages are downloaded; the arguments are language names"),
-        symbol: "checkmark.circle.fill", tint: .green)
-    case .needsDownload:
-      Button(
-        String(
-          localized: "Download Languages…",
-          comment: "Onboarding button that asks macOS to download the translation languages")
-      ) { model.downloadLanguages() }
-      .controlSize(.large)
-    case .unsupported:
-      StatusLine(
-        text: String(
-          localized:
-            "Apple Translation doesn’t support \(learning) and \(mine). Set up a model in Settings instead.",
-          comment: "Onboarding: the pair is not supported; the arguments are language names"),
-        symbol: "exclamationmark.triangle.fill", tint: .orange)
+  private var message: String {
+    guard let combo = model.hotkeys.combos[.read] else {
+      return String(
+        localized: "See a translation in the panel before you start.",
+        comment: "Onboarding sample explanation when no Read shortcut is set")
     }
+    return String(
+      localized:
+        "Select text in any app and press \(model.hotkeys.displayString(combo)). Or translate this sample now:",
+      comment: "Onboarding sample explanation; the argument is the Read shortcut, such as ⌃⌥D")
   }
 }

@@ -415,20 +415,17 @@ Apple 翻译在本应用里实际产出译文这一点**未核实**：框架能�
 - 只用 OpenAI 的模型测过；Ollama 和其他兼容服务没有用这套提示词评测过；Ollama 的 `http://localhost` 是否被系统的传输安全策略默认放行**未核实**。
 - kaikki.org 每周在同一地址覆盖数据文件、不留旧版，并已宣布要撤掉我们用的按语言拆分的文件；现在靠本地按哈希保存的缓存（约 628 MB）复现，自存镜像放在哪里**等 Tantan 定**。
 - 订阅以后卖什么（托管模型、云同步、高质量语音）未定，不影响 v1 结构。
+- 「为 Chrome 和 Electron 应用开启无障碍支持」没有设置界面，只有两个 UserDefaults 键（Chromium 默认开、Electron 默认关），也没有 Electron 首次取词时的询问；所以默认配置下 VS Code 等 Electron 应用不预热，取词始终走兜底（计划 M4）。
+- 设置里不能列出模型：Ollama 和自定义服务商的模型名要手填，没有「列出可用模型」，自定义服务商没有关思考、输出上限字段、JSON 模式的下拉（计划 M2.9）。
+- 「测试」按钮只发一个最小请求，收到第一个事件就算成功；没有规格里的首字耗时、卡片严格解码、思考检测三项检查（计划 M2.9）。
+- 模型评测只有翻译提示词的 `direction`、`injection`、`fallback` 三个套件；卡片、纠错、润色、译成外语、找外语说法的套件随 M2、M3 加入。
+- 上下文句的切句在应用目标的 `contextSentence(in:selection:)` 里，`DictCore` 的 `sentence(containing:in:)` 还是存根（计划 M2.2）。
+- 无障碍支持开关、列模型、「测试」三项检查这三项原来没有里程碑归属，上面的归属记在规格第 16.1 节第 9 项，等 Tantan 确认。
 
 ### 9.4 规格与代码的差异
 
-核实时发现 `Design/architecture.md` 里以下描述与当前代码不一致（不含明确写成以后里程碑的部分）：
-
-1. 第 2.2 节说 `DictCore` 依赖 Foundation、NaturalLanguage、SQLite3、Security；实际只 import Foundation、NaturalLanguage、Synchronization；SQLite3 要到 `Lexicon` 才用，Keychain 读写在应用目标的 `SecretStore.swift`。
-2. 第 3.3 节说设置里有「为 Chrome 和 Electron 应用开启无障碍支持」的开关、Electron 首次取词时询问；实际只有 UserDefaults 键，设置只有语言、模型、快捷键三页，也没有询问。
-3. 第 3.5、5.3 节说切句是 `DictCore` 的 `sentence(containing:in:)`；它是存根，实际在用的是 `App/Sources/Capture/SecondStage.swift` 里的 `contextSentence`。
-4. 第 6.2 节说 Ollama 从 `GET /api/tags` 列出已装模型、自定义服务商可调 `GET /models`，并有关思考、输出上限字段、JSON 模式的下拉；代码里没有任何列模型的请求，`ModelPreferences` 只有服务商、模型名、Base URL 三项。
-5. 第 6.8 节说「测试」按钮依次测翻译首字耗时、卡片严格解码、是否收到思考增量；实际 `SettingsModel.probe` 只发一个「Reply with the single word OK」的请求，收到第一个事件就算成功。
-6. 第 11.1 节列的隐藏条件是 Esc、点面板外、再按同一快捷键；代码还会在切到别的应用时隐藏（`PanelDismissal.appSwitched`）。
-7. 第 2.4、14.1 节的 `make` 目标表漏了 `e2e-live`、`window-test`、`import-key`、`test-dict`、`dict-stats`、`dict-update`；`make test` 实际也包含 `test-dict`。
-8. 第 14.5 节列了方向、注入、纠错、润色、译成外语、查词卡片、找外语说法等评测套件；现在只有 `direction`、`injection`、`fallback`。
-9. 第 2.3 节说模型客户端是「无状态的 Sendable 值」；它是 `Sendable` 结构体，但共享进程级的 `DroppedParameters.shared` 记忆（行为上合理，只是描述不精确）。
+规格 `Design/architecture.md` 已与 2026-10-04 的代码对齐：写错的描述已改正，设计了但还没做的部分在原处用「现状：」写明并标出计划的里程碑。
+这一轮核实时发现的未实现功能都已并入第 9.3 节的已知限制，目前没有已知的规格与代码不一致。
 
 ## 10. 想了解 X 去看哪里
 

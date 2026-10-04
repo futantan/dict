@@ -6,7 +6,11 @@
 
 ## 0. 读法
 
-想先建立整体理解，请先读上层概览 `Design/overview.md`，它说明现在已实现什么，并列出本文与代码不一致的地方。
+想先建立整体理解，请先读上层概览 `Design/overview.md`，它说明现在已实现什么、还有哪些已知限制。
+
+本文是设计，覆盖到 v1 的全部里程碑；第 15 节写明每个里程碑做哪些事。
+设计了但代码里还没有、又容易被误认为已有的内容，在原处用「现状：」开头的句子写明现在的样子，并说明计划在哪个里程碑做。
+第 15 节明确归入以后里程碑的整块功能（查词、词库、发音、写作与替换、划词图标、截图取词、回顾与复习、发布准备里的登录时启动和移到 `/Applications` 提示等）不再逐句标注。
 
 ### 0.1 证据标注
 
@@ -116,11 +120,16 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `DictCore` 库 | `Packages/DictCore/Sources/DictCore` | macOS 15、iOS 18 | 不依赖任何界面框架的全部逻辑：文本分析、提示词、模型客户端与服务商预设、结构化输出的后处理、改写校验与 diff、即时词典查询、词库存储、复习排程、音色选择规则、偏好设置的数据类型 |
 | `DictEval` 可执行 | `Packages/DictCore/Sources/DictEval` | macOS | 用真实模型跑提示词评测，不进 CI（第 14.5 节） |
 | `DictApp` 应用 | `App/Sources` | macOS | 菜单栏、全局快捷键、取词（无障碍、剪贴板、合成按键）、替换、面板与窗口、Apple 翻译框架宿主、拼写检查、系统语音、OCR、权限引导、Keychain 读写 |
-| `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（新增，`project.yml` 里加一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
-| 词典构建工具 | `tools/build-dict`（新增，独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
+| `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（`project.yml` 里的一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
+| 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
-`DictCore` 只依赖 Foundation、NaturalLanguage、SQLite3（系统 `libsqlite3`）、Security 这些 iOS 上也有的系统框架。
-它不 import AppKit、SwiftUI、ApplicationServices、Carbon、AVFoundation、Translation、Vision。
+现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型；即时词典查询、词库存储、音色选择规则（M2），结构化输出的后处理与改写校验（M2、M3），复习排程（M5）都还没有。
+选区分类 `classify`、`sentence(containing:in:)`、`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
+
+`DictCore` 只用 iOS 上也有的系统框架。
+现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）；M2 的 `Lexicon` 和 `VocabStore` 加入后再用 SQLite3（系统 `libsqlite3`）。
+Keychain 读写（Security 框架）在 `DictApp` 的 `App/Sources/Settings/SecretStore.swift`，`DictCore` 不碰 Keychain。
+它不 import AppKit、SwiftUI、ApplicationServices、Carbon、AVFoundation、Translation、Vision、Security。
 凡是需要这些框架的能力，`DictCore` 只定义协议或纯函数，实现放在 `DictApp`；以后 iOS 版提供自己的实现。
 
 不引入第三方库。
@@ -134,8 +143,9 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 - 界面、剪贴板、合成按键、全局快捷键、系统语音、键盘布局查询都在主 actor 上。
   其中键盘布局查询（`TISCopyCurrentKeyboardLayoutInputSource`、`UCKeyTranslate`）要求主线程。
 - 无障碍调用（`AXUIElement…`）都在一个专用的串行队列上执行，每条消息用 `AXUIElementSetMessagingTimeout` 设超时，调用方通过 `async` 接口等待结果，主线程永远不被跨进程消息阻塞。
-- 每个 sqlite 文件由一个 actor 独占一条连接：`Lexicon`（只读词典）、`VocabStore`（词库）。
-- 模型客户端是无状态的 `Sendable` 值，内部用 `URLSession` 的异步字节流。
+- 每个 sqlite 文件由一个 actor 独占一条连接：`Lexicon`（只读词典）、`VocabStore`（词库）；两者都在 M2 加入。
+- 模型客户端 `ChatCompletionsModel` 是不可变的 `Sendable` 结构体，内部用 `URLSession` 的异步字节流。
+  它唯一共享的可变状态是进程级的 `DroppedParameters.shared`：服务商以 400 拒绝过的可选参数按「端点 + 模型」记在这里（第 6.4 节），由 `Mutex` 保护，之后的请求都不再带；测试注入自己的实例。
 
 `AXUIElement` 不是 `Sendable`，用一个 `@unchecked Sendable` 的包装类型跨队列传递，理由写在类型注释里：无障碍元素是指向别的进程的不可变引用，所有调用都是跨进程消息，并且只在无障碍队列上发起。
 
@@ -146,20 +156,29 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `Config/Base.xcconfig` | 产品名、bundle id、签名团队 `M5ZVXWJNK8` 的唯一来源 |
 | `Config/Debug.xcconfig` | 开发版：名字 `Dict Dev`，bundle id `au.ibra.dict.dev`，与正式版并存，辅助功能授权和 Keychain 条目各自独立 |
 | `Config/Release.xcconfig` | 正式版：`Dict`，`au.ibra.dict`，不注入调试权限 |
-| `project.yml` | XcodeGen 描述；新增 `CaptureFixture` target |
+| `project.yml` | XcodeGen 描述，含 `DictApp`、`DictAppTests`、`CaptureFixture` 三个 target |
 | `App/` | 应用源码、资源（String Catalog，英文和简体中文）、单元测试 |
 | `Packages/DictCore/` | 跨平台逻辑与 `DictEval` |
 | `Fixtures/CaptureFixture/` | 夹具应用 |
+| `Fixtures/E2E/scenarios.json` | 夹具端到端场景 |
 | `tools/build-dict/` | 词典构建工具 |
-| `scripts/` | 冒烟测试、打包、端到端测试驱动 |
+| `scripts/` | 冒烟测试、窗口测试、打包、端到端测试驱动（`driver/`）、模拟服务商故障的 `fake-model.py`、评测与导入 Key 的脚本 |
 
-现有 `make` 目标保留（`generate`、`build`、`test`、`test-core`、`test-app`、`smoke`、`run`、`package`、`lint`、`format`、`clean`），新增：
+M0 骨架的 `make` 目标：`generate`、`build`、`test`、`test-core`、`test-app`、`smoke`、`run`、`package`、`lint`、`format`、`clean`。
+`make test` 依次跑 `test-core`、`test-dict`、`test-app`、`smoke`。
+之后加入的目标：
 
 | 目标 | 作用 |
 |---|---|
-| `make e2e` | 构建开发版和夹具应用，跑夹具上的取词与替换场景（第 14.3 节） |
-| `make matrix` | 在本机真实应用（TextEdit、Safari、Chrome、VS Code）上跑取词与替换矩阵，输出 JSON 并与上次结果比较（第 14.4 节） |
-| `make dict` | 下载固定版本的数据快照，生成 `build/dict/dict-en-zh.sqlite`（第 7.2 节） |
+| `make test-dict` | 词典构建工具的单测，用手写夹具，不联网；包含在 `make test` 里 |
+| `make window-test` | 检查首次引导、设置、关于窗口能出现在最前并成为 key，关闭后焦点还给原来的应用；会抢焦点，所以不在 `make test` 里 |
+| `make e2e` | 构建开发版和夹具应用，跑夹具上的取词场景，M3 起加替换场景（第 14.3 节） |
+| `make matrix` | 在本机真实应用（TextEdit、Safari、Chrome、VS Code）上跑取词矩阵，M3 起加替换；输出 JSON 并与上次结果比较（第 14.4 节） |
+| `make e2e-live` | 用真实模型走完整的「读」键链路（夹具、TextEdit、Safari、Chrome），含断网、Key 被拒、流中断等故障行；要联网、花几美分，需要先 `make import-key`；不在 `make test` 和 `make e2e` 里 |
+| `make import-key [MODEL=…]` | 把 `.env` 里的 `OPENAI_API_KEY` 存进开发版自己的 Keychain 条目，并选中 OpenAI 和模型（默认 `gpt-6-luna`），供 `e2e-live` 和人工试用 |
+| `make dict` | 下载固定版本的数据快照（按哈希缓存），生成 `build/dict/dict-en-zh.sqlite`（第 7.2 节） |
+| `make dict-stats` | 打印 `dict-en-zh.sqlite` 的高频词覆盖率和查询耗时 |
+| `make dict-update` | 把上游当前文件钉进 `tools/build-dict/manifest.json`、重新构建，并打印前后数字供人审阅 |
 | `make eval SUITE=…` | 用真实模型跑提示词评测，读 `.env` 里的 Key 但不打印（第 14.5 节） |
 
 开发版始终用 Apple Development 证书签名（团队 `M5ZVXWJNK8`），不用 ad hoc 签名，保证重新构建后辅助功能授权不丢。
@@ -305,8 +324,13 @@ VS Code 第二次写入的触发条件是从 3 次观察归纳的，机制没有
 
 写这些属性会改变目标应用的行为：VS Code 会进入「屏幕阅读器优化」模式，Chrome 会维护完整的无障碍树。
 对性能和内存的影响没有测出结论【未验证】。
-所以设置里有一个开关「为 Chrome 和 Electron 应用开启无障碍支持」，并在首次引导里说明；默认值见第 16 节的未决问题。
+所以设计上设置里有一个开关「为 Chrome 和 Electron 应用开启无障碍支持」，并在首次引导里说明；默认值见第 16 节的未决问题。
 开关关闭时，这些应用的取词只能走兜底，划词图标在这些应用里不出现。
+
+现状：开关和询问都未实现，计划在 M4 做（第 15.4 节）。
+代码里只有两个 UserDefaults 键，`AccessibilitySupportChromium` 默认开、`AccessibilitySupportElectron` 默认关（按第 16.1 节第 1 项的建议写死），只能用 `defaults write` 改。
+所以默认配置下 Electron 应用（VS Code 等）不预热，取词始终走兜底；`make matrix` 启动开发版时用参数把 Electron 的键打开，才测到 VS Code 第二次起走无障碍。
+「在 Electron 应用里首次取词时询问一次」也没有做。
 
 ### 3.4 第一段：读选中文字（截止 150 ms）
 
@@ -340,7 +364,9 @@ VS Code 第二次写入的触发条件是从 3 次观察归纳的，机制没有
    3. 不使用系统的「句子范围」属性和「向上找父元素的值」：Chrome 遇到行内标签（链接、加粗）只返回单个文本节点【实测】。
    4. Chromium 的 contenteditable 不走第 1 步：它的值和范围偏移不一致【实测】。
    5. 都失败或来源是剪贴板、OCR 时，没有上下文句；卡片退化为不带上下文的释义。
-   切句和定位是 `DictCore` 里的纯函数 `sentence(containing:in:)`，输入段落和选区偏移，输出 `ContextSentence`。
+   切句和定位设计为 `DictCore` 里的纯函数 `sentence(containing:in:)`，输入段落和选区偏移，输出 `ContextSentence`。
+   现状：上面第 1、2 步的读取已在 M1 实现（`App/Sources/Capture/SecondStage.swift`），切句用的是同一文件里应用目标的 `contextSentence(in:selection:)`（输入 `NSRange`）；`DictCore` 的 `sentence(containing:in:)` 还是调用即崩溃的存根，计划在 M2.2 实现并替换前者（第 15.2 节）。
+   M1 只把上下文句放进 `Selection`，翻译不使用它。
 3. **替换目标**：只有「写」键路径需要，规则见第 4.3 节。
    快照必须在面板出现之前取：面板成为 key 后 VS Code 的应用级焦点元素会变成 `noValue`【实测】。
    所以「写」键的面板要等第二段结束才出现（第 11.1 节）。
@@ -569,6 +595,8 @@ public enum SelectionKind: Sendable, Equatable { case none, word, phrase, passag
 public func classify(_ text: String) -> SelectionKind
 ```
 
+现状：`classify` 是调用即崩溃的存根，计划在 M2.1 实现；M1 把所有选区都当作段落翻译。
+
 第一版的规则「先去首尾标点再判断句末标点」自相矛盾，在 169 条真实选区上分错 78 条；URL、数字、代码、空串没有「不查」的出口【实测】。
 新规则按固定顺序执行：
 
@@ -620,9 +648,11 @@ public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
 | 函数 | 用途 |
 |---|---|
 | `normalizedKey(_ text: String) -> String` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
-| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index` |
-| `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节） |
-| `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据 |
+| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：存根，M2.2 实现；现在切句用应用目标的 `contextSentence(in:selection:)`（第 3.5 节） |
+| `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节）。现状：存根，M3 实现 |
+| `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据。现状：存根，M3.2 实现 |
+
+`normalizedKey` 已实现；第 5.1 节的 `classify` 现在是存根，M2.1 实现；第 5.2 节的 `resolveDirection` 已实现。
 
 `AppKind` 判定不在这里：`AppKind` 是 `DictApp` 的类型，判定函数也在 `DictApp`（第 3.3 节）。
 
@@ -705,6 +735,11 @@ v1 的预设行：
 | Ollama | `http://localhost:11434/v1` | 由 `GET /api/tags` 列出已装模型让用户选 | `reasoning_effort: "none"` | `max_tokens` | `json_schema` |
 | 自定义 | 用户填写 | 用户填写，可调 `GET /models` 列出 | 下拉：关 / 最低 / 服务商默认 | 下拉 | 下拉，默认自动 |
 
+现状：列模型和三个下拉都未实现，计划在 M2.9 做（第 15.2 节）。
+代码里没有任何列模型的请求；设置的模型页只有服务商下拉、模型名和 Base URL 两个文本框，服务商接受 Key 时再加一个 Key 输入框（`ModelPreferences` 只存前三项，Key 在 Keychain）。
+Ollama 的模型名由用户手填，预设的默认模型是空串，不填就报「缺少模型」。
+自定义服务商用预设表里的固定值：关思考（`reasoning_effort: "none"`）、`max_tokens`、`json_schema`；`ModelEndpoint.thinking` 始终是 `.off`。
+
 依据：
 - `gpt-6-luna` 接受 `reasoning_effort: "none"`，思考 token 为 0；`gpt-5-nano` 发 `none` 返回 400，且 2026-12-11 下线【实测、源码】。
 - Ollama 兼容端点上 `max_tokens` 生效、`max_completion_tokens` 被忽略；`reasoning_effort: "minimal"` 返回 400；用 `think: false` 或 `/no_think` 都关不掉思考【实测，评审在本机 Ollama 0.23.0 上】。
@@ -773,6 +808,7 @@ public enum TimeoutStage: Sendable, Equatable { case firstEvent, idle, total }
 - **重试**：只有一种自动重试：HTTP 400 且错误信息提到某个可选参数（`response_format`、`reasoning_effort`、输出上限字段、`stream_options`），去掉该参数重试一次，并按「端点 + 模型」记住。
   取消、401/403、404、429、5xx、超时都不自动重试，面板显示原因和「重试」按钮。
 - **错误文案**：Key 无效、模型不存在（提供「列出可用模型」）、额度或频率限制、服务商故障、网络离线、超时；错误信息和日志里出现的 Key 一律替换成 `••••`。
+  现状：「列出可用模型」未实现，模型不存在时只显示文案，随 M2.9 的列模型一起做。
 - **降级**：
   - 句子翻译：模型失败且这对语言的 Apple 翻译语言包恰好已装时，自动改用它，并在面板上注明。
     注明方式是译文下方一行说明（`PanelState.note`），写出模型失败的原因；模型译文被截断（`.truncated`）时保留已得译文并注明，不降级。
@@ -1026,6 +1062,8 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 - 输出上限：翻译和改写取 `max(256, 原文 UTF-8 字节数)`，查词卡片 800；目的是防止跑飞，不是精确预算【推断】。
 - 设置里的「测试」按钮依次做三件事并分别显示：翻译一句话并显示首个内容耗时；请求一张卡片并严格解码；检查是否收到思考增量。
   首个内容超过 3 s 或收到思考增量时提示「这个模型在思考，查词会很慢」。
+  现状：三项检查和「在思考」的提示都未实现，计划在 M2.9 做（卡片检查要等 M2.5 的卡片提示词）。
+  现在的「测试」（`SettingsModel.probe`）只发一个最小请求（system「Reply with the single word OK.」，输出上限 16），收到第一个正文、思考或结束事件就算成功并显示耗时；收到思考增量也算成功，不提示。
 
 ## 7. 即时词典层
 
@@ -1448,8 +1486,10 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
   它和完整的结果（`PanelPhase.result`）一样能选中和拷贝，但不能作为替换的内容；替换只接受 `.result`。
   所有提示都在面板里，不弹系统对话框。
   唯一的例外由用户点击触发：辅助功能说明里的「打开系统设置」按钮先调用带 prompt 选项的 `AXIsProcessTrustedWithOptions`，把应用登记进辅助功能列表（系统可能弹出自己的提示），再跳到系统设置；按快捷键的路径和权限检查只用不弹窗的 `AXIsProcessTrusted()`、`CGPreflightPostEventAccess()`，绝不弹系统对话框。
-- Esc、点面板外、再按同一个快捷键都会隐藏面板；隐藏即结束会话并取消进行中的请求。
-- 面板可见时（包括兜底期间的「读取中」）再按「读」键，照旧隐藏面板、结束会话；Esc 和点面板外也一样。
+- Esc、点面板外、切到别的应用（例如 ⌘Tab）、再按同一个快捷键都会隐藏面板；隐藏即结束会话并取消进行中的请求。
+  点面板外用全局鼠标监听判断（只看得到别的应用里的点击），切换应用看 `NSWorkspace.didActivateApplicationNotification`，两者都只在面板可见时安装；面板失去 key 本身不算，因为兜底按拷贝时 key 可能移动，不能因此结束会话。
+  前三种是面板自己报告的原因（`PanelDismissal` 的 `escape`、`clickOutside`、`appSwitched`），再按快捷键由会话协调者处理。
+- 面板可见时（包括兜底期间的「读取中」）再按「读」键，照旧隐藏面板、结束会话；Esc、点面板外、切到别的应用也一样。
   取消后兜底不再按拷贝、不再等剪贴板，已经触发的拷贝照样把剪贴板恢复（第 3.7 节）。
 - 取词还在进行或正在收尾、面板又不可见时再按「读」键会被忽略：两轮取词的剪贴板快照和恢复可能交错，把选中文字留在用户剪贴板里。
 - 输入法：输入框里有未上屏的组字时，回车、Esc、Tab 交给输入法。
@@ -1477,7 +1517,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
   3. 填 API Key：服务商、模型、Key 和「测试」按钮，与设置的模型页共用同一个界面和校验（`ModelSections` 与 `SettingsModel`）。
      进入这一步时如果还没选服务商，预选第一个（OpenAI）；没有可用模型时主按钮是「以后再说」。
   4. 试一下：用一段示例英文直接走一次面板翻译（`SessionCoordinator.translateSample`，不经过取词，因为在 Dict 自己的窗口里取词什么也读不到），然后「完成」。
-- 以后的版本再加进引导：我的语言、学习语言、口音；Chrome 和 Electron 应用的无障碍支持说明；登录时启动；提示下载高质量音色。
+- 以后的版本再加进引导：我的语言、学习语言、口音；Chrome 和 Electron 应用的无障碍支持说明（M4，第 3.3 节）；登录时启动；提示下载高质量音色。
   引导里没有、也不会有下载翻译语言包的步骤。
 - 应用已在运行时再次打开（Finder、Spotlight、`open`，即收到 reopen 事件）：引导没完成就显示引导，完成了就打开设置；没有 Dock 图标，窗口是用户唯一能看到的反应。
 - 菜单栏菜单：今天（每日回顾）、复习（显示待复习数）、截图取词、暂停记录、设置、关于（含数据署名）、退出。
@@ -1529,12 +1569,17 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 | 层 | 命令 | 内容 | 何时跑 |
 |---|---|---|---|
-| `DictCore` 单测 | `make test-core` | 第 5、6、7、8 节的全部纯函数（表驱动）；提示词快照；每个预设对每种操作的完整请求体快照；SSE 解析（手写夹具：正常结束、无 `[DONE]` 断开、注释行、只有思考增量、孤立 `</think>`、`length` / `content_filter` / 流中错误、非 SSE 响应、UTF-8 字符切在两块之间）；`ChatCompletionsModel` 用 `URLProtocol` 桩分块返回，覆盖错误映射、400 去参数重试、看门狗（注入时钟）、取消；`Lexicon` 用测试小库；`VocabStore` 用临时文件（外键级联、按天查询、复习阶梯、损坏改名）；`resolveVoice` 用构造的音色列表 | 每次改动 |
-| 应用单测 | `make test-app` | `ReplaceWriter` 状态机用假的无障碍、剪贴板、按键实现覆盖每条分支（含无障碍写入迟到生效、读回出现两份）；`AppKind` 判定；快捷键冲突校验；面板定位计算；`ClipboardGateway` 的恢复规则（用私有命名剪贴板，不碰通用剪贴板）；语音在渲染模式下断言范围单调、落在文本内、流会结束 | 每次改动 |
-| 冒烟 | `make smoke` | 已有：启动应用，经无障碍找到菜单栏图标，退出 | 每次改动 |
+| `DictCore` 单测 | `make test-core` | 第 5、6、7、8 节的全部纯函数（表驱动）；提示词快照；每个预设对每种操作的完整请求体快照；SSE 解析（手写夹具：正常结束、无 `[DONE]` 断开、注释行、只有思考增量、孤立 `</think>`、`length` / `content_filter` / 流中错误、非 SSE 响应、UTF-8 字符切在两块之间）；`ChatCompletionsModel` 用 `URLProtocol` 桩分块返回，覆盖错误映射、400 去参数重试、看门狗（注入时钟）、取消；`Lexicon` 用测试小库；`VocabStore` 用临时文件（外键级联、按天查询、复习阶梯、损坏改名）；`resolveVoice` 用构造的音色列表（后三项随 M2 加入） | 每次改动 |
+| 词典构建工具单测 | `make test-dict` | `tools/build-dict` 的清单、文本处理、读音、合并、写库和整次构建，用手写夹具，不联网 | 每次改动 |
+| 应用单测 | `make test-app` | `ReplaceWriter` 状态机用假的无障碍、剪贴板、按键实现覆盖每条分支（含无障碍写入迟到生效、读回出现两份，M3 加入）；`AppKind` 判定；快捷键冲突校验；面板定位计算；`ClipboardGateway` 的恢复规则（用私有命名剪贴板，不碰通用剪贴板）；语音在渲染模式下断言范围单调、落在文本内、流会结束（M2 加入） | 每次改动 |
+| 冒烟 | `make smoke` | 启动应用，经无障碍找到菜单栏图标，退出 | 每次改动 |
+| 窗口 | `make window-test` | 首次引导、设置、关于窗口出现在最前并成为 key，关闭后焦点回到原应用；会抢焦点 | 改动窗口和激活逻辑时；里程碑验收 |
 | 夹具端到端 | `make e2e` | 第 14.3 节 | 改动取词、替换、面板时；里程碑验收 |
 | 真实应用矩阵 | `make matrix` | 第 14.4 节 | 里程碑验收、发版前 |
+| 真实模型端到端 | `make e2e-live` | 用真实模型走「读」键链路：流式译文、首个内容耗时、断网与 Key 被拒的降级、流停顿与中断（`scripts/fake-model.py`）、日志里没有用户文字和 Key；需要先 `make import-key`，要联网、有花费 | 改动翻译链路时；里程碑验收 |
 | 模型评测 | `make eval` | 第 14.5 节 | 改提示词或预设时、发版前 |
+
+`make test` 是 `test-core`、`test-dict`、`test-app`、`smoke` 四层；`window-test`、`e2e`、`matrix`、`e2e-live`、`eval` 都不在里面。
 | 人工清单 | 每个里程碑的验收清单 | 真实按键触发快捷键、输入法、听感、图标点击的视觉效果 | 里程碑验收 |
 
 所有修 bug 的工作先在能复现的最高一层（通常是夹具端到端）加一个失败的用例，再修。
@@ -1544,10 +1589,12 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 调试版可执行文件接受 `--e2e <场景.json> --e2e-out <结果.json>`，执行场景后退出；正式版编译时去掉这段代码。
 必须经 `open -n "<Dict Dev.app>" --args …` 启动，让应用以自己的签名身份和授权运行：从终端直接执行的进程借用的是终端的辅助功能授权【实测，评审】。
 场景步骤包括：让夹具或测试页选中指定文字、调用取词（指定剪贴板策略）、用固定文本调用替换、记录每一步的结果和耗时。
+现状：已有的步骤是 `select`、`capture`、`read`、`wait`；替换步骤随 M3.5 加入。
 `read` 步骤模拟一次「读」键：经真实的会话协调者和结果面板走完整条链路，翻译用回显桩，记录「读取中」出现的时刻、兜底前后面板是否为 key、前台应用是否不变、面板收到的每次 `show` / `update`。
 `read` 可以带 `"force": "menu"` 或 `"key"`，跳过无障碍读取直接走那条兜底途径，用来在无障碍读得到的应用里测兜底和拷贝耗时。
 场景不经过全局快捷键，因为合成按键能否触发 Carbon 快捷键没有定论（第 3.8 节）；快捷键本身由人工清单覆盖。
-端到端场景里的模型是进程内的桩实现，按脚本返回事件，不联网。
+`make e2e` 场景里的翻译是进程内的回显桩，不联网。
+`read` 带 `"translator": "model"` 时改用设置里的真实模型，可以再用 `baseURL`、`apiKey` 指向拒绝连接的端口、错误的 Key 或 `scripts/fake-model.py`；只有 `make e2e-live` 这样用。
 
 ### 14.3 夹具应用 `CaptureFixture`
 
@@ -1557,6 +1604,9 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - `WKWebView`：只读段落（含 `<b>`、`<a>` 行内标签和多段）、`<textarea>`、`contenteditable`。
 - 自绘视图：不暴露选中文字；选区为空；没有选区时 ⌘C 拷贝整行。
 - 「撒谎」控件：报告可写但忽略无障碍写入；写入后把换行规范化；收到粘贴 600 ms 后才生效；无障碍写入 100 ms 后才异步生效（重复插入的陷阱）。
+
+现状：M1 的夹具有 `NSTextView`（纯文本、富文本）、`NSTextField`、`NSSecureTextField`、`WKWebView` 的三种控件和三种自绘视图。
+SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计划在 M3.5 加入（第 15.3 节）。
 
 夹具把收到的每一次拷贝、粘贴、无障碍写入写进一个 JSON Lines 日志；夹具接受分布式通知形式的命令（选中某控件的某段文字）。
 断言示例：无障碍可读的控件上拷贝事件数为 0；替换后粘贴事件恰好 1 次；剪贴板所有类型的哈希在场景前后相同；⌘Z 后全文回到原样；密码框上没有任何拷贝或读取。
@@ -1569,6 +1619,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - VS Code 一律用隔离实例（临时的用户数据目录和扩展目录）；目录放在 `$TMPDIR` 下，因为 VS Code 的 IPC 套接字路径超过 103 个字符会启动失败【实测】；结束时 `kill -9` 并删除目录，只发 SIGTERM 会留下「窗口意外终止」对话框【实测】。
 - 不碰微信、Slack、邮件等有真实对话的应用；不出声。
 - 每一行输出：应用、控件、冷或热、取词途径、耗时、文字是否一致、上下文句是否一致、替换途径、替换结果、剪贴板是否原样。
+  现状：上下文句一列在 M2 加入（第 15.2 节验收），替换两列在 M3 加入；现在的行另有面板状态、失败原因和备注。
   结果写进 `Design/app-matrix.json`（脚本生成，不手改），与上次结果比较，差异需要人确认。
 - 以后用虚拟机镜像（macOS 15、26、27 各一个）跑同一套矩阵，见第 16 节。
 
@@ -1578,6 +1629,8 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - 评测框架（用例、不变量检查、运行器、报告）放在 `DictEval` 里，不随应用发布；`DictCoreTests` 依赖 `DictEval`，用桩模型测它。
 - `make eval SUITE=<套件> RUNS=<次数>`：`scripts/eval.sh` 从 `.env` 读出 `OPENAI_API_KEY` 放进子进程环境，不打印；每次运行有花费上限（默认 1 美元），按每次返回的用量累计。
 - 套件：方向（问句、被提及的词）、注入（每种操作）、纠错（正确输入原样、错误改对、逗号连接分句第一遍改掉、第二遍无改动）、润色、译成外语、查词卡片、找外语说法。
+  现状：只有翻译提示词的三个套件 `direction`、`injection`（只覆盖翻译）、`fallback`（`.undecided` 的回落提示词）。
+  其余未实现：查词卡片和找外语说法在 M2.5，纠错在 M3.1，润色和译成外语在 M3.2，各自加入时同时给该操作补注入用例。
 - 用例是我们自己写的文字；每个用例跑 N 次，报告通过率和首个内容、完成耗时的 p50 / p90。
 - 判定的是不变量，不是具体文字：目标语言正确、不含答案、不含标签和提示词片段、链接和代码逐字保留、行数不变、错处能应用、严格解码成功、词元与选中词同一书写系统等。
 - 通过标准：默认预设的默认模型，每个不变量的通过率不低于 95%；Ollama 只要求不崩溃。
@@ -1617,7 +1670,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 验收：
 
-1. `make lint test` 通过（`test-core`、`test-app`、`smoke`）。
+1. `make lint test` 通过（`test-core`、`test-dict`、`test-app`、`smoke`）。
 2. `make e2e` 通过：夹具的 `NSTextView`、`NSTextField`、`WKWebView` 三种控件经无障碍取到的文字与预期一致、来源是 `accessibility`、拷贝事件数为 0；自绘控件经菜单栏拷贝项取到文字；密码框返回 `secureField` 且没有任何拷贝事件；所有场景前后剪贴板哈希一致。
 3. `make matrix` 输出并人工确认：Chrome 热状态经无障碍取词，第一段耗时不超过 150 ms；Chrome 冷状态（隔离实例）第一次走菜单栏拷贝项且剪贴板原样，约 2 s 后同一页面走无障碍；Safari 只读文字经文本标记取到；VS Code 隔离实例第一次走兜底、之后走无障碍；TextEdit 走无障碍。
 4. 人工：在 TextEdit 里选中一句英文，按真实的「读」键，面板在选区下方出现并显示原文；日志里取词到面板出现不超过 200 ms；没有配置模型时显示「需要配置翻译模型」，语言包恰好已装时显示 Apple 翻译的中文译文；TextEdit 仍是前台应用，按 Esc 后光标和选区还在原处。
@@ -1631,13 +1684,14 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 | 任务 | 内容 | 依赖 | 可并行 |
 |---|---|---|---|
 | M2.1 选区分类 | `classify` 与自写语料的表驱动测试 | M1 | 是 |
-| M2.2 上下文句 | 第二段的上下文句（值窗口 + 段落文本标记）、`sentence(containing:in:)`；夹具加行内标签和多段 | M1 | 是 |
+| M2.2 上下文句 | 第二段的上下文句读取（值窗口 + 段落文本标记）已在 M1 做完；剩下实现 `DictCore` 的 `sentence(containing:in:)` 并替换应用目标里的 `contextSentence(in:selection:)`，表驱动单测；夹具加行内标签和多段的上下文句场景 | M1 | 是 |
 | M2.3 词典构建工具 | `tools/build-dict`、清单、`make dict`、覆盖统计、繁简抽样对照、`LICENSE` 和 `ATTRIBUTION` | 无 | 是 |
 | M2.4 词典查询 | `Lexicon` actor 与测试小库 | M2.3 的表结构（可先按本文的表结构写） | 是 |
 | M2.5 卡片 | 卡片提示词和 schema、顶层字段扫描器、找外语说法；`DictEval` 卡片套件 | M1.2 | 是 |
 | M2.6 词库 | `VocabStore`（表结构、迁移、记录查词和翻译、档位升级规则） | M1.0 | 是 |
 | M2.7 发音 | `resolveVoice`、`Speaker`、预热、音色提示 | M1.0 | 是 |
 | M2.8 界面串联 | 卡片视图（词典层先出、模型卡片补齐、第 N 次遇到、⌘S、⌘P）、「作为句子翻译」和「查这个词」互转、记录 | M2.1–M2.7 | 最后 |
+| M2.9 模型设置补全 | Ollama 用 `GET /api/tags`、自定义服务商用 `GET /models` 列出模型；模型不存在时「列出可用模型」；自定义服务商的关思考、输出上限字段、JSON 模式下拉；「测试」按钮的三项检查和「在思考」提示（第 6.2、6.4、6.8 节；归属见第 16.1 节第 9 项） | M2.5 | 是 |
 
 验收：`make test` 通过；`make dict` 生成数据库并打印行数和覆盖统计，前 5 千词元覆盖不低于 85%；查 `ran` 显示 `run` 的中文释义和美式音标，词典层耗时不超过 5 ms（日志）；在 Safari 只读页面查一个词，卡片的本句意思与上下文一致，上下文句与夹具一致（`make matrix` 增加上下文列）；`sqlite3` 查 `vocab.sqlite` 能看到词条和带原句的 `encounter`，同一个词第二次查询显示「第 2 次」；删除词条后 `encounter` 为 0；`make eval SUITE=card` 严格解码率不低于 98%；人工听一次正常与慢速。
 
@@ -1649,7 +1703,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 | M3.2 润色与译成外语 | 两个提示词、`appContext`、`cleanUp`、`validate`；评测 | M1.2 | 是 |
 | M3.3 错处与 diff | `applyEdits`、通用 diff、`replacementConfirmed` | M1.0 | 是 |
 | M3.4 替换 | 可写判定、`ReplaceTarget` 快照、`ReplaceWriter` 状态机与假实现测试、提示胶囊 | M1.4 | 是 |
-| M3.5 夹具扩展 | 撒谎控件、迟到粘贴、异步写入、⌘Z 断言；替换场景 | M1.5 | 是 |
+| M3.5 夹具扩展 | 撒谎控件、迟到粘贴、异步写入、⌘Z 断言；SwiftUI `TextField` 和 `TextEditor`（第 14.3 节）；替换场景 | M1.5 | 是 |
 | M3.6 零配置写作 | 系统拼写检查转错处列表；Apple 翻译的译成外语 | M1.8 | 是 |
 | M3.7 界面串联 | 写键流程、动作切换、diff 视图、校验警告、记录纠正的句子；Chromium 多段的拷贝取原文 | M3.1–M3.6 | 最后 |
 
@@ -1660,7 +1714,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 ### 15.4 M4：划词图标与截图取词
 
-任务：全局鼠标监听与触发判定（纯函数部分可单测）、图标面板与收起规则、排除名单；`screencapture` 调用、Vision 识别、版面拼接、预热；屏幕录制权限引导。
+任务：全局鼠标监听与触发判定（纯函数部分可单测）、图标面板与收起规则、排除名单；`screencapture` 调用、Vision 识别、版面拼接、预热；屏幕录制权限引导；设置里「为 Chrome 和 Electron 应用开启无障碍支持」的开关、首次引导里的说明、在 Electron 应用里首次取词时询问一次（第 3.3 节；默认值按第 16.1 节第 1 项，归属见第 9 项）。
 依赖 M2（图标点击走「读」流程）。
 验收：在 Safari 和预热后的 Chrome 里拖选外语出现图标，选中文不出现，在终端里不出现；全过程剪贴板哈希不变、夹具日志里拷贝事件为 0；点击图标打开卡片或译文；截图一段英文图片后显示译文，识别结果记录为 `ocr` 来源。
 
@@ -1681,7 +1735,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 | # | 问题 | 选项与建议 |
 |---|---|---|
-| 1 | 为 Chrome 和 Electron 应用开启无障碍支持的默认值 | 写属性会让 VS Code 进入屏幕阅读器优化模式（用户可见的行为变化）、Chrome 维护完整无障碍树（性能代价未测）。建议：Chromium 浏览器默认开启，Electron 应用默认关闭、在首次在其中取词时询问一次 |
+| 1 | 为 Chrome 和 Electron 应用开启无障碍支持的默认值 | 写属性会让 VS Code 进入屏幕阅读器优化模式（用户可见的行为变化）、Chrome 维护完整无障碍树（性能代价未测）。建议：Chromium 浏览器默认开启，Electron 应用默认关闭、在首次在其中取词时询问一次。现状：代码已按这条建议写死两个 UserDefaults 键的默认值，开关和询问未实现（M4，第 3.3 节） |
 | 2 | Chromium 多段文字的替换 | 建议：用拷贝取带换行的原文、粘贴替换、读回确认，M3 用人工验收；不满足就降级为只复制 |
 | 3 | 复习算法 | 建议 v1 用固定间隔阶梯加完整复习日志，FSRS 以后再换 |
 | 4 | 词频数据来源 | wordfreq 质量更好但导出需要 Python 包；FrequencyWords 是纯文本、零工具。建议 v1 用 FrequencyWords，后续再换 |
@@ -1689,6 +1743,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 | 6 | 自动更新 | Sparkle 是唯一考虑中的第三方依赖；替代是只在应用内检查新版本并打开下载页。建议 M6 再定 |
 | 7 | 订阅的范围 | 托管模型、云同步、高质量语音之一或组合；不影响 v1 结构，只影响 `TextModel` 的第三个实现何时做 |
 | 8 | M3 与 M4 的先后 | 本文先做写作替换（风险已被原型降低，且是五个需求里的两个半），再做图标与截图取词；如果阅读体验优先，可以对调，两者没有依赖 |
+| 9 | 设计了但原来没有里程碑归属的功能 | 以下设计在 M1 没做（或只做了最小版本），原计划也没有写进任何里程碑：Chrome 和 Electron 无障碍支持的开关与 Electron 首次询问（第 3.3 节）；列模型、「列出可用模型」、自定义服务商的高级下拉、「测试」按钮的三项检查（第 6.2、6.4、6.8 节）；夹具的 SwiftUI 控件（第 14.3 节）。建议分别放进 M4、M2.9、M3.5（已写进第 15 节），请确认；如果列模型和高级下拉不是 v1 必需，可以挪到 M6 之后 |
 
 ### 16.2 未验证项（实现时必须先验证）
 
@@ -1739,7 +1794,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 |---|---|---|
 | 目标应用升级后无障碍行为变化（例如开始真正接受写入，或读回值被规范化） | 替换被误判 | 读回判据不依赖偏移、不确定时绝不重复粘贴；真实应用矩阵定期跑 |
 | Chrome 冷状态 2 s | 切到 Chrome 后立即按键时第一次走兜底 | 前台切换时预热；兜底用菜单栏拷贝项，不出声、不留剪贴板痕迹 |
-| 服务商默认模型下线或改参数 | 默认配置突然失效 | 预设是数据；「测试」按钮发现 404 时列出可用模型；评测随预设变更必跑 |
+| 服务商默认模型下线或改参数 | 默认配置突然失效 | 预设是数据；「测试」按钮发现 404 时列出可用模型（M2.9，现在只提示模型不存在）；评测随预设变更必跑 |
 | 用户长期处于安全输入（终端） | 快捷键可能不触发 | 菜单栏标记加说明；划词图标不依赖键盘 |
 | 词典数据的众包内容含侵权条目 | 下架通知 | 构建工具支持黑名单，数据文件与代码分离 |
 | kaikki.org 每周覆盖提取文件、不留旧版，且要撤掉按语言拆分的下载 | 新检出复现不了旧构建；输入地址失效 | 缓存按哈希保留旧输入；`make dict-update` 一步更新清单并对比前后数字；以后自存输入副本（16.1 第 5 项） |

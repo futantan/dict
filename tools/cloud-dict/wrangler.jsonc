@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// The cloud dictionary's D1 database. No Worker yet: `wrangler d1` commands need only the binding.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dict-en-zh",
+  "compatibility_date": "2026-10-04",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dict-en-zh",
+      // PLACEHOLDER: replace with the id printed by `wrangler d1 create dict-en-zh`.
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

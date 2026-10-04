@@ -8,7 +8,7 @@ SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/
 	Packages/DictCore/Tests scripts tools/build-dict/Package.swift tools/build-dict/Sources \
 	tools/build-dict/Tests
 
-.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
+.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update dict-cloud-export dict-cloud-verify smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -42,6 +42,22 @@ dict-stats:
 dict-update:
 	swift build -c release --package-path tools/build-dict
 	tools/build-dict/.build/release/build-dict update
+
+# Writes build/cloud-dict/data.sql, the INSERTs that fill the cloud D1 database (schema in
+# tools/cloud-dict/schema.sql) from build/dict/dict-en-zh.sqlite; run `make dict` first.
+dict-cloud-export:
+	mkdir -p build/cloud-dict
+	node tools/cloud-dict/export.mjs build/dict/dict-en-zh.sqlite build/cloud-dict/data.sql
+
+# Loads the schema and data.sql into wrangler's local D1 under build/cloud-dict/d1 and checks
+# it against the source sqlite. Local only: needs no Cloudflare account.
+dict-cloud-verify: dict-cloud-export tools/cloud-dict/node_modules
+	node tools/cloud-dict/verify.mjs build/dict/dict-en-zh.sqlite build/cloud-dict/data.sql \
+		build/cloud-dict/d1
+
+tools/cloud-dict/node_modules: tools/cloud-dict/package-lock.json
+	npm ci --prefix tools/cloud-dict
+	touch $@
 
 test-app: generate
 	$(XCODEBUILD) test

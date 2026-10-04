@@ -1,0 +1,9 @@
+{
+  "name": "cloud-dict",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "description": "Exports the offline dictionary to Cloudflare D1 and verifies it against wrangler's local D1.",
+  "devDependencies": {
+    "wrangler": "4.147.0"
+  }
+}

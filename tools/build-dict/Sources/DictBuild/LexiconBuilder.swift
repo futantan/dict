@@ -109,8 +109,10 @@ public struct LexiconBuilder: Sendable {
   ///   the form table.
   /// - A headword with only proper-noun senses is dropped when its key is also an inflection of
   ///   another headword: `was` is the past of `be`, not the surname Was.
-  /// - A form link is dropped when the lemma is far rarer than the form (more than 1.5 on the
-  ///   Zipf scale), which removes dialect lemmas such as `made` → Scots `mak` or `ran` → `rin`.
+  /// - A form link to a single-word lemma is dropped when the lemma is far rarer than the form
+  ///   (more than 2 on the Zipf scale), which removes dialect lemmas such as `made` → Scots
+  ///   `mak` but keeps Latin plurals (`algae` → `alga`, 1.7 apart). Multi-word lemmas
+  ///   (`atm` → automatic teller machine) have no frequency and are always kept.
   public func build(zipf: (String) -> Double?, blocklist: Set<String> = []) -> Lexicon {
     let candidates = groups.filter {
       !blocklist.contains($0.key) && !($0.value.senses.isEmpty && $0.value.nameSenses.isEmpty)
@@ -119,8 +121,8 @@ public struct LexiconBuilder: Sendable {
       guard candidates[link.lemmaKey] != nil, !blocklist.contains(link.formKey) else {
         return false
       }
-      guard let formZipf = zipf(link.formKey) else { return true }
-      return (zipf(link.lemmaKey) ?? 0) >= formZipf - 1.5
+      guard let formZipf = zipf(link.formKey), !link.lemmaKey.contains(" ") else { return true }
+      return (zipf(link.lemmaKey) ?? 0) >= formZipf - 2
     }
     let inflectedKeys = Set(forms.map(\.formKey))
 

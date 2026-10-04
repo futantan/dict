@@ -38,8 +38,8 @@ struct DatabaseTests {
     let output = Self.temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: output) }
     let summary = try Self.build(into: output)
-    #expect(summary.headwords == 16)
-    #expect(summary.forms == 8)
+    #expect(summary.headwords == 17)
+    #expect(summary.forms == 9)
 
     let db = try SQLiteConnection(
       path: output.appending(path: "dict-en-zh.sqlite").path, readOnly: true)

@@ -34,7 +34,8 @@ struct BuildTests {
     let lexicon = try Self.lexicon()
     #expect(
       lexicon.headwords.map(\.key) == [
-        "absite", "arena", "be", "best", "better", "child", "color", "created", "good",
+        "absite", "arena", "automatic teller machine", "be", "best", "better", "child", "color",
+        "created", "good",
         "hospital", "light", "rin", "run", "server", "take off", "turkey",
       ])
   }
@@ -87,6 +88,7 @@ struct BuildTests {
     let forms = try Self.lexicon().forms
     #expect(
       forms == [
+        FormLink(formKey: "atm", lemmaKey: "automatic teller machine"),
         FormLink(formKey: "best", lemmaKey: "good"),
         FormLink(formKey: "better", lemmaKey: "good"),
         FormLink(formKey: "children", lemmaKey: "child"),

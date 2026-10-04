@@ -20,4 +20,6 @@
 {"word": "rin", "lang_code": "en", "lang": "英語", "pos": "verb", "forms": [{"form": "ran", "tags": ["past"]}], "senses": [{"glosses": ["跑（蘇格蘭）"]}]}
 {"word": "light", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["光;光線;光亮[U]"]}, {"glosses": ["窗;天窗[C]"]}]}
 {"word": "created", "lang_code": "en", "lang": "英語", "pos": "verb", "senses": [{"glosses": ["創建（:Template:之過去式）"]}, {"glosses": [":Template:之過去式"]}]}
+{"word": "ATM", "lang_code": "en", "lang": "英語", "pos": "abbrev", "senses": [{"glosses": ["automatic teller machine 的縮寫"], "tags": ["alt-of"], "alt_of": [{"word": "automatic teller machine"}]}]}
+{"word": "automatic teller machine", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["自動櫃員機"]}]}
 {"word": "server", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": [":Template:計算機 伺服器"]}, {"glosses": [":Template:可數 侍者"]}]}

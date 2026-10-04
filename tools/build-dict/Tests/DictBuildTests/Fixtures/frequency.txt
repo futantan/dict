@@ -11,3 +11,4 @@ ran 5000
 be 100000
 was 90000
 child 99
+atm 3000

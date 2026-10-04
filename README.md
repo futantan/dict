@@ -18,6 +18,7 @@ Writing help (the Write shortcut), word lookup and the vocabulary come in later 
 - `scripts/` holds the smoke test, packaging and end-to-end driver scripts.
 - `tools/build-dict/` is a standalone Swift package that builds the dictionary data (see Dictionary data).
 - `Design/` holds the architecture document and the M1 file-ownership plan.
+- `Design/overview.md` is the architecture overview (in Chinese): read it first for the big picture, before the detailed `Design/architecture.md`.
 
 ## Build and run
 

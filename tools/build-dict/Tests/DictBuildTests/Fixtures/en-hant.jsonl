@@ -1,0 +1,23 @@
+{"word": "hospital", "lang_code": "en", "lang": "英語", "pos": "noun", "sounds": [{"ipa": "/ˈhɒs.pɪ.tl̩/", "tags": ["Received-Pronunciation"]}, {"ipa": "/ˈhɑs.pɪ.tl̩/", "tags": ["General-American"]}, {"audio": "x.ogg", "raw_tags": ["音頻（美式）"]}], "categories": [{"name": "英語名詞"}], "senses": [{"glosses": ["醫院"], "id": "a"}]}
+{"word": "run", "lang_code": "en", "lang": "英語", "pos": "verb", "forms": [{"form": "runs", "tags": ["third-person", "singular", "present"]}, {"form": "running", "tags": ["present", "participle"]}, {"form": "ran", "raw_tags": ["簡單過去時"]}, {"form": "run", "tags": ["past", "participle"]}, {"form": "more run", "tags": ["comparative"]}], "sounds": [{"ipa": "/ɹʌn/", "tags": ["US"], "raw_tags": ["英國"]}, {"ipa": "/ɹʊn/", "raw_tags": ["北英格蘭"]}], "senses": [{"glosses": ["奔跑"]}, {"glosses": ["經營；管理。"]}]}
+{"word": "Turkey", "lang_code": "en", "lang": "英語", "pos": "name", "senses": [{"glosses": ["土耳其"]}]}
+{"word": "children", "lang_code": "en", "lang": "英語", "pos": "noun", "sounds": [{"ipa": "/ˈt͡ʃɪldɹən/"}], "senses": [{"glosses": ["child 的複數。"], "tags": ["form-of"], "form_of": [{"word": "child"}]}]}
+{"word": "child", "lang_code": "en", "lang": "英語", "pos": "noun", "forms": [{"form": "children", "tags": ["plural"]}], "sounds": [{"ipa": "[t͡ʃaɪld]"}, {"ipa": "/t͡ʃaɪld/"}], "senses": [{"glosses": ["孩子；兒童"]}]}
+{"word": "colour", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["color的另一種寫法"], "tags": ["alt-of"], "alt_of": [{"word": "color"}]}]}
+{"word": "color", "lang_code": "en", "lang": "英語", "pos": "noun", "sounds": [{"ipa": "/ˈkʌlə/", "raw_tags": ["英"]}, {"ipa": "/ˈkʌlɚ/", "raw_tags": ["美", "加"]}], "senses": [{"glosses": ["顏色"]}]}
+{"word": "arena", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["arena\n====翻译====\n翻譯\n* 漢語：巨蛋"]}, {"glosses": ["競技場\n* 正體: 競技場[體育]"]}]}
+{"word": "troll", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["troll (複數 trolls)\n本詞語需要翻譯為漢語。請協助添加，並移除{{rfdef}}模板。"]}]}
+{"word": "go", "lang_code": "en", "lang": "英語", "pos": "verb", "senses": [{"tags": ["no-gloss"]}]}
+{"word": "absite", "lang_code": "en", "lang": "英語", "pos": "unknown", "senses": [{"glosses": ["钍钛铀矿"]}]}
+{"word": "take off", "lang_code": "en", "lang": "英語", "pos": "verb", "senses": [{"glosses": ["起飛"]}, {"glosses": ["脫下"]}]}
+{"word": "good", "lang_code": "en", "lang": "英語", "pos": "adj", "forms": [{"form": "better", "tags": ["comparative"]}, {"form": "best", "tags": ["superlative"]}], "senses": [{"glosses": ["好的"]}, {"glosses": ["﹝美口﹞ <俚> 夠了"]}]}
+{"word": "better", "lang_code": "en", "lang": "英語", "pos": "adj", "senses": [{"glosses": ["較好、更好﹝good的比較級﹞"]}]}
+{"word": "guests", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["guest 的複數"]}]}
+{"word": "chat", "lang_code": "fr", "lang": "法語", "pos": "noun", "senses": [{"glosses": ["貓"]}]}
+{"word": "best", "lang_code": "en", "lang": "英語", "pos": "adj", "forms": [{"form": "good", "raw_tags": ["原級"]}, {"form": "better", "tags": ["comparative"]}], "senses": [{"glosses": ["最好的"]}]}
+{"word": "Was", "lang_code": "en", "lang": "英語", "pos": "name", "senses": [{"glosses": ["姓氏"]}]}
+{"word": "be", "lang_code": "en", "lang": "英語", "pos": "verb", "forms": [{"form": "was", "tags": ["past"]}], "senses": [{"glosses": ["是"]}]}
+{"word": "rin", "lang_code": "en", "lang": "英語", "pos": "verb", "forms": [{"form": "ran", "tags": ["past"]}], "senses": [{"glosses": ["跑（蘇格蘭）"]}]}
+{"word": "light", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": ["光;光線;光亮[U]"]}, {"glosses": ["窗;天窗[C]"]}]}
+{"word": "created", "lang_code": "en", "lang": "英語", "pos": "verb", "senses": [{"glosses": ["創建（:Template:之過去式）"]}, {"glosses": [":Template:之過去式"]}]}
+{"word": "server", "lang_code": "en", "lang": "英語", "pos": "noun", "senses": [{"glosses": [":Template:計算機 伺服器"]}, {"glosses": [":Template:可數 侍者"]}]}

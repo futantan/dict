@@ -5,9 +5,10 @@ DERIVED_DATA := build/DerivedData
 XCODEBUILD := xcodebuild -project DictApp.xcodeproj -scheme DictApp -configuration $(CONFIG) \
 	-derivedDataPath $(DERIVED_DATA) -destination 'platform=macOS,arch=$(shell uname -m)' -quiet
 SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/Sources \
-	Packages/DictCore/Tests scripts
+	Packages/DictCore/Tests scripts tools/build-dict/Package.swift tools/build-dict/Sources \
+	tools/build-dict/Tests
 
-.PHONY: generate build test test-core test-app smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
+.PHONY: generate build test test-core test-app test-dict dict dict-stats smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -15,10 +16,26 @@ generate:
 build: generate
 	$(XCODEBUILD) build
 
-test: test-core test-app smoke
+test: test-core test-dict test-app smoke
 
 test-core:
 	cd Packages/DictCore && swift test
+
+# The dictionary builder against hand-written fixtures; no network.
+test-dict:
+	cd tools/build-dict && swift test
+
+# Downloads the pinned inputs in tools/build-dict/manifest.json into build/dict/cache/ (reused
+# when present and verified by size and SHA-256), then writes build/dict/dict-en-zh.sqlite with
+# its LICENSE and ATTRIBUTION.
+dict:
+	swift build -c release --package-path tools/build-dict
+	tools/build-dict/.build/release/build-dict build
+
+# Coverage of the most frequent words and lookup timing of build/dict/dict-en-zh.sqlite.
+dict-stats:
+	swift build -c release --package-path tools/build-dict
+	tools/build-dict/.build/release/build-dict stats
 
 test-app: generate
 	$(XCODEBUILD) test
@@ -63,4 +80,4 @@ format:
 	swift format --in-place --recursive $(SWIFT_SOURCES)
 
 clean:
-	rm -rf build DictApp.xcodeproj Packages/DictCore/.build
+	rm -rf build DictApp.xcodeproj Packages/DictCore/.build tools/build-dict/.build

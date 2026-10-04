@@ -1,0 +1,13 @@
+you 600000
+the 300000
+run 50000
+good 40000
+Hospital 2000
+hospital 1000
+turkey 500
+children 400
+absite 1
+ran 5000
+be 100000
+was 90000
+child 99

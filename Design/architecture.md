@@ -1032,8 +1032,8 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 |---|---|---|
 | 英 → 简中释义（主） | 中文维基词典的英语词条，经 wiktextract / kaikki.org 提取（合并「英語」「英语」两个标题），繁体转简体 | CC BY-SA 4.0（维基词典双许可，我们只按 CC BY-SA 使用） |
 | 英 → 中释义（补，可选） | 英文维基词典词条的 Mandarin 翻译表，同上提取 | CC BY-SA 4.0 |
-| 音标 | 维基词典 IPA（英式、美式分开）；缺失时英式用 Britfone，美式用 CMUdict 转 IPA | CC BY-SA 4.0 / MIT / BSD-2 |
-| 词频分档 | wordfreq 导出的 Zipf 值，或 FrequencyWords 字幕词频 | CC BY-SA 4.0 |
+| 音标 | 维基词典 IPA（英式、美式分开）；缺失时英式用 Britfone，美式用 CMUdict 转 IPA（补源尚未接入构建工具） | CC BY-SA 4.0 / MIT / BSD-2 |
+| 词频分档 | FrequencyWords 英语全量词表（OpenSubtitles 2018）换算的 Zipf 值 | CC BY-SA 4.0 |
 | 词形还原 | 维基词典的 form-of 与变形数据建反查表；运行时再用系统 `NLTagger(.lemma)` 补充 | CC BY-SA 4.0 / 系统框架 |
 
 覆盖抽样（每个词频段随机 200 词，筛出真正的词元；样本小，误差大）【实测，核查报告】：
@@ -1047,6 +1047,7 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 两者都没有的多是人名和变形；变形在查询前会先还原成词元。
 质量抽样（214 条）：182 条带 IPA，16 条没有释义，10 条只是「另一种写法」的指向，32 条释义用了繁体字【实测，核查报告】。
 维基词典的义项常比商业词典少，长尾词往往只有一个义项；查不到或义项太少时，模型卡片补上。
+全量构建后的实测远低于上面的抽样：很多常用词的页面存在，但英语段落格式不规范，提取不出释义（and、make、people、bank 等），FrequencyWords 前 5 千个词只有约 42% 能查到中文释义【实测，构建报告 `docs/reviews/dictionary-build-report.md`】。
 
 美音和英音音标分别存储；澳音没有对应的开放音标数据，选澳音时显示英式音标并标注【推断：澳音更接近英式记音】。
 
@@ -1055,9 +1056,11 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 - 数据库是独立生成的 `dict-en-zh.sqlite`，许可 CC BY-SA 4.0，旁边放独立的 `LICENSE` 和 `ATTRIBUTION`；库内 `meta` 表也写明来源、快照日期和许可，文件被单独拿走时信息不丢。
 - 数据库不进 git。
   仓库里只有构建工具 `tools/build-dict/`（GPL-3.0，独立 Swift 包，不依赖第三方库）和一个清单文件，清单固定每个输入的下载地址、快照日期和 sha256，保证可复现。
-- `make dict` 下载输入到 `build/dict/cache/`，生成 `build/dict/dict-en-zh.sqlite`，打印各表行数和覆盖统计。
-- 繁转简用 ICU 的 `Hant-Hans` 变换（`String.applyingTransform`），不引入 OpenCC；ICU 是逐字转换，词级准确度不如 OpenCC【未验证】，构建工具输出一份抽样对照供人检查。
-- 只收录词频前约 6 万到 8 万个词元与维基词典的交集，每个词最多 4 条短释义；体积估计 10–30 MB【推断】。
+- `make dict` 下载输入到 `build/dict/cache/`，生成 `build/dict/dict-en-zh.sqlite`，打印各表行数；`make dict-stats` 打印覆盖统计和查询耗时。
+- 繁转简用 ICU 的 `Traditional-Simplified` 变换（即 `Hant-Hans`，`String.applyingTransform`），不引入 OpenCC；ICU 是逐字转换，字形全部转成简体，但台湾用词（线上、塑胶）不改【实测，构建报告】，构建工具把抽样对照写到 `build/dict/simplification-sample.tsv` 供人检查。
+- 收录中文维基词典里所有有可用中文释义的英语词条，不按词频截断；库里不限释义条数，专名释义排在最后，界面只显示前几条。
+  2026-10-02 快照约 6.8 万词条、10 万条释义，数据库 8.7 MB【实测，构建报告】。
+- kaikki.org 约每周在同一地址覆盖更新提取文件，不保留旧版本；上游更新后清单的大小和 sha256 校验会失败，要同时更新清单里的地址、日期、大小和哈希再构建。
 - 构建工具支持按词条黑名单剔除内容，收到侵权通知时在下个版本删掉。
 - 打包时把数据库复制进应用的 `Resources`，同时作为发布附件单独提供下载，「关于 → 致谢」页列出全部署名和下载链接。
 - 仓库根目录的 `LICENSE` 只覆盖代码，README 说明词典数据另行许可。
@@ -1068,14 +1071,15 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 ```sql
 CREATE TABLE meta (
   key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL            -- schema_version、built_at、sources（JSON：名称、地址、快照日期、sha256、许可）
+  value TEXT NOT NULL            -- schema_version、built_at（快照日期，不用构建时刻，保证可复现）、tool_version、
+                                 -- license、license_url、sources（JSON：名称、地址、快照日期、sha256、许可）、attribution
 ) WITHOUT ROWID;
 
 CREATE TABLE headword (
   id         INTEGER PRIMARY KEY,
   lemma      TEXT NOT NULL,      -- 原样写法，例如 take off
   lemma_key  TEXT NOT NULL UNIQUE, -- normalizedKey(lemma)
-  zipf       REAL,               -- 词频；界面只显示分档
+  zipf       REAL,               -- 词频，保留两位小数；界面只显示分档；多词条目和极少见的词为 NULL
   ipa_us     TEXT,
   ipa_uk     TEXT,
   wiki_title TEXT NOT NULL       -- 维基词典页面标题，用于署名链接
@@ -1084,7 +1088,7 @@ CREATE TABLE headword (
 CREATE TABLE sense (
   headword_id INTEGER NOT NULL REFERENCES headword(id),
   ord         INTEGER NOT NULL,
-  pos         TEXT NOT NULL,     -- 与模型卡片同一组词性枚举
+  pos         TEXT NOT NULL,     -- 与模型卡片同一组词性枚举；来源没标词性时为空串（约 46% 的释义）
   gloss       TEXT NOT NULL,     -- 简体中文短释义
   PRIMARY KEY (headword_id, ord)
 ) WITHOUT ROWID;
@@ -1125,6 +1129,7 @@ public actor Lexicon {
    `NLTagger` 单词还原 16 个里对 13 个，`saw`、`found`、`better` 不还原【实测，评审】。
 5. 多个候选按词频降序。
 
+分档按 Zipf 值切：`common` ≥ 4.5，`moderate` 3.5 到 4.5，其余和没有词频的为 `rare`；构建工具的 `FrequencyBand` 用同一组阈值。
 目标耗时 5 ms 以内【推断】，用单测里的计时断言守护。
 不使用系统词典的文本作为预览：公开接口返回的是用户启用顺序第一本词典的整段文本，中文母语用户默认拿到的是英英释义和美式重拼音标，短语动词查到的是错的词条【实测，评审】。
 卡片上保留「在系统词典中打开」按钮。

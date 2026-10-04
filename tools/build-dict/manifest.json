@@ -1,0 +1,54 @@
+{
+  "snapshotDate": "2026-10-02",
+  "sources": [
+    {
+      "id": "zhwiktionary-en-hant",
+      "name": "Chinese Wiktionary, English entries under 英語 (wiktextract extraction by kaikki.org)",
+      "url": "https://kaikki.org/zhwiktionary/%E8%8B%B1%E8%AA%9E/kaikki.org-dictionary-%E8%8B%B1%E8%AA%9E.jsonl",
+      "file": "zhwiktionary-en-hant.jsonl",
+      "snapshotDate": "2026-10-02",
+      "bytes": 63126839,
+      "sha256": "ce3b2e10f7fe73d9d85b63dbf06cc04d1e66c6089d1e702366a51e951432cd7e",
+      "license": "CC BY-SA 4.0",
+      "licenseURL": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "homepage": "https://zh.wiktionary.org/",
+      "credit": [
+        "Content by the contributors of the Chinese Wiktionary (https://zh.wiktionary.org/), from the zhwiktionary dump dated 2026-10-01; each entry's page history lists its authors.",
+        "Extracted on 2026-10-02 by kaikki.org with wiktextract 1a05e46 and wikitextprocessor e3d6d4e (https://kaikki.org/zhwiktionary/).",
+        "Tatu Ylonen: Wiktextract: Wiktionary as Machine-Readable Structured Data, LREC 2022, pp. 1317-1325."
+      ]
+    },
+    {
+      "id": "zhwiktionary-en-hans",
+      "name": "Chinese Wiktionary, English entries under 英语 (wiktextract extraction by kaikki.org)",
+      "url": "https://kaikki.org/zhwiktionary/%E8%8B%B1%E8%AF%AD/kaikki.org-dictionary-%E8%8B%B1%E8%AF%AD.jsonl",
+      "file": "zhwiktionary-en-hans.jsonl",
+      "snapshotDate": "2026-10-02",
+      "bytes": 21928264,
+      "sha256": "e3ecda3d47230967ef65a7efcc2c1b1523590aa86265c37432664b5e18ad22f4",
+      "license": "CC BY-SA 4.0",
+      "licenseURL": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "homepage": "https://zh.wiktionary.org/",
+      "credit": [
+        "Content by the contributors of the Chinese Wiktionary (https://zh.wiktionary.org/), from the zhwiktionary dump dated 2026-10-01; each entry's page history lists its authors.",
+        "Extracted on 2026-10-02 by kaikki.org with wiktextract 1a05e46 and wikitextprocessor e3d6d4e (https://kaikki.org/zhwiktionary/)."
+      ]
+    },
+    {
+      "id": "frequencywords-en",
+      "name": "FrequencyWords, English full list from OpenSubtitles 2018",
+      "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/072bbed282316a23651aa7068c7173aa7898cf80/content/2018/en/en_full.txt",
+      "file": "frequencywords-en_full.txt",
+      "snapshotDate": "2019-02-13",
+      "bytes": 19977552,
+      "sha256": "7fea67ab954e2c01df6c608c9826e594cf36f8823b3243554f88245fb75dc506",
+      "license": "CC BY-SA 4.0",
+      "licenseURL": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "homepage": "https://github.com/hermitdave/FrequencyWords",
+      "credit": [
+        "Word frequency list by Hermit Dave (https://github.com/hermitdave/FrequencyWords), content licensed CC BY-SA 4.0.",
+        "Counted from the OpenSubtitles2018 corpus of OPUS (http://opus.nlpl.eu/OpenSubtitles2018.php): P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from Movie and TV Subtitles, LREC 2016; subtitles from http://www.opensubtitles.org/."
+      ]
+    }
+  ]
+}

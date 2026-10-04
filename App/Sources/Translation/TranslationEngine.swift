@@ -40,7 +40,10 @@ final class TranslationEngine {
     // An unrecognized source is checked as the pair's other language: the framework would
     // otherwise be asked anyway and could offer a download.
     let source = languages.source ?? (languages.target == pair.mine ? pair.learning : pair.mine)
-    let installed = await appleAvailability(source, languages.target) == .installed
+    let availability = appleAvailability
+    let appleInstalled = { await availability(source, languages.target) == .installed }
+    // With a model the request starts at once; the languages matter only for a fallback.
+    let installed = model == nil ? await appleInstalled() : false
     guard !Task.isCancelled else { return }
     let chosen = engine(
       for: .translate, modelConfigured: model != nil, appleTranslationInstalled: installed)
@@ -73,8 +76,9 @@ final class TranslationEngine {
       } catch {
         Log.model.error("model translation failed: \(errorKind(error), privacy: .public)")
         let hasText = !shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let canFallBack = error is CancellationError ? false : await appleInstalled()
         switch translationRecovery(
-          after: error, hasText: hasText, appleTranslationInstalled: installed)
+          after: error, hasText: hasText, appleTranslationInstalled: canFallBack)
         {
         case .stop: return
         case .keepPartial: show(.result(shown), note: TranslationStrings.truncatedNote)

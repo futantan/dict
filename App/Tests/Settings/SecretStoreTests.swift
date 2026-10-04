@@ -62,8 +62,83 @@ struct SecretStoreTests {
     #expect(try store.secret(for: "custom") == "ключ-密钥-🔑")
   }
 
+  @Test func cachedStoreFollowsTheContract() throws {
+    try checkContract(CachedSecretStore(InMemorySecretStore()))
+  }
+
+  @Test func cachedStoreReadsEachAccountOnce() throws {
+    let inner = CountingSecretStore(["openai": "sk-saved"])
+    let store = CachedSecretStore(inner)
+
+    #expect(try store.secret(for: "openai") == "sk-saved")
+    #expect(try store.secret(for: "openai") == "sk-saved")
+    #expect(try store.secret(for: "custom") == nil)
+    #expect(try store.secret(for: "custom") == nil)
+
+    #expect(inner.reads == ["openai", "custom"])
+  }
+
+  @Test func savingAKeyReplacesTheCachedOne() throws {
+    let inner = CountingSecretStore(["openai": "sk-old"])
+    let store = CachedSecretStore(inner)
+    #expect(try store.secret(for: "openai") == "sk-old")
+
+    try store.setSecret("sk-new", for: "openai")
+    #expect(try store.secret(for: "openai") == "sk-new")
+    try store.setSecret(nil, for: "openai")
+    #expect(try store.secret(for: "openai") == nil)
+
+    #expect(inner.reads == ["openai"])
+  }
+
+  @Test func failedReadsAreTriedAgain() throws {
+    let inner = CountingSecretStore(["openai": "sk-saved"])
+    inner.failure = KeychainError(status: errSecInteractionNotAllowed)
+    let store = CachedSecretStore(inner)
+
+    #expect(throws: KeychainError(status: errSecInteractionNotAllowed)) {
+      try store.secret(for: "openai")
+    }
+    inner.failure = nil
+    #expect(try store.secret(for: "openai") == "sk-saved")
+  }
+
+  @Test func failedWritesForgetTheCachedKey() throws {
+    let inner = CountingSecretStore(["openai": "sk-old"])
+    let store = CachedSecretStore(inner)
+    #expect(try store.secret(for: "openai") == "sk-old")
+
+    inner.failure = KeychainError(status: errSecWrPerm)
+    #expect(throws: KeychainError(status: errSecWrPerm)) {
+      try store.setSecret("sk-new", for: "openai")
+    }
+    inner.failure = nil
+    #expect(try store.secret(for: "openai") == "sk-old")
+    #expect(inner.reads == ["openai", "openai"])
+  }
+
   @Test func appServiceIsTheBundleIdentifierDotModel() {
     #expect(KeychainStore.app.service == "\(Bundle.main.bundleIdentifier ?? "").model")
     #expect(KeychainStore.app.service.hasPrefix("au.ibra.dict"))
+  }
+}
+
+/// An in-memory store that records reads and can be made to fail.
+private final class CountingSecretStore: SecretStore, @unchecked Sendable {
+  private var secrets: [String: String]
+  private(set) var reads: [String] = []
+  var failure: KeychainError?
+
+  init(_ secrets: [String: String]) { self.secrets = secrets }
+
+  func secret(for account: String) throws(KeychainError) -> String? {
+    if let failure { throw failure }
+    reads.append(account)
+    return secrets[account]
+  }
+
+  func setSecret(_ secret: String?, for account: String) throws(KeychainError) {
+    if let failure { throw failure }
+    secrets[account] = secret?.isEmpty == false ? secret : nil
   }
 }

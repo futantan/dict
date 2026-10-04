@@ -209,6 +209,29 @@ struct TranslationEngineTests {
     #expect(states.map(\.phase) == [.needsSetup(TranslationStrings.needsModel)])
   }
 
+  /// With a model the request starts at once: Apple Translation's languages are checked only
+  /// when the model fails and a fallback is possible (measured 10–40 ms per press).
+  @Test func aModelDoesNotWaitForAppleAvailability() async {
+    let checks = Mutex(0)
+    func engine(_ model: ScriptedModel) -> TranslationEngine {
+      TranslationEngine(
+        model: ModelTranslator(model: model), apple: FakeApple(.success("你好")),
+        appleAvailability: { _, _ in
+          checks.withLock { $0 += 1 }
+          return .installed
+        })
+    }
+    await engine(ScriptedModel(events: [.text("你好"), complete]))
+      .translate("Hello", direction: .intoMine, pair: LanguagePair()) { _ in }
+    #expect(checks.withLock { $0 } == 0)
+
+    var states: [PanelState] = []
+    await engine(ScriptedModel(error: ModelError.network(code: -1009)))
+      .translate("Hello", direction: .intoMine, pair: LanguagePair()) { states.append($0) }
+    #expect(checks.withLock { $0 } == 1)
+    #expect(states.last?.phase == .result("你好"))
+  }
+
   @Test func appleFailureIsShown() async throws {
     struct Broken: Error {}
     let result = await states(model: nil, apple: FakeApple(.failure(Broken())))

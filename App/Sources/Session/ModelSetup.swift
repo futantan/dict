@@ -27,3 +27,17 @@ func configuredModel(
     return nil
   }
 }
+
+/// The translation engine for the saved model preferences: the model when one is usable,
+/// otherwise Apple Translation alone.
+@MainActor
+func makeTranslationEngine(
+  _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore
+) -> TranslationEngine {
+  let model = configuredModel(preferences, presets: presets, secrets: secrets).map {
+    ModelTranslator(
+      model: ChatCompletionsModel(
+        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+  }
+  return TranslationEngine(model: model)
+}

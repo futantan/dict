@@ -7,7 +7,7 @@ XCODEBUILD := xcodebuild -project DictApp.xcodeproj -scheme DictApp -configurati
 SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/Sources \
 	Packages/DictCore/Tests scripts
 
-.PHONY: generate build test test-core test-app smoke window-test e2e matrix eval run package lint format clean
+.PHONY: generate build test test-core test-app smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -37,6 +37,15 @@ e2e: build
 
 matrix: build
 	scripts/matrix.sh $(CONFIG)
+
+# The real model end to end: needs the network, `make import-key`, and costs a few cents at
+# most. Never part of `make test` or `make e2e`.
+e2e-live: build
+	scripts/e2e-live.sh
+
+# Saves OPENAI_API_KEY from .env into the Debug app's own Keychain item and selects OpenAI.
+import-key: build
+	scripts/import-key.sh $(MODEL)
 
 eval:
 	SUITE="$(SUITE)" RUNS="$(RUNS)" scripts/eval.sh

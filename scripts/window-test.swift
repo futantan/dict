@@ -4,7 +4,9 @@
 // activated) and checks that each of its own windows comes up in front and key:
 // - the first-run window on a fresh launch,
 // - Settings… and About from the menu bar item, pressed through the Accessibility API,
-// - the first-run window or Settings when the running app is opened again (reopen event).
+// - the first-run window or Settings when the running app is opened again (reopen event),
+// - and that closing the first-run window or Settings gives focus back to the app that was
+//   in front before.
 // Each case runs in a new instance that is quit afterwards. The cases pass
 // `-onboarding.completed NO` or `YES`, an argument-domain override, so the user's
 // preferences are read but never written.
@@ -196,13 +198,39 @@ func pressMenuItem(_ app: NSRunningApplication, _ what: String, _ pick: ([AXUIEl
   AXUIElementPerformAction(items[index], kAXPressAction as CFString)
 }
 
+/// The app in front now, which Dict's windows should give focus back to when they close.
+func frontApp() -> NSRunningApplication {
+  waitFor("no app is in front", { NSWorkspace.shared.frontmostApplication })
+}
+
+/// Closes the app's focused window with its close button and checks that `previous` is the
+/// front app again.
+func expectFocusReturns(
+  _ app: NSRunningApplication, to previous: NSRunningApplication, _ what: String
+) -> String {
+  guard
+    let window = element(
+      AXUIElementCreateApplication(app.processIdentifier), kAXFocusedWindowAttribute),
+    let close = element(window, kAXCloseButtonAttribute)
+  else { fail("\(what): no focused window with a close button") }
+  AXUIElementPerformAction(close, kAXPressAction as CFString)
+  return waitFor(
+    "\(what): focus did not go back to \(previous.localizedName ?? "the previous app")",
+    {
+      NSWorkspace.shared.frontmostApplication == previous && !app.isActive
+        ? "closing the \(what) gave focus back to \(previous.localizedName ?? "?")" : nil
+    }, diagnose: { state(of: app) })
+}
+
 while mkdir(lockPath, 0o755) != 0 { spin(2) }
 holdsLock = true
 
 var passed: [String] = []
 
+var previous = frontApp()
 let fresh = launch(["-onboarding.completed", "NO"])
 passed.append(expectFrontAndKey(fresh, "first-run window"))
+passed.append(expectFocusReturns(fresh, to: previous, "first-run window"))
 quitLaunched()
 
 // Settings… is the item with the ⌘, shortcut; About follows it.
@@ -213,9 +241,11 @@ for (what, pick) in [
   ("Settings window", settingsIndex),
   ("About panel", { settingsIndex($0).map { $0 + 1 } }),
 ] {
+  previous = frontApp()
   let app = launch(["--no-onboarding"])
   pressMenuItem(app, what, pick)
   passed.append(expectFrontAndKey(app, what))
+  if what == "Settings window" { passed.append(expectFocusReturns(app, to: previous, what)) }
   quitLaunched()
 }
 

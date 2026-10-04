@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let delegate = AppDelegate()
     app.delegate = delegate
     #if DEBUG
+      KeyImport.runIfRequested()
       E2ERunner.startIfRequested()
     #endif
     app.run()
@@ -110,16 +111,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
       reader: reader, panel: panel,
       environment: SessionCoordinator.Environment(
         makeTranslator: {
-          let preferences = PreferencesStore(defaults: .standard).load()
-          let model = configuredModel(
-            preferences.model, presets: presets, secrets: KeychainStore.app
-          ).map {
-            ModelTranslator(
-              model: ChatCompletionsModel(
-                endpoint: $0.configuration.endpoint, rules: $0.configuration.rules,
-                apiKey: $0.apiKey))
-          }
-          return TranslationEngine(model: model)
+          makeTranslationEngine(
+            PreferencesStore(defaults: .standard).load().model, presets: presets,
+            secrets: CachedSecretStore.app)
         },
         languagePair: { PreferencesStore(defaults: .standard).load().languagePair },
         refreshPermissions: { [permissions] in permissions.refresh() },

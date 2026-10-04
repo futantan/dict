@@ -44,7 +44,7 @@ final class SettingsModel {
   @ObservationIgnored private var testTask: Task<Void, Never>?
 
   init(
-    defaults: UserDefaults = .standard, secrets: any SecretStore = KeychainStore.app,
+    defaults: UserDefaults = .standard, secrets: any SecretStore = CachedSecretStore.app,
     presets: [ProviderPreset] = (try? ProviderPreset.all()) ?? [],
     makeModel: @escaping ModelFactory = SettingsModel.chatCompletionsModel
   ) {

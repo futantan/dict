@@ -15,6 +15,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
   var hotkeys: HotkeyCenter
 
   private let tabs = SettingsTabViewController()
+  private let focus = FocusReturn()
 
   init(model: SettingsModel = SettingsModel(), hotkeys: HotkeyCenter = HotkeyCenter()) {
     self.model = model
@@ -35,6 +36,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     guard let window else { return }
     prepare()
     if let pane { select(pane) }
+    focus.remember()
     window.makeKeyAndOrderFront(nil)
     NSApp.activateFromFrontApp()
   }
@@ -75,6 +77,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
   func windowWillClose(_ notification: Notification) {
     window?.makeFirstResponder(nil)
     model.commitKey()
+    if let window { focus.restore(closing: window) }
   }
 }
 

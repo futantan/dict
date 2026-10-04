@@ -85,7 +85,6 @@ struct MatrixRow {
 
 @MainActor
 struct Matrix {
-  static let port = 8765
   static let sections = ["textedit", "safari", "chrome", "chrome-cold", "vscode"]
   static let webControls = ["web.paragraph", "web.textarea", "web.contenteditable"]
   static let webText = [
@@ -448,57 +447,23 @@ struct Matrix {
   // MARK: Helpers
 
   private func pageURL(_ control: String) -> String {
-    let text =
-      Self.webText[control]?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-    return "http://127.0.0.1:\(Self.port)/page.html?control=\(control)&text=\(text)"
+    fixturePageURL(control, text: Self.webText[control] ?? "")
   }
-
-  private func pageTitle(_ control: String) -> String { "Dict fixture \(control)" }
 
   private func pageIsFront(_ pid: pid_t, control: String) -> Bool {
-    NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
-      && AX.focusedWindowTitle(pid)?.hasPrefix(pageTitle(control)) == true
+    fixturePageIsFront(pid, control: control)
   }
 
-  /// Opens the page in a new tab of `appName` and waits until it is the front tab.
   private func openPage(_ control: String, in appName: String, bundleID: String) -> pid_t? {
-    shell(["open", "-a", appName, pageURL(control)])
-    guard let pid = poll(timeout: 10, { runningPids(bundleID).first }),
-      poll(timeout: 10, { pageIsFront(pid, control: control) ? true : nil }) != nil
-    else { return nil }
-    pause(0.3)
-    return pid
+    openFixturePage(pageURL(control), control: control, in: appName, bundleID: bundleID)
   }
 
-  /// Closes the front tab with ⌘W, but only when it is the driver's own page.
   private func closeTab(_ pid: pid_t, control: String) {
-    guard pageIsFront(pid, control: control) else {
-      say("  warning: the front tab is not the test page; left open for you to close")
-      return
-    }
-    postKey(pid, keyCode: 13)  // ⌘W
-    pause(0.5)
+    closeFixtureTab(pid, control: control)
   }
 
   private func startServer() throws {
-    let server = Process()
-    server.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-    server.arguments = [
-      "-m", "http.server", String(Self.port), "--bind", "127.0.0.1", "--directory", pages.path,
-    ]
-    server.standardOutput = FileHandle.nullDevice
-    server.standardError = FileHandle.nullDevice
-    try server.run()
-    Cleanup.add { server.terminate() }
-    let url = "http://127.0.0.1:\(Self.port)/page.html"
-    guard
-      poll(
-        timeout: 10,
-        {
-          server.isRunning && shell(["curl", "-sf", "-o", "/dev/null", url]).status == 0
-            ? true : nil
-        }) != nil
-    else { throw DriverError("the HTTP server on port \(Self.port) did not start (port in use?)") }
+    try startPageServer(pages)
   }
 
   private mutating func compareAndWrite() {
@@ -534,6 +499,80 @@ struct Matrix {
     } catch {
       say("matrix: could not write \(output.path): \(error)")
     }
+  }
+}
+
+// MARK: - Fixture pages
+
+/// The local HTTP server's port for Fixtures/CaptureFixture/Resources/page.html.
+let pageServerPort = 8765
+
+/// The fixture page selecting `text` in `control`; `content` first replaces the control's text.
+func fixturePageURL(_ control: String, text: String, content: String? = nil) -> String {
+  var components = URLComponents()
+  components.scheme = "http"
+  components.host = "127.0.0.1"
+  components.port = pageServerPort
+  components.path = "/page.html"
+  components.queryItems =
+    [URLQueryItem(name: "control", value: control), URLQueryItem(name: "text", value: text)]
+    + (content.map { [URLQueryItem(name: "content", value: $0)] } ?? [])
+  return components.string ?? ""
+}
+
+@MainActor
+func fixturePageIsFront(_ pid: pid_t, control: String) -> Bool {
+  NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
+    && AX.focusedWindowTitle(pid)?.hasPrefix("Dict fixture \(control)") == true
+}
+
+/// Opens `url` in a new tab of `appName` and waits until it is the front tab.
+@MainActor
+func openFixturePage(_ url: String, control: String, in appName: String, bundleID: String)
+  -> pid_t?
+{
+  shell(["open", "-a", appName, url])
+  guard let pid = poll(timeout: 10, { runningPids(bundleID).first }),
+    poll(timeout: 10, { fixturePageIsFront(pid, control: control) ? true : nil }) != nil
+  else { return nil }
+  pause(0.3)
+  return pid
+}
+
+/// Closes the front tab with ⌘W, but only when it is the driver's own page.
+@MainActor
+func closeFixtureTab(_ pid: pid_t, control: String) {
+  guard fixturePageIsFront(pid, control: control) else {
+    say("  warning: the front tab is not the test page; left open for you to close")
+    return
+  }
+  postKey(pid, keyCode: 13)  // ⌘W
+  pause(0.5)
+}
+
+/// Serves `pages` on 127.0.0.1 until the driver exits.
+@MainActor
+func startPageServer(_ pages: URL) throws {
+  let server = Process()
+  server.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+  server.arguments = [
+    "-m", "http.server", String(pageServerPort), "--bind", "127.0.0.1", "--directory",
+    pages.path,
+  ]
+  server.standardOutput = FileHandle.nullDevice
+  server.standardError = FileHandle.nullDevice
+  try server.run()
+  Cleanup.add { server.terminate() }
+  let url = "http://127.0.0.1:\(pageServerPort)/page.html"
+  guard
+    poll(
+      timeout: 10,
+      {
+        server.isRunning && shell(["curl", "-sf", "-o", "/dev/null", url]).status == 0
+          ? true : nil
+      }) != nil
+  else {
+    throw DriverError("the HTTP server on port \(pageServerPort) did not start (port in use?)")
   }
 }
 

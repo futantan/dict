@@ -9,18 +9,34 @@
 // reports when the reading panel showed and whether it was key while the fallback copied.
 // `"force": "menu"` or `"key"` skips the accessibility read and copies that way, to measure
 // the fallback in apps whose selection accessibility reads.
+// `"translator": "model"` translates with the saved model settings and the Keychain key
+// instead, as the app does; `"baseURL"` and `"apiKey"` override those two for failure tests.
+// `"pressAgainAfterMs"` presses the shortcut once more and `"escapeAfterMs"` sends Esc to
+// the panel, both counted from the first press.
 
 #if DEBUG
   import AppKit
   import DictCore
 
   enum E2EStep: Equatable, Sendable {
-    case select(control: String, text: String)
+    /// `content`, when given, first replaces the control's text.
+    case select(control: String, text: String, content: String? = nil)
     case capture(ClipboardPolicy)
-    case read(force: ForcedCopy?)
+    case read(E2EReadOptions)
     case wait(ms: Int)
     /// A step this runner does not understand; reported, then skipped.
     case invalid(String)
+  }
+
+  /// How a `read` step presses the shortcut and translates.
+  struct E2EReadOptions: Equatable, Sendable {
+    var force: ForcedCopy?
+    /// Translate with the configured model rather than echo the text.
+    var usesModel = false
+    var baseURL: String?
+    var apiKey: String?
+    var pressAgainAfterMs: Int?
+    var escapeAfterMs: Int?
   }
 
   enum E2EScenario {
@@ -37,7 +53,7 @@
       if let select = object["select"] as? [String: Any] {
         guard let control = select["control"] as? String, let text = select["text"] as? String
         else { return .invalid("select needs control and text") }
-        return .select(control: control, text: text)
+        return .select(control: control, text: text, content: select["content"] as? String)
       }
       if let capture = object["capture"] as? [String: Any] {
         switch capture["policy"] as? String {
@@ -47,11 +63,23 @@
         }
       }
       if let read = object["read"] as? [String: Any] {
-        guard let force = read["force"] as? String else { return .read(force: nil) }
-        guard let forced = ForcedCopy(rawValue: force) else {
-          return .invalid("read force must be menu or key")
+        var options = E2EReadOptions()
+        if let force = read["force"] as? String {
+          guard let forced = ForcedCopy(rawValue: force) else {
+            return .invalid("read force must be menu or key")
+          }
+          options.force = forced
         }
-        return .read(force: forced)
+        switch read["translator"] as? String {
+        case nil, "echo": break
+        case "model": options.usesModel = true
+        default: return .invalid("read translator must be echo or model")
+        }
+        options.baseURL = read["baseURL"] as? String
+        options.apiKey = read["apiKey"] as? String
+        options.pressAgainAfterMs = read["pressAgainAfterMs"] as? Int
+        options.escapeAfterMs = read["escapeAfterMs"] as? Int
+        return .read(options)
       }
       if let wait = object["wait"] as? [String: Any] {
         guard let ms = wait["ms"] as? Int else { return .invalid("wait needs ms") }
@@ -87,6 +115,7 @@
         object["panelKeyAtShow"] = session.keyAtShow ?? NSNull()
         object["panelKeyAfterCopy"] = session.keyAfterCopy ?? NSNull()
         object["frontAppUnchanged"] = session.frontAppUnchanged
+        object["translation"] = session.translation
         row = object
         return row
       case .capture(let ms, let result, let report):
@@ -176,10 +205,12 @@
         let clock = ContinuousClock()
         let start = clock.now
         switch step {
-        case .select(let control, let text):
+        case .select(let control, let text, let content):
+          var userInfo = ["command": "select", "control": control, "text": text]
+          userInfo["content"] = content
           DistributedNotificationCenter.default().postNotificationName(
             fixtureCommand, object: nil,
-            userInfo: ["command": "select", "control": control, "text": text],
+            userInfo: userInfo,
             deliverImmediately: true)
           try? await Task.sleep(for: .milliseconds(200))
           rows.append(.select(ms: milliseconds(clock.now - start)))
@@ -191,10 +222,10 @@
           rows.append(
             .capture(
               ms: milliseconds(clock.now - start), result: result, report: reader.lastReport))
-        case .read(let force):
+        case .read(let options):
           let running = session ?? E2ESession(reader: reader)
           session = running
-          let record = await running.press(force: force)
+          let record = await running.press(options)
           rows.append(
             .read(ms: milliseconds(clock.now - start), session: record, report: reader.lastReport))
         case .invalid(let reason):
@@ -215,7 +246,7 @@
 
   /// One "read" shortcut press through the real coordinator and panel. It stands in for the
   /// reader (to record the capture), the panel (to record what the coordinator asks of it)
-  /// and the translator (which echoes the text, without any model).
+  /// and, unless the step asks for the model, the translator (which echoes the text).
   @MainActor
   final class E2ESession: SelectionReader, SessionPanel, SessionTranslator {
     struct Record {
@@ -229,18 +260,32 @@
       var keyAtShow: Bool?
       var keyAfterCopy: Bool?
       var frontAppUnchanged = true
+      /// The translation's timings and outcome, for steps that translate.
+      var translationShownMs: Double?
+      var firstTextMs: Double?
+      var endedMs: Double?
+      var textUpdates = 0
+      /// States the panel actually took on; fewer than the updates when text was throttled.
+      var panelStates = 0
+      var lastState: PanelState?
+      var secondPress: String?
+      var escapeSentMs: Double?
+      /// Panel calls the coordinator made after the panel was dismissed or hidden.
+      var callsAfterDismissal = 0
+      var visibleAtEnd = false
     }
 
     private let reader: AccessibilitySelectionReader
     private let controller = PanelController()
-    private var force: ForcedCopy?
+    private var options = E2EReadOptions()
     private var record = Record()
+    private var dismissed = false
     private let clock = ContinuousClock()
     private var start = ContinuousClock.now
     private lazy var coordinator = SessionCoordinator(
       reader: self, panel: self,
       environment: SessionCoordinator.Environment(
-        makeTranslator: { [unowned self] in self },
+        makeTranslator: { [unowned self] in self.translator() },
         languagePair: { LanguagePair() },
         refreshPermissions: {
           PermissionStatus(
@@ -253,16 +298,29 @@
 
     init(reader: AccessibilitySelectionReader) {
       self.reader = reader
+      controller.onDismiss = { [unowned self] in
+        self.dismissed = true
+        self.coordinator.panelDismissed($0)
+      }
     }
 
     /// Presses the shortcut, waits for the session to finish, then hides the panel.
-    func press(force: ForcedCopy?) async -> Record {
-      self.force = force
+    func press(_ options: E2EReadOptions) async -> Record {
+      self.options = options
       record = Record()
+      dismissed = false
       start = clock.now
+      let statesBefore = controller.shownStates
       let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
       coordinator.hotkeyPressed(.read)
+      let extra = Task { await self.extraInput(options) }
       await coordinator.settle()
+      record.endedMs = elapsed
+      await extra.value
+      // A second press may have started nothing, or ended the session; wait for either.
+      await coordinator.settle()
+      record.visibleAtEnd = controller.isVisible
+      record.panelStates = controller.shownStates - statesBefore
       record.frontAppUnchanged =
         NSWorkspace.shared.frontmostApplication?.processIdentifier == front
       coordinator.end()
@@ -271,7 +329,39 @@
       return record
     }
 
+    /// The second press and the Esc key the step asks for, at their times.
+    private func extraInput(_ options: E2EReadOptions) async {
+      if let ms = options.pressAgainAfterMs {
+        try? await Task.sleep(until: start.advanced(by: .milliseconds(ms)), clock: clock)
+        record.secondPress = controller.isVisible ? "panel visible" : "panel hidden"
+        coordinator.hotkeyPressed(.read)
+      }
+      if let ms = options.escapeAfterMs {
+        try? await Task.sleep(until: start.advanced(by: .milliseconds(ms)), clock: clock)
+        guard
+          let escape = NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: controller.window.windowNumber, context: nil, characters: "\u{1b}",
+            charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: PanelKeys.escape)
+        else { return }
+        record.escapeSentMs = elapsed
+        controller.window.sendEvent(escape)
+      }
+    }
+
     private var elapsed: Double { milliseconds(clock.now - start) }
+
+    private func translator() -> any SessionTranslator {
+      guard options.usesModel else { return self }
+      var preferences = PreferencesStore(defaults: .standard).load().model
+      if let baseURL = options.baseURL { preferences.baseURL = baseURL }
+      var secrets: any SecretStore = CachedSecretStore.app
+      if let key = options.apiKey, let provider = preferences.providerID {
+        secrets = InMemorySecretStore([provider: key])
+      }
+      return makeTranslationEngine(
+        preferences, presets: (try? ProviderPreset.all()) ?? [], secrets: secrets)
+    }
 
     func capture(
       policy: ClipboardPolicy, beforeFallback: () -> Void
@@ -282,7 +372,7 @@
         self.record.keyAtShow = self.controller.window.isKeyWindow
       }
       let result =
-        if let force {
+        if let force = options.force {
           await reader.captureByCopying(force, beforeCopying: showing)
         } else {
           await reader.capture(policy: policy, beforeFallback: showing)
@@ -297,12 +387,27 @@
 
     func show(_ state: PanelState, near anchor: PanelAnchor) {
       controller.show(state, near: anchor)
-      record.panelCalls.append(String(format: "show:%@@%.1f", state.phase.name, elapsed))
+      dismissed = false
+      noteState(state, call: "show")
     }
 
     func update(_ state: PanelState) {
+      if dismissed || !controller.isVisible { record.callsAfterDismissal += 1 }
       controller.update(state)
-      record.panelCalls.append(String(format: "update:%@@%.1f", state.phase.name, elapsed))
+      noteState(state, call: "update")
+    }
+
+    private func noteState(_ state: PanelState, call: String) {
+      let now = elapsed
+      record.panelCalls.append(String(format: "%@:%@@%.1f", call, state.phase.name, now))
+      record.lastState = state
+      if case .generating = state.phase, record.translationShownMs == nil {
+        record.translationShownMs = now
+      }
+      if state.phase.copyableText != nil {
+        record.textUpdates += 1
+        if record.firstTextMs == nil { record.firstTextMs = now }
+      }
     }
 
     func hide() {
@@ -313,6 +418,35 @@
       _ text: String, direction: Direction, pair: LanguagePair, update: (PanelState) -> Void
     ) async {
       update(PanelState(source: text, phase: .result(text)))
+    }
+  }
+
+  extension E2ESession.Record {
+    /// The translation's part of a `read` row.
+    var translation: [String: Any] {
+      var object: [String: Any] = [
+        "textUpdates": textUpdates, "panelStates": panelStates,
+        "callsAfterDismissal": callsAfterDismissal,
+        "visibleAtEnd": visibleAtEnd,
+      ]
+      object["panelShownMs"] = translationShownMs.map(rounded) ?? NSNull()
+      object["firstTextMs"] = firstTextMs.map(rounded) ?? NSNull()
+      object["endedMs"] = endedMs.map(rounded) ?? NSNull()
+      object["escapeSentMs"] = escapeSentMs.map(rounded) ?? NSNull()
+      object["secondPress"] = secondPress ?? NSNull()
+      object["phase"] = lastState?.phase.name ?? NSNull()
+      object["result"] = lastState?.phase.copyableText ?? NSNull()
+      object["note"] = lastState?.note?.text ?? NSNull()
+      object["noteAction"] = lastState?.note?.action?.id ?? NSNull()
+      switch lastState?.phase {
+      case .failure(let notice), .needsSetup(let notice):
+        object["noticeTitle"] = notice.title
+        object["noticeMessage"] = notice.message ?? NSNull()
+        object["noticeActions"] = notice.actions.map(\.id)
+      default:
+        break
+      }
+      return object
     }
   }
 #endif

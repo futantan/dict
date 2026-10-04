@@ -72,6 +72,41 @@ struct KeychainStore: SecretStore {
   }
 }
 
+/// Remembers what another store read, so the shortcut path reads the Keychain once per
+/// account rather than on every press. Writes go through it, so a key saved in Settings
+/// replaces the remembered one. A failed read is not remembered and is tried again; a
+/// failed write forgets the account. A key changed by another process is seen after a
+/// relaunch.
+final class CachedSecretStore: SecretStore {
+  /// The app's Keychain items; Settings and the translator share it.
+  static let app = CachedSecretStore(KeychainStore.app)
+
+  private let inner: any SecretStore
+  /// A missing account has not been read; a nil value means there is no secret.
+  private let cache = Mutex<[String: String?]>([:])
+
+  init(_ inner: any SecretStore) {
+    self.inner = inner
+  }
+
+  func secret(for account: String) throws(KeychainError) -> String? {
+    if let cached = cache.withLock({ $0[account] }) { return cached }
+    let secret = try inner.secret(for: account)
+    cache.withLock { $0[account] = .some(secret) }
+    return secret
+  }
+
+  func setSecret(_ secret: String?, for account: String) throws(KeychainError) {
+    do {
+      try inner.setSecret(secret, for: account)
+    } catch {
+      cache.withLock { $0[account] = nil }
+      throw error
+    }
+    cache.withLock { $0[account] = .some(secret?.isEmpty == false ? secret : nil) }
+  }
+}
+
 /// Keeps secrets in memory, for tests and previews.
 final class InMemorySecretStore: SecretStore {
   private let secrets: Mutex<[String: String]>

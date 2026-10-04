@@ -15,6 +15,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
   /// Reads the permissions; a change reaches `model.permissionsChanged` through the monitor.
   private let refreshPermissions: () -> Void
   private var poll: Timer?
+  private let focus = FocusReturn()
 
   init(model: OnboardingModel, appName: String, refreshPermissions: @escaping () -> Void) {
     self.model = model
@@ -38,6 +39,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
   func show() {
     guard let window else { return }
     if !window.isVisible { window.center() }
+    focus.remember()
     window.makeKeyAndOrderFront(nil)
     NSApp.activateFromFrontApp()
     startPolling()
@@ -56,6 +58,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
   func windowWillClose(_ notification: Notification) {
     poll?.invalidate()
     poll = nil
+    if let window { focus.restore(closing: window) }
   }
 
   private func startPolling() {

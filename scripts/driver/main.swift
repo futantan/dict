@@ -5,6 +5,7 @@
 //
 //   dict-driver e2e      --app <Dict.app> --fixture <CaptureFixture.app> --scenarios <json> --work <dir>
 //   dict-driver matrix   --app <Dict.app> --pages <dir> --out <json> --work <dir> [--only a,b]
+//   dict-driver live     --app <Dict.app> --fixture <CaptureFixture.app> --pages <dir> --work <dir> [--only a,b] [--runs n]
 //   dict-driver selftest --fixture <CaptureFixture.app> --fakes <dir> --work <dir>
 //
 // Exit status: 0 all passed, 1 failures, 2 skipped because the app has no `--e2e` entry point
@@ -60,6 +61,15 @@ func main() -> Int32 {
         app: try required("app"), pages: try required("pages"), output: try required("out"),
         work: try required("work"), only: only)
       return try matrix.run()
+
+    case "live":
+      try requireAccessibility()
+      let only = option("only").map { $0.split(separator: ",").map(String.init) }
+      var live = Live(
+        app: try required("app"), fixtureApp: try required("fixture"),
+        pages: try required("pages"), work: try required("work"), only: only,
+        runs: option("runs").flatMap(Int.init) ?? 10)
+      return try live.run()
 
     case "selftest":
       try requireAccessibility()

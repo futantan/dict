@@ -25,6 +25,11 @@ final class PanelController {
   /// Set before the window is ordered in and cleared before it is ordered out, so callbacks
   /// fired during either see the session's state, not the window's.
   private(set) var isVisible = false
+  /// States the panel took on since it was created, for the e2e report.
+  private(set) var shownStates = 0
+  private lazy var throttle = StreamThrottle(interval: Self.frameInterval) { [weak self] in
+    self?.apply($0)
+  }
 
   var state: PanelState { model.state }
   /// The panel window, for tests and for anchoring other windows to it.
@@ -32,6 +37,8 @@ final class PanelController {
 
   /// Shows the panel with `state` next to `anchor` and makes it key without activating Dict.
   func show(_ state: PanelState, near anchor: PanelAnchor) {
+    throttle.cancel()
+    shownStates += 1
     self.anchor = anchor
     side = .below
     model.draft = ""
@@ -45,17 +52,25 @@ final class PanelController {
   }
 
   /// Replaces what the panel shows; the panel stays where it is and grows away from its
-  /// anchor. Does nothing while the panel is hidden.
+  /// anchor. Streamed text shows at most once per display frame (`StreamThrottle`). Does
+  /// nothing while the panel is hidden.
   func update(_ state: PanelState) {
+    guard isVisible else { return }
+    throttle.submit(state)
+  }
+
+  private func apply(_ state: PanelState) {
     guard isVisible, model.state != state else { return }
     if model.state.phase.name != state.phase.name {
       Log.ui.info("panel state: \(state.phase.name, privacy: .public)")
     }
+    shownStates += 1
     model.state = state
   }
 
   /// Hides the panel without calling `onDismiss`.
   func hide() {
+    throttle.cancel()
     guard isVisible else { return }
     isVisible = false
     removeMonitors()
@@ -140,6 +155,11 @@ final class PanelController {
     }
     mouseMonitor = nil
     activationObserver = nil
+  }
+
+  /// One frame of the main display.
+  private static var frameInterval: Duration {
+    .seconds(1) / max(NSScreen.main?.maximumFramesPerSecond ?? 60, 30)
   }
 
   private static func currentScreens() -> [PanelScreen] {

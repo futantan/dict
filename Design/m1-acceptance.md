@@ -1,7 +1,7 @@
 # M1 验收记录
 
 本文逐条列出 `Design/architecture.md` 第 15.1 节的 8 条验收，写明当前状态、证据，以及还没验证的条目由谁、用哪条命令或哪些步骤来验证。
-记录时间：2026-10-04，main 分支（基于 `5c5e990` 的工作区）。
+记录时间：2026-10-04，main 分支（第 4–6 条基于 `37e2301` 的工作区更新）。
 第一轮记录时屏幕锁定；本次更新在解锁的真实屏幕上跑了不需要用户授权的部分（见下文「解锁后的真实屏幕验证」）。
 第二轮记录时 Dict Dev 还没有辅助功能授权，依赖它的条目当时标为「等用户」。
 之后用户给 Dict Dev 授权了辅助功能，第 2、3 条已在 2026-10-04 重跑并通过（见各条）。
@@ -21,6 +21,7 @@
    第 4 步「试一下」点「翻译示例」：没有 Key 时面板应显示「需要配置翻译模型」（语言包恰好已装时显示 Apple 翻译的译文）；然后点「完成」。
 5. 验收第 5 条之前在设置里填 Key：菜单栏图标 → 设置… → 模型 → 服务商选 OpenAI → 粘贴 Key → 点「测试」应显示成功。
    也可以在引导第 3 步直接填 Key 并点「测试」，再在第 4 步点「翻译示例」看到模型的译文。
+   开发版也可以运行 `make import-key`：把 `.env` 里的 Key 存进 Dict Dev 自己的钥匙串条目并选好 OpenAI；2026-10-04 已经运行过，所以现在设置里已是 OpenAI 和 `gpt-6-luna`（第 4 条要先改成「不使用」）。
 
 `make e2e` 和 `make matrix` 用 `open -g -n` 启动 Dict Dev，走的是应用自己的签名身份，不借用终端的辅助功能授权。
 所以在完成上面第 2 步之前，它们会报 `noAccessibilityPermission`，这不是代码缺陷。
@@ -85,11 +86,13 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
 
 ### 4. TextEdit 里读一句英文（零配置）
 
-状态：等用户（需要前置条件 1–4 和真实按键）。
-已在真实屏幕上分段验证（都不是真实按键）：TextEdit 取词走无障碍；面板不激活 Dict 也能成为 key 窗口、菜单栏仍属前台应用、Esc 隐藏后焦点交回；语言包未装时真实面板很快给出需要设置的说明而不转圈，日志里没有 `apple translation: panel session` 或 `direct session`，说明没有创建翻译会话（这次记录时的文案后来按产品决定改成了「需要配置翻译模型」）。
-会话协调者的整条链路（按键 → 取词 → 面板 → 翻译）没有在真实屏幕上跑过：应用内取词需要 Dict Dev 自己的辅助功能授权。
+状态：整条链路已由脚本在真实应用上验证（2026-10-04，带模型，见第 5 条）；零配置的面板和真实按键仍等用户。
+脚本验证的入口是应用内部的：`--e2e` 的 `read` 步骤直接调用会话协调者的 `hotkeyPressed(.read)`，不是在键盘上按下快捷键，所以 Carbon 热键注册和真实按键路由没有被脚本覆盖。
+已在真实屏幕上分段验证（都不是真实按键）：TextEdit 取词走无障碍；面板不激活 Dict 也能成为 key 窗口、菜单栏仍属前台应用、Esc 隐藏后焦点交回；语言包未装时真实面板很快给出需要设置的说明而不转圈，日志里没有 `apple translation: panel session` 或 `direct session`，说明没有创建翻译会话。
+注意：为第 5 条，Dict Dev 的偏好里已经选了 OpenAI（`gpt-6-luna`）并在它自己的钥匙串条目里存了 Key（`make import-key`）。
+做这一条之前先在「设置 → 模型」把服务商改成「不使用」，做完再改回 OpenAI（Key 不会丢，切回来会从钥匙串读出）；或者先做第 5 条再做这一条。
 验证者：人。
-前提：完成前置条件 1–4，设置里没有配置模型（服务商选「不使用」，或选了 OpenAI 但没填 Key）。
+前提：完成前置条件 1–4，设置里没有配置模型（服务商选「不使用」）。
 步骤：
 
 1. 打开 TextEdit，新建文稿，输入 `The weather is lovely today, so we are going for a walk.`，用鼠标选中整句。
@@ -98,23 +101,45 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
    如果这台 Mac 恰好已装英语和简体中文的翻译语言包，面板改为先短暂显示「正在翻译…」，然后显示 Apple 翻译的中文译文；两种结果都算通过，记录看到的是哪一种。
    面板和别处都不应出现任何下载语言包的提示。
 4. 显示「需要配置翻译模型」时点「打开设置」：面板隐藏，设置窗口打开在「模型」页并在最前面；关掉设置窗口。
-5. 应看到：菜单栏仍是 TextEdit 的菜单（TextEdit 仍是前台应用）。
+5. 应看到：TextEdit 回到前台（菜单栏是 TextEdit 的菜单），直接打字就进 TextEdit；关闭设置窗口时 Dict 会把焦点还给打开它之前的应用（`make window-test` 已覆盖从菜单打开的情形）。
 6. 再按一次「读」键让面板出现，按 Esc：面板消失，TextEdit 里的选区仍高亮，光标位置不变；直接打字会替换选区，说明焦点回到了 TextEdit。
 7. 再选中一句、按「读」键，等面板出现后再按一次「读」键：面板应隐藏。
-8. 在终端运行 `log show --last 5m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "panel shown"`，每次按键一行，形如 `session 3: capture 18.4ms via accessibility, panel shown 19.0ms after the shortcut`；`panel shown` 后的毫秒数应不超过 200。
+8. 在终端运行 `/usr/bin/log show --last 5m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "panel shown"`，每次按键一行，形如 `session 3: capture 18.4ms via accessibility, panel shown 19.0ms after the shortcut`；`panel shown` 后的毫秒数应不超过 200。
    走兜底的应用（例如刚切到前台就按键的 Chrome）另有一行 `reading panel shown … after the shortcut, before the clipboard fallback`，记录「读取中」出现的时刻。
-
+   Dict 启动后的第一次按键要创建面板，`panel shown` 会比之后多约 30 ms（脚本里 80–120 ms，之后 10–25 ms）。
 
 ### 5. 配置 OpenAI Key 后流式翻译与断网降级
 
-状态：等用户（同第 4 条）。
-不依赖屏幕的部分已验证：模型客户端和提示词由 `make eval` 覆盖（见第 8 条，首个内容 p50 0.76 s、p90 1.04 s）；降级逻辑由 `TranslationEngineTests` 和 `SessionCoordinatorTests` 用桩覆盖。
-验证者：人。
-步骤：
+状态：脚本已验证（2026-10-04，`make e2e-live`，真实的 `gpt-6-luna`，入口同第 4 条，不是真实按键）；真实按键和手动断网等用户。
+Key 的准备：`make import-key` 把 `.env` 里的 `OPENAI_API_KEY` 经管道交给 Dict Dev 的调试入口 `--import-api-key`，由 Dict Dev 自己走设置窗口的保存路径写进它的钥匙串条目（service `au.ibra.dict.dev.model`，account `openai`），并把服务商设为 OpenAI、模型 `gpt-6-luna`；快捷键和「引导已完成」不动。
+条目由 Dict Dev 自己（同一签名身份）创建，之后经 `open` 正常启动和 `--e2e` 启动读取都没有钥匙串对话框：读取在启动时完成、翻译在 1 s 内出结果，`SecurityAgent` 没有运行。
+Key 只经过管道，没有进命令行参数、环境变量、文件或输出。
+`make e2e-live` 每行一个新的 Dict 进程（TextEdit 的 10 次在同一个进程里），每行检查：面板出现、流式文字到达并以完成状态结束、译文语言（`NLLanguageRecognizer`）、前台应用不变、剪贴板哈希不变。
+结果（23 行全部通过）：
 
-1. 完成前置条件 5。
+- TextEdit 英文句子译成中文，同一个 Dict 进程连续 10 次：从入口到面板出现中位数 18 ms，到首个译文中位数 768 ms（658–969 ms），到完成中位数 923 ms；满足首个内容中位数小于 1.5 s。
+- TextEdit 中文句子译成英文、CaptureFixture 文本框中文译成英文：英文译文，完成。
+- Safari 只读网页（无障碍取词）、用户自己的 Chrome（冷状态，走菜单栏拷贝项兜底，先出「读取中」）、CaptureFixture 自绘控件（菜单栏拷贝项兜底）：中文译文，完成；Chrome 测前测后都是 33 个标签页，`AXEnhancedUserInterface` 恢复为原值 false。
+- 长段落（8 句英文）：181 个流式块，面板只刷新了 66 次（按显示帧合并，见下），完成。
+- 新进程的第一次按键：面板 80–185 ms，首个译文 0.9–1.7 s（新的 TLS 连接）。
+
+失败与降级（这台 Mac 的英中语言包未装，所以都不降级到 Apple 翻译，直接显示模型的错误，与架构第 6.4、6.5 节一致）：
+
+- 连接被拒（Base URL 指向 `127.0.0.1:1`，模拟断网）：约 50 ms 后显示「模型没能翻译这段文字」「原因：网络错误。」和「重试」。
+- Key 被拒（假 Key）：约 0.7 s 后显示「原因：API Key 无效。」和「打开设置」。
+- 首个事件超时（本地假服务只回响应头）：10.4 s 后显示「原因：超时。」和「重试」。
+- 流中途断开（本地假服务发两段后断开）：两段文字先流出，随后整块换成「原因：连接中断。」和「重试」，已流出的文字不保留（架构只对 `.truncated` 保留部分译文；要不要也保留中断前的文字是产品决定，见「已知差异」）。
+- 取词还在进行时再按「读」键：被忽略，翻译照常完成。
+- 流式中途再按「读」键、流式中途按 Esc：面板立刻隐藏，会话在 100 ms 内结束，之后协调者没有再调用面板；Esc 是送进面板的合成 `NSEvent`。
+- 每一行剪贴板哈希都不变，前台应用不变，测后没有残留的 Dict Dev 进程。
+
+修掉的缺陷：有模型时每次翻译都先等 Apple 翻译的语言包查询（实测 10–40 ms）才发请求；现在有模型时直接发请求，只在模型失败、需要决定是否降级时才查询（`TranslationEngineTests.aModelDoesNotWaitForAppleAvailability`）。
+验证者：脚本（`make e2e-live`，需要网络，每次约 20 次短调用，不进 `make test`）；真实按键由人。
+步骤（人）：
+
+1. Key 已由 `make import-key` 存好；打开「设置 → 模型」应看到服务商 OpenAI、模型 `gpt-6-luna`、Key 栏有内容，点「测试」应显示成功。
 2. 在 TextEdit 选中同一句英文，按「读」键：译文应逐步出现（流式），而不是一次性出现。
-3. 连续做 10 次（每次可以换一句），然后运行 `log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "first text"`，取 10 个毫秒数的中位数，应小于 1500。
+3. 连续做 10 次（每次可以换一句），然后运行 `/usr/bin/log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "first text"`，取 10 个毫秒数的中位数，应小于 1500。
 4. 关掉 Wi-Fi（或拔网线），再选中一句按「读」键：
    语言包恰好已装时，面板显示 Apple 翻译的译文，译文下方有一行说明「模型出错（网络错误），已改用 Apple 翻译。」；
    语言包未装时，面板显示「模型没能翻译这段文字」「原因：网络错误。」和「重试」按钮。
@@ -122,19 +147,17 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
 5. 恢复网络。
 6. 在设置里把 Key 改成一个错误的值（例如在末尾多加一个字符），再选中一句按「读」键：
    面板显示「模型没能翻译这段文字」「原因：API Key 无效。」和「打开设置」按钮（语言包恰好已装时则是 Apple 译文，说明行末尾有「打开设置」）。
-   点「打开设置」应打开设置的「模型」页；把 Key 改回正确的值。
+   点「打开设置」应打开设置的「模型」页；把 Key 改回正确的值（或在终端运行 `make import-key`），关掉设置后再按「读」键应立即用新 Key（Key 读一次后缓存，设置里保存会更新缓存）。
 
 ### 6. 日志只有耗时、没有用户文字和 Key
 
-状态：部分验证，完整检查等第 4、5 条的真实运行。
-已做：本次真实屏幕运行后执行 `/usr/bin/log show --last 50m --info --predicate 'subsystem == "au.ibra.dict.dev"'`，共 80 行，其中 `panel shown` 51 行、`translation engine: appleTranslation` 1 行、取词模块 `capture failed:noAccessibilityPermission app=- … first=-1.0ms second=-1.0ms fallback=-1.0ms total=…` 13 行；用测试里用过的句子词和 `sk-` 去 grep 无命中（`second` 只命中字段名 `second=`）。
-还缺：会话协调者的 `capture … via …`、`first text …`、`ended in result after …` 要等真实按键才会出现。
+状态：已由脚本验证（2026-10-04，`make e2e-live` 结束时自动检查）；真实按键之后人再看一次。
+`make e2e-live` 结束时读取本次运行时段的 `/usr/bin/log show --last <分钟>m --info --predicate 'subsystem == "au.ibra.dict.dev"'`，用测试句子里的特征词（英文和中文各若干）、Key 去掉公共前缀 `sk-proj-` 之后的 8 个字符、Key 的最后 8 个字符、以及假 Key 去 grep，只打印命中数：全部为 0。
+同一时段里有每个阶段的耗时：取词模块 `capture accessibility app=… first=…ms second=…ms fallback=…ms copyWait=…ms total=…ms`，会话的 `capture …ms via …, panel shown …ms after the shortcut`、`reading panel shown …`、`first text …ms after the shortcut`、`… ended in result after …ms`，翻译引擎的 `translation engine: model` 和失败时的 `model translation failed: ModelError.network` 之类（只有类型和分支名）。
 注意：在 fish 或 zsh 里 `log` 可能是内建命令，用 `/usr/bin/log`；info 级别日志只在内存里保留几分钟，要在操作后立即运行。
-代码层面已检查：新增日志只插值会话代号、耗时、途径名、阶段名和状态名，全部是非用户数据；Key 从不进日志。
-验证者：人或脚本，在第 4、5 条之后立即运行。
-命令：`log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"'`。
-通过标准：能看到每个会话的 `capture … via …`、`panel shown …`、`first text …`、`ended in result after …`，以及取词模块的 `capture accessibility app=… first=…ms` 和翻译引擎的 `translation engine: …`。
-再运行 `log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep -iE "weather|lovely|sk-"`，应没有任何输出（把第 4、5 条用过的句子里的词和 Key 的前缀代进去）。
+验证者：脚本；人在第 4、5 条之后立即运行下面两条命令再确认一次。
+命令：`/usr/bin/log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"'`。
+通过标准：能看到上面列出的各阶段耗时行；再运行同一条命令接 `| grep -iE "weather|lovely|walk"`（换成第 4、5 条实际用过的句子里的词）应没有任何输出；Key 的检查用 `make e2e-live` 的自动检查，不要把 Key 的片段打在命令行上。
 
 ### 7. 没有 `dict-en-zh.sqlite` 时以上全部成立
 
@@ -189,6 +212,10 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
   `AppleTranslationLiveTests` 只在语言包恰好已装的机器上有意义。
 
 ## 已知差异
+
+- 流中途断开时已经流出的文字被错误提示整块替换（架构第 6.4 节只对 `.truncated` 保留部分译文）；Easydict 在流中断且已有至少 8 个字时保留文字。
+  要不要对 `.interrupted` 也保留已得译文并注明，是产品决定，没有改。
+- 预先创建结果面板（参考笔记「值得做」）试过后放弃：只创建并布局没有收益；要把首次显示从约 30 ms 降到约 17 ms，必须在启动时把透明面板排进排出一次，这让空闲内存从约 55 MB 涨到约 83 MB，只换来启动后第一次按键快十几毫秒。
 
 - 面板出现时机：走兜底时「读取中」在兜底之前出现（架构第 11.1 节）；但冷状态下要先等满第一段的 150 ms，加上新进程第一次创建面板约 40–60 ms，`make matrix` 里冷 Chrome 和 VS Code 的「读取中」在按键后 156–211 ms 出现，略超 150 ms。
 - 「授权后自动继续」：只有在权限说明面板仍然可见时授权，才会自动重新取词；点「打开系统设置」会切到系统设置，面板随之隐藏、会话结束，回到原应用后需要再按一次快捷键。

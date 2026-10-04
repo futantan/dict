@@ -11,12 +11,16 @@
       let json = """
         {"steps": [
           {"select": {"control": "textView.plain", "text": "Hello"}},
+          {"select": {"control": "custom.noSelectedText", "text": "Hi", "content": "Hi there"}},
           {"wait": {"ms": 250}},
           {"capture": {"policy": "never"}},
           {"capture": {"policy": "allowed"}},
           {"read": {}},
           {"read": {"force": "key"}},
           {"read": {"force": "paste"}},
+          {"read": {"translator": "model", "baseURL": "http://127.0.0.1:1/v1", "apiKey": "x",
+            "pressAgainAfterMs": 0, "escapeAfterMs": 900}},
+          {"read": {"translator": "magic"}},
           {"unknown": {}}
         ]}
         """
@@ -24,12 +28,18 @@
       #expect(
         steps == [
           .select(control: "textView.plain", text: "Hello"),
+          .select(control: "custom.noSelectedText", text: "Hi", content: "Hi there"),
           .wait(ms: 250),
           .capture(.never),
           .capture(.allowed),
-          .read(force: nil),
-          .read(force: .key),
+          .read(E2EReadOptions()),
+          .read(E2EReadOptions(force: .key)),
           .invalid("read force must be menu or key"),
+          .read(
+            E2EReadOptions(
+              usesModel: true, baseURL: "http://127.0.0.1:1/v1", apiKey: "x",
+              pressAgainAfterMs: 0, escapeAfterMs: 900)),
+          .invalid("read translator must be echo or model"),
           .invalid("unknown step"),
         ])
     }

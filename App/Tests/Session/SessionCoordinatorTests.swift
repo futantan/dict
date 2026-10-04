@@ -94,17 +94,20 @@ private final class FakePanel: SessionPanel {
   func dismissByUser() { isVisible = false }
 }
 
-/// Reports scripted states, optionally waiting at a gate after the first one.
+/// Reports scripted states, the last one with `note`, optionally waiting at a gate after the
+/// first one.
 @MainActor
 private final class StubTranslator: SessionTranslator {
   var states: [PanelPhase]
   var gate: Gate?
+  var note: PanelNote?
   private(set) var requests: [(text: String, direction: Direction)] = []
   private(set) var sawCancellation = false
 
-  init(_ states: [PanelPhase], gate: Gate? = nil) {
+  init(_ states: [PanelPhase], gate: Gate? = nil, note: PanelNote? = nil) {
     self.states = states
     self.gate = gate
+    self.note = note
   }
 
   func translate(
@@ -116,7 +119,8 @@ private final class StubTranslator: SessionTranslator {
         await gate.wait()
         sawCancellation = Task.isCancelled
       }
-      update(PanelState(source: text, phase: phase))
+      update(
+        PanelState(source: text, phase: phase, note: index == states.count - 1 ? note : nil))
     }
   }
 }
@@ -493,6 +497,23 @@ struct SessionCoordinatorTests {
 
     #expect(
       harness.panel.calls.last == .update(PanelState(source: "Hello", phase: .failure(failure))))
+  }
+
+  /// The incomplete text stays in the panel, and its note's "Try Again" translates again.
+  @Test func incompleteTranslationStaysAndRetries() async {
+    let note = PanelNote(
+      "incomplete", action: PanelAction(id: TranslationStrings.retryAction, title: "Try Again"))
+    let incomplete = PanelState(source: "Hello", phase: .partial("你好"), note: note)
+    let harness = Harness(
+      [(.success(selection("Hello")), nil)],
+      translator: StubTranslator([.generating("你好"), .partial("你好")], note: note))
+    await harness.press()
+    #expect(harness.panel.calls.last == .update(incomplete))
+
+    harness.coordinator.perform(TranslationStrings.retryAction)
+    await harness.coordinator.settle()
+    #expect(harness.translator.requests.map(\.text) == ["Hello", "Hello"])
+    #expect(harness.panel.calls.last == .update(incomplete))
   }
 
   @Test func retryTranslatesTheSameTextAgain() async {

@@ -34,6 +34,12 @@
             source: text.source, phase: .result(text.result),
             note: TranslationStrings.fallbackNote(ModelError.unauthorized))
         ),
+        (
+          "partial-interrupted",
+          PanelState(
+            source: text.source, phase: .partial(text.partial),
+            note: TranslationStrings.incompleteNote(ModelTranslationError.interrupted))
+        ),
       ]
     }
 

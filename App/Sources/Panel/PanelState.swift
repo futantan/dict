@@ -8,8 +8,8 @@ struct PanelState: Sendable, Equatable {
   /// The captured or typed text, shown above the result; nil while it is still being read.
   var source: String?
   var phase: PanelPhase
-  /// A remark under a generating or finished result, for example that Apple Translation
-  /// stood in for a failed model.
+  /// A remark under a generating, finished or partial result, for example that Apple
+  /// Translation stood in for a failed model, or why a result is partial.
   var note: PanelNote?
 
   init(source: String? = nil, phase: PanelPhase, note: PanelNote? = nil) {
@@ -29,8 +29,12 @@ enum PanelPhase: Sendable, Equatable {
   case reading
   /// The result is streaming in; the value is the whole text so far and may be empty.
   case generating(String)
-  /// The finished result.
+  /// The complete result.
   case result(String)
+  /// A result that stopped before it was complete: cut off at the length limit, or the
+  /// stream failed after text showed. The note says why. It is shown and can be copied, but
+  /// it must never be used for replacing (architecture 6.3).
+  case partial(String)
   /// Something went wrong; the caller supplies the wording.
   case failure(PanelNotice)
   /// A permission or a model is missing; the content comes from the caller (architecture
@@ -40,7 +44,7 @@ enum PanelPhase: Sendable, Equatable {
   /// The text ⌘C copies when nothing in the panel is selected.
   var copyableText: String? {
     switch self {
-    case .generating(let text), .result(let text): text.isEmpty ? nil : text
+    case .generating(let text), .result(let text), .partial(let text): text.isEmpty ? nil : text
     case .input, .reading, .failure, .needsSetup: nil
     }
   }

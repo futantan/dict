@@ -179,7 +179,7 @@ struct Live {
     row(
       "fixture, stream cut off", "textView.plain", english,
       Self.modelRead(["baseURL": Self.fakeModel("cut")]),
-      .failure(actions: ["translation.retry"], textFirst: true))
+      .partial(text: "部分译文", noteAction: "translation.retry"))
     row(
       "fixture, Esc while streaming", "textView.plain", english,
       Self.modelRead(["baseURL": Self.fakeModel("slow"), "escapeAfterMs": 1_200]),
@@ -433,6 +433,8 @@ struct LiveStep {
   let noticeTitle: String?
   let noticeMessage: String?
   let noticeActions: [String]
+  let note: String?
+  let noteAction: String?
   let panelCalls: [String]
 
   init(_ step: StepResult) {
@@ -453,6 +455,8 @@ struct LiveStep {
     noticeTitle = translation["noticeTitle"] as? String
     noticeMessage = translation["noticeMessage"] as? String
     noticeActions = translation["noticeActions"] as? [String] ?? []
+    note = translation["note"] as? String
+    noteAction = translation["noteAction"] as? String
     panelCalls = step.panelCalls
   }
 }
@@ -461,8 +465,12 @@ struct LiveStep {
 enum LiveExpectation {
   /// A complete result in `language`, streamed into the panel. `source` nil accepts any path.
   case result(language: NLLanguage, source: String?, secondPress: String? = nil)
-  /// The model's error with these buttons; `textFirst` when text streamed before it failed.
-  case failure(actions: [String], minimumMs: Double = 0, textFirst: Bool = false)
+  /// The model's error with these buttons.
+  case failure(actions: [String], minimumMs: Double = 0)
+  /// The stream failed after `text` showed: the text stays, marked incomplete by a note
+  /// with this button. Assumes Apple Translation's languages for the pair are not installed,
+  /// or it would stand in instead.
+  case partial(text: String, noteAction: String)
   /// Ended while streaming by Esc or a second press: hidden, no later panel calls, quickly.
   case cancelled(by: String)
 
@@ -489,7 +497,7 @@ enum LiveExpectation {
           "second press \(step.secondPress ?? "none"), expected \(secondPress ?? "none")")
       }
       if !step.visibleAtEnd { problems.append("the panel was not visible at the end") }
-    case .failure(let actions, let minimumMs, let textFirst):
+    case .failure(let actions, let minimumMs):
       if step.phase != "failure" { problems.append("ended in \(step.phase ?? "-"), not failure") }
       if step.noticeActions != actions {
         problems.append("buttons \(step.noticeActions), expected \(actions)")
@@ -498,7 +506,15 @@ enum LiveExpectation {
         problems.append(
           String(format: "ended after %.0f ms, expected at least %.0f", ended, minimumMs))
       }
-      if textFirst && step.textUpdates == 0 { problems.append("no text before the failure") }
+      if !step.visibleAtEnd { problems.append("the panel was not visible at the end") }
+    case .partial(let text, let noteAction):
+      if step.phase != "partial" { problems.append("ended in \(step.phase ?? "-"), not partial") }
+      if step.textUpdates < 1 { problems.append("no streamed text") }
+      if step.result != text { problems.append("kept “\(step.result ?? "-")”, expected “\(text)”") }
+      if step.note == nil { problems.append("no note under the text") }
+      if step.noteAction != noteAction {
+        problems.append("note button \(step.noteAction ?? "none"), expected \(noteAction)")
+      }
       if !step.visibleAtEnd { problems.append("the panel was not visible at the end") }
     case .cancelled(let by):
       if step.textUpdates == 0 { problems.append("nothing streamed before the cancel") }

@@ -81,7 +81,8 @@ final class TranslationEngine {
           after: error, hasText: hasText, appleTranslationInstalled: canFallBack)
         {
         case .stop: return
-        case .keepPartial: show(.result(shown), note: TranslationStrings.truncatedNote)
+        case .keepPartial:
+          show(.partial(shown), note: TranslationStrings.partialNote(error))
         case .fallBack:
           let modelError = error
           do {

@@ -22,8 +22,22 @@ struct TranslationRecoveryTests {
     (OtherError(), false, true, .fallBack),
     // Without installed Apple Translation languages the error is shown
     (ModelError.network(code: -1009), false, false, .showError),
+    (ModelTranslationError.interrupted, false, false, .showError),
+    (ModelError.timedOut(.idle), false, false, .showError),
     (ModelTranslationError.refused, false, false, .showError),
     (OtherError(), false, false, .showError),
+    // A stream that fails after text showed keeps the text as incomplete; Apple Translation
+    // still stands in when its languages are installed
+    (ModelTranslationError.interrupted, true, false, .keepPartial),
+    (ModelError.network(code: -1005), true, false, .keepPartial),
+    (ModelError.timedOut(.idle), true, false, .keepPartial),
+    (ModelError.timedOut(.total), true, false, .keepPartial),
+    (ModelError.server(status: 502), true, false, .keepPartial),
+    (ModelError.malformedResponse, true, false, .keepPartial),
+    (ModelTranslationError.refused, true, false, .keepPartial),
+    (OtherError(), true, false, .keepPartial),
+    (ModelError.timedOut(.idle), true, true, .fallBack),
+    (ModelTranslationError.refused, true, true, .fallBack),
     // A cut-off translation is still worth reading
     (ModelTranslationError.truncated, true, true, .keepPartial),
     (ModelTranslationError.truncated, true, false, .keepPartial),

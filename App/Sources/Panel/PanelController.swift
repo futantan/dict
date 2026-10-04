@@ -175,6 +175,7 @@ extension PanelPhase {
     case .reading: "reading"
     case .generating: "generating"
     case .result: "result"
+    case .partial: "partial"
     case .failure: "failure"
     case .needsSetup: "needsSetup"
     }

@@ -115,11 +115,47 @@ struct TranslationEngineTests {
       ])
   }
 
-  @Test func truncatedTranslationIsKeptWithANote() async {
+  /// A cut-off translation is incomplete: shown with a note, never as a complete result.
+  @Test(arguments: [AppleTranslationAvailability.installed, .notInstalled])
+  func truncatedTranslationIsKeptWithANote(availability: AppleTranslationAvailability) async {
     let model = ScriptedModel(events: [.text("你好"), .finished(.truncated, nil)])
     #expect(
-      await states(model: model).last
-        == state(.result("你好"), note: TranslationStrings.truncatedNote))
+      await states(model: model, availability: availability).last
+        == state(.partial("你好"), note: TranslationStrings.truncatedNote))
+  }
+
+  /// A stream that fails after text showed keeps that text, marked incomplete, with the
+  /// reason and a way to try again; the text never turns into an error.
+  @Test(arguments: [
+    ModelTranslationError.interrupted as any Error, ModelError.network(code: -1005),
+    ModelError.timedOut(.idle), ModelTranslationError.refused,
+  ])
+  func failureAfterTextKeepsItAsIncomplete(error: any Error) async throws {
+    let model = ScriptedModel(events: [.text("你好\n"), .text("世界")], error: error)
+    let result = await states(model: model, availability: .notInstalled)
+    let note = TranslationStrings.incompleteNote(error)
+    #expect(result.last == state(.partial("你好\n世界"), note: note))
+    #expect(note.action?.id == TranslationStrings.retryAction)
+    #expect(note.action?.isDefault == false)
+    #expect(!result.contains { if case .failure = $0.phase { true } else { false } })
+  }
+
+  /// With Apple Translation's languages installed, the model's failure still falls back.
+  @Test func failureAfterTextFallsBackWhenAppleIsInstalled() async {
+    let error = ModelTranslationError.interrupted
+    #expect(
+      await states(model: ScriptedModel(events: [.text("你好")], error: error)).last
+        == state(.result("你好，世界"), note: TranslationStrings.fallbackNote(error)))
+  }
+
+  /// Text retracted by `.discardText` was never the translation: a failure after it shows
+  /// the error, as if nothing had arrived.
+  @Test func failureAfterRetractedTextShowsTheError() async {
+    let error = ModelTranslationError.interrupted
+    let model = ScriptedModel(events: [.text("嗯"), .discardText], error: error)
+    #expect(
+      await states(model: model, availability: .notInstalled).last
+        == state(.failure(TranslationStrings.modelFailure(error))))
   }
 
   @Test func withoutAModelAppleTranslates() async {
@@ -306,6 +342,18 @@ struct TranslationStringsTests {
       CocoaError(.featureUnsupported),
     ]
     #expect(Set(errors.map(TranslationStrings.modelFailureReason)).count == errors.count)
+  }
+
+  @Test func incompleteNoteReadsInChinese() throws {
+    let template = try chinese("The translation is incomplete (%@).")
+    #expect(
+      String(format: template, try chinese("the connection was interrupted")) == "译文未完成（连接中断）。")
+  }
+
+  @Test func incompleteNoteOffersSettingsForKeyProblems() {
+    #expect(
+      TranslationStrings.incompleteNote(ModelError.unauthorized).action?.id
+        == TranslationStrings.openSettingsAction)
   }
 
   @Test func cancellationShowsNothing() {

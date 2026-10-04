@@ -25,10 +25,27 @@ enum TranslationStrings {
       action: isKeyProblem(error) ? openSettings(isDefault: false) : nil)
   }
 
+  /// Under a partial model translation: why it stopped. Only a failed stream can be tried
+  /// again; a key problem points to Settings, as elsewhere.
+  static func partialNote(_ error: any Error) -> PanelNote {
+    error as? ModelTranslationError == .truncated ? truncatedNote : incompleteNote(error)
+  }
+
   static let truncatedNote = PanelNote(
     String(
       localized: "The translation was cut off at the length limit.", table: "Translation",
       comment: "Shown under a translation the model stopped early"))
+
+  /// Under the text a model stream showed before it failed.
+  static func incompleteNote(_ error: any Error) -> PanelNote {
+    PanelNote(
+      String(
+        format: String(
+          localized: "The translation is incomplete (%@).", table: "Translation",
+          comment: "Under a translation whose stream failed partway; %@ is the reason"),
+        modelFailureReason(error)),
+      action: isKeyProblem(error) ? openSettings(isDefault: false) : retry(isDefault: false))
+  }
 
   static func modelFailure(_ error: any Error) -> PanelNotice {
     PanelNotice(
@@ -40,7 +57,7 @@ enum TranslationStrings {
           localized: "Reason: %@.", table: "Translation",
           comment: "Why the model failed; the argument is a short reason"),
         modelFailureReason(error)),
-      actions: [isKeyProblem(error) ? openSettings(isDefault: true) : retry])
+      actions: [isKeyProblem(error) ? openSettings(isDefault: true) : retry(isDefault: true)])
   }
 
   /// The key is missing or the provider rejected it: only Settings can fix that.
@@ -75,7 +92,7 @@ enum TranslationStrings {
         title: String(
           localized: "Apple Translation couldn’t translate this", table: "Translation",
           comment: "Title of the error when Apple Translation failed"),
-        message: message, actions: [retry]))
+        message: message, actions: [retry(isDefault: true)]))
   }
 
   /// No model is set up and Apple Translation has no installed languages for the text.
@@ -102,10 +119,12 @@ enum TranslationStrings {
       isDefault: isDefault)
   }
 
-  private static let retry = PanelAction(
-    id: retryAction,
-    title: String(localized: "Try Again", table: "Translation", comment: "Retry button"),
-    isDefault: true)
+  private static func retry(isDefault: Bool) -> PanelAction {
+    PanelAction(
+      id: retryAction,
+      title: String(localized: "Try Again", table: "Translation", comment: "Retry button"),
+      isDefault: isDefault)
+  }
 
   /// A short reason, used inside a sentence.
   static func modelFailureReason(_ error: any Error) -> String {

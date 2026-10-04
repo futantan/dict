@@ -43,6 +43,21 @@ struct StreamThrottleTests {
     #expect(delivered().count == 2)
   }
 
+  /// A stream that fails shows its last text as incomplete at once, held text or not.
+  @Test func anIncompleteResultKeepsTheLastText() async throws {
+    let (throttle, delivered) = harness()
+    let partial = PanelState(
+      source: "Hello", phase: .partial("你好，世"), note: PanelNote("incomplete"))
+    throttle.submit(streaming("你"))
+    throttle.submit(streaming("你好"))
+    throttle.submit(streaming("你好，世"))
+    throttle.submit(partial)
+    #expect(delivered() == [streaming("你"), partial])
+
+    try await Task.sleep(for: .milliseconds(80))
+    #expect(delivered().last == partial)
+  }
+
   /// `.discardText` makes the whole text shorter; the latest state still wins.
   @Test func retractedTextIsNotBroughtBack() async throws {
     let (throttle, delivered) = harness()

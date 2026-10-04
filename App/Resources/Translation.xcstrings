@@ -100,6 +100,17 @@
         }
       }
     },
+    "The translation is incomplete (%@)." : {
+      "comment" : "Under a translation whose stream failed partway; %@ is the reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文未完成（%@）。"
+          }
+        }
+      }
+    },
     "The translation was cut off at the length limit." : {
       "comment" : "Shown under a translation the model stopped early",
       "localizations" : {

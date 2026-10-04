@@ -87,7 +87,7 @@ private struct PanelContent: View {
             comment: "Shown until the first words of the result arrive"))
       case .generating(let text):
         ResultText(text: text, isStreaming: true)
-      case .result(let text):
+      case .result(let text), .partial(let text):
         ResultText(text: text, isStreaming: false)
       case .failure(let notice):
         NoticeView(
@@ -259,10 +259,10 @@ private struct ActionButton: View {
 }
 
 extension PanelPhase {
-  /// Only a result, streaming or finished, carries a note.
+  /// Only a result, streaming, finished or partial, carries a note.
   fileprivate var showsNote: Bool {
     switch self {
-    case .generating, .result: true
+    case .generating, .result, .partial: true
     case .input, .reading, .failure, .needsSetup: false
     }
   }

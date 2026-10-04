@@ -144,30 +144,50 @@ struct Matrix {
   // MARK: Capturing
 
   private mutating func capture(_ app: String, _ control: String, _ state: String, expect: String) {
-    var row = MatrixRow(app: app, control: control, state: state)
+    captures(app, control, [state], steps: [Self.captureStep], expect: expect)
+  }
+
+  static let captureStep: [String: Any] = ["capture": ["policy": "allowed"]]
+
+  /// Runs `steps` in one Dict process and records a row for each capture step, named by
+  /// `states` in order. `during` runs on the driver while Dict runs the steps.
+  private mutating func captures(
+    _ app: String, _ control: String, _ states: [String], steps: [[String: Any]],
+    expect: String, during: () -> Void = {}
+  ) {
     let before = Clipboard.hash()
     let outcome = runner.run(
-      [["capture": ["policy": "allowed"]]], name: "\(app)-\(control)-\(state)")
-    row.clipboardIntact = Clipboard.hash() == before
+      steps, name: "\(app)-\(control)-\(states.joined(separator: "-"))", during: during)
+    let clipboardIntact = Clipboard.hash() == before
+    let results: [StepResult]
+    var note: String?
     switch outcome {
     case .finished(let steps):
-      if let step = steps.last(where: { $0.step == "capture" }) {
+      results = steps.filter { $0.step == "capture" }
+      if results.count < states.count { note = "\(results.count) capture steps in the result" }
+    case .noEntryPoint:
+      results = []
+      note = "no --e2e entry point"
+    case .noResult(let reason):
+      results = []
+      note = reason
+    }
+    for (index, state) in states.enumerated() {
+      var row = MatrixRow(app: app, control: control, state: state)
+      row.clipboardIntact = clipboardIntact
+      row.note = note
+      if results.indices.contains(index) {
+        let step = results[index]
         row.ok = step.ok
         row.source = step.source
         row.failure = step.failure
         row.ms = step.ms
         row.textMatches = step.ok && step.text == expect
         if step.ok && !row.textMatches { row.note = "got \(E2E.quote(step.text))" }
-      } else {
-        row.note = "no capture step in the result"
       }
-    case .noEntryPoint:
-      row.note = "no --e2e entry point"
-    case .noResult(let reason):
-      row.note = reason
+      say("  " + row.line)
+      rows.append(row)
     }
-    say("  " + row.line)
-    rows.append(row)
   }
 
   private mutating func skip(_ app: String, _ reason: String) {
@@ -302,6 +322,10 @@ struct Matrix {
       try? FileManager.default.removeItem(at: directory)
     }
     defer { Cleanup.run(cleanup) }
+    // Electron support is off until the user agrees (architecture 3.3, 16.1 #1); these rows
+    // check the path after they did. The argument domain leaves the saved setting alone.
+    runner.extraArguments = ["-AccessibilitySupportElectron", "<true/>"]
+    defer { runner.extraArguments = [] }
     guard let pid = poll(timeout: 20, { Set(runningPids(bundleID)).subtracting(before).first }),
       poll(timeout: 30, { AX.focusedWindowTitle(pid)?.contains("sample.txt") == true ? true : nil })
         != nil
@@ -309,12 +333,26 @@ struct Matrix {
     pause(1)
     postKey(pid, keyCode: 0)  // ⌘A
     pause(0.3)
-    capture("VS Code (isolated)", "editor", "cold", expect: Self.sentence)
-    pause(3)
-    // Turning on accessibility rebuilds the editor's text and drops the selection.
-    postKey(pid, keyCode: 0)
-    pause(0.3)
-    capture("VS Code (isolated)", "editor", "warm", expect: Self.sentence)
+    // Both rows run in one Dict process: Dict keeps the tree on while it runs and turns it off
+    // again when it quits, so a second process would find VS Code cold once more.
+    captures(
+      "VS Code (isolated)", "editor", ["cold", "warm"],
+      steps: [Self.captureStep, ["wait": ["ms": 6000]], Self.captureStep], expect: Self.sentence
+    ) {
+      // Electron loads the text only after Dict's second write (~2.5 s after the first), and
+      // that rebuild drops the selection. A ⌘A posted after it did not select (measured), so
+      // select again through accessibility once the text is there.
+      let loaded = poll(timeout: 5) {
+        AX.focusedElement(pid).flatMap { AX.string($0, kAXValueAttribute) } == Self.sentence
+          ? true : nil
+      }
+      let selected = AX.focusedElement(pid).map {
+        selectRange($0, of: Self.sentence, in: Self.sentence)
+      }
+      if loaded == nil || selected != true {
+        say("  warning: could not select the VS Code text again before the warm row")
+      }
+    }
   }
 
   // MARK: Helpers

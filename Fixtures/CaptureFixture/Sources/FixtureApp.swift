@@ -106,8 +106,17 @@ final class FixtureApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     window?.makeKeyAndOrderFront(nil)
     NSApp.activate()
     select(command) { detail in
+      Self.validateMenus()
       EventLog.shared.record(.select, control: command.control, detail: detail)
     }
+  }
+
+  /// A selection made by a command arrives without a user event, and AppKit revalidates the
+  /// menu bar at most about once a second: an accessibility read of Copy right after a
+  /// previous capture read it still saw the old state up to ~1 s later (measured 2026-10-04).
+  /// A person selecting text and then pressing the hotkey gives AppKit that time.
+  private static func validateMenus() {
+    NSApp.mainMenu?.items.compactMap(\.submenu).forEach { $0.update() }
   }
 
   /// Applies a select command; calls back with the selected text or "error: …".

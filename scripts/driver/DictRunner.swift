@@ -40,6 +40,8 @@ struct DictRunner {
   let app: URL
   let workDirectory: URL
   var timeout: TimeInterval = 20
+  /// Passed after the entry point's own arguments, e.g. `-SomeDefault YES` (argument domain).
+  var extraArguments: [String] = []
   private var counter = 0
 
   init(app: URL, workDirectory: URL, timeout: TimeInterval = 20) {
@@ -48,8 +50,10 @@ struct DictRunner {
     self.timeout = timeout
   }
 
-  /// Runs `steps` and returns the result file's steps.
-  mutating func run(_ steps: [[String: Any]], name: String) -> RunOutcome {
+  /// Runs `steps` and returns the result file's steps. `during` runs once the app has started.
+  mutating func run(
+    _ steps: [[String: Any]], name: String, during: () -> Void = {}
+  ) -> RunOutcome {
     counter += 1
     let stem = String(format: "%02d-%@", counter, name.replacingOccurrences(of: " ", with: "-"))
     let scenario = workDirectory.appendingPathComponent("\(stem).scenario.json")
@@ -59,9 +63,10 @@ struct DictRunner {
     } catch {
       return .noResult("could not write \(scenario.path): \(error)")
     }
-    let launch = shell([
-      "open", "-g", "-n", app.path, "--args", "--e2e", scenario.path, "--e2e-out", result.path,
-    ])
+    let launch = shell(
+      [
+        "open", "-g", "-n", app.path, "--args", "--e2e", scenario.path, "--e2e-out", result.path,
+      ] + extraArguments)
     guard launch.status == 0 else { return .noResult("open failed with status \(launch.status)") }
 
     let launched: [pid_t] =
@@ -69,6 +74,7 @@ struct DictRunner {
         let found = pids(matching: "--e2e-out \(result.path)")
         return found.isEmpty ? nil : found
       } ?? []
+    if !launched.isEmpty { during() }
     func readResult() -> [StepResult]? {
       guard let object = readJSON(result) as? [String: Any],
         let steps = object["steps"] as? [[String: Any]]

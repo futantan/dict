@@ -1,0 +1,172 @@
+{
+  "rows" : [
+    {
+      "app" : "TextEdit",
+      "clipboardIntact" : true,
+      "control" : "textView",
+      "failure" : null,
+      "ms" : 22.399999999999999,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "warm",
+      "textMatches" : true
+    },
+    {
+      "app" : "Safari",
+      "clipboardIntact" : true,
+      "control" : "web.paragraph",
+      "failure" : null,
+      "ms" : 63.799999999999997,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "first",
+      "textMatches" : true
+    },
+    {
+      "app" : "Safari",
+      "clipboardIntact" : true,
+      "control" : "web.textarea",
+      "failure" : null,
+      "ms" : 20.399999999999999,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "first",
+      "textMatches" : true
+    },
+    {
+      "app" : "Safari",
+      "clipboardIntact" : true,
+      "control" : "web.contenteditable",
+      "failure" : null,
+      "ms" : 19.399999999999999,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "first",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome",
+      "clipboardIntact" : true,
+      "control" : "web.paragraph",
+      "failure" : null,
+      "ms" : 38.200000000000003,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "first",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome",
+      "clipboardIntact" : true,
+      "control" : "web.paragraph",
+      "failure" : null,
+      "ms" : 38.899999999999999,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "warm",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome",
+      "clipboardIntact" : true,
+      "control" : "web.textarea",
+      "failure" : null,
+      "ms" : 19.300000000000001,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "first",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome",
+      "clipboardIntact" : true,
+      "control" : "web.textarea",
+      "failure" : null,
+      "ms" : 13.699999999999999,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "warm",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome",
+      "clipboardIntact" : true,
+      "control" : "web.contenteditable",
+      "failure" : null,
+      "ms" : 9.4000000000000004,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "first",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome",
+      "clipboardIntact" : true,
+      "control" : "web.contenteditable",
+      "failure" : null,
+      "ms" : 41,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "warm",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome (isolated)",
+      "clipboardIntact" : true,
+      "control" : "web.textarea",
+      "failure" : null,
+      "ms" : 52.200000000000003,
+      "note" : null,
+      "ok" : true,
+      "source" : "menuCopy",
+      "state" : "cold",
+      "textMatches" : true
+    },
+    {
+      "app" : "Chrome (isolated)",
+      "clipboardIntact" : true,
+      "control" : "web.textarea",
+      "failure" : null,
+      "ms" : 44.200000000000003,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "warm",
+      "textMatches" : true
+    },
+    {
+      "app" : "VS Code (isolated)",
+      "clipboardIntact" : true,
+      "control" : "editor",
+      "failure" : null,
+      "ms" : 73,
+      "note" : null,
+      "ok" : true,
+      "source" : "menuCopy",
+      "state" : "cold",
+      "textMatches" : true
+    },
+    {
+      "app" : "VS Code (isolated)",
+      "clipboardIntact" : true,
+      "control" : "editor",
+      "failure" : null,
+      "ms" : 5.2999999999999998,
+      "note" : null,
+      "ok" : true,
+      "source" : "accessibility",
+      "state" : "warm",
+      "textMatches" : true
+    }
+  ]
+}

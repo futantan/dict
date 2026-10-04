@@ -115,6 +115,7 @@ struct E2E {
   ) -> ScenarioOutcome {
     fixture.activate()
     let hashBefore = Clipboard.hash()
+    let typesBefore = Clipboard.describe()
     let mark = fixture.mark
     var select: [String: Any] = ["control": scenario.control, "text": scenario.text]
     select["content"] = scenario.content
@@ -124,7 +125,9 @@ struct E2E {
     var notes: [String] = []
     var ms: Double?
 
-    if Clipboard.hash() != hashBefore { notes.append("clipboard hash changed") }
+    if Clipboard.hash() != hashBefore {
+      notes.append("clipboard hash changed: types \(typesBefore) became \(Clipboard.describe())")
+    }
     let selected = events.first { $0.event == "select" && $0.control == scenario.control }
     if let selected, selected.detail.hasPrefix("error:") {
       notes.append("fixture could not select: \(selected.detail)")

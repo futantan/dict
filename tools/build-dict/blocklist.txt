@@ -1,0 +1,2 @@
+# Headword keys (normalizedKey) removed from the dictionary, one per line, for example after a
+# takedown notice. A removed key is dropped as a headword and as a form. Comments start with #.

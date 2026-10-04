@@ -16,6 +16,7 @@ Writing help (the Write shortcut), word lookup and the vocabulary come in later 
 - `Config/` holds the xcconfig files; the product name, bundle identifier and signing team are defined only in `Config/Base.xcconfig`.
 - `project.yml` is the XcodeGen spec; the generated `DictApp.xcodeproj` is not tracked.
 - `scripts/` holds the smoke test, packaging and end-to-end driver scripts.
+- `tools/build-dict/` is a standalone Swift package that builds the dictionary data (see Dictionary data).
 - `Design/` holds the architecture document and the M1 file-ownership plan.
 
 ## Build and run
@@ -26,7 +27,7 @@ Install XcodeGen once with `brew install xcodegen`.
 make generate   # create DictApp.xcodeproj from project.yml
 make build      # Debug build: "Dict Dev", bundle id au.ibra.dict.dev
 make run        # build and launch the Debug app
-make test       # DictCore tests, app unit tests, end-to-end smoke test
+make test       # DictCore and dictionary-builder tests, app unit tests, end-to-end smoke test
 make lint       # swift format lint (Xcode's bundled swift-format)
 make format     # apply swift format in place
 make package    # Release build zipped into build/dist/
@@ -46,6 +47,22 @@ It never takes focus or sends key events, but the terminal running it needs Acce
 The window test launches the app through Launch Services as `open` does and checks that the first-run window, and Settings and About opened from the menu bar item, come up as the frontmost, key window.
 It forces the first-run window with the launch argument `-onboarding.completed NO`, so the user's preferences are never written.
 It takes focus, so it is not part of `make test` and holds `/private/tmp/dict-ui.lock` while it runs.
+
+## Dictionary data
+
+The instant English to Simplified Chinese dictionary is a separate data file, `dict-en-zh.sqlite`, licensed CC BY-SA 4.0 with its own `LICENSE` and `ATTRIBUTION`; the repository's `LICENSE` covers the code only.
+The data is not in git: `tools/build-dict/` is a standalone Swift package that builds it from pinned public snapshots.
+
+```sh
+make dict        # download the inputs pinned in tools/build-dict/manifest.json, build build/dict/dict-en-zh.sqlite
+make dict-stats  # coverage of the most frequent words and lookup timing
+make test-dict   # the builder's tests on hand-written fixtures (also part of make test)
+```
+
+Downloads go to `build/dict/cache/` and are reused when their size and SHA-256 match the manifest.
+kaikki.org replaces its Wiktionary extractions about weekly at the same URLs, so a fresh checkout fails verification once the pinned snapshot is gone; update the manifest's URL, date, size and hash together, then rebuild.
+The same inputs always produce a byte-identical database.
+Keys listed in `tools/build-dict/blocklist.txt` are left out, for example after a takedown notice.
 
 ## Distribution
 

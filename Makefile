@@ -8,7 +8,7 @@ SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/
 	Packages/DictCore/Tests scripts tools/build-dict/Package.swift tools/build-dict/Sources \
 	tools/build-dict/Tests
 
-.PHONY: generate build test test-core test-app test-dict dict dict-stats smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
+.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -25,9 +25,9 @@ test-core:
 test-dict:
 	cd tools/build-dict && swift test
 
-# Downloads the pinned inputs in tools/build-dict/manifest.json into build/dict/cache/ (reused
-# when present and verified by size and SHA-256), then writes build/dict/dict-en-zh.sqlite with
-# its LICENSE and ATTRIBUTION.
+# Downloads the pinned inputs in tools/build-dict/manifest.json into build/dict/cache/ (kept
+# there named by SHA-256 and reused when present), then writes build/dict/dict-en-zh.sqlite with
+# its LICENSE and ATTRIBUTION. Fails with instructions when upstream has replaced a snapshot.
 dict:
 	swift build -c release --package-path tools/build-dict
 	tools/build-dict/.build/release/build-dict build
@@ -36,6 +36,12 @@ dict:
 dict-stats:
 	swift build -c release --package-path tools/build-dict
 	tools/build-dict/.build/release/build-dict stats
+
+# Pins the current upstream files in tools/build-dict/manifest.json, rebuilds, and prints the
+# figures before and after; review them, then commit the manifest.
+dict-update:
+	swift build -c release --package-path tools/build-dict
+	tools/build-dict/.build/release/build-dict update
 
 test-app: generate
 	$(XCODEBUILD) test

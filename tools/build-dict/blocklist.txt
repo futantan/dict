@@ -1,2 +1,4 @@
 # Headword keys (normalizedKey) removed from the dictionary, one per line, for example after a
-# takedown notice. A removed key is dropped as a headword and as a form. Comments start with #.
+# takedown notice. A removed key is dropped as a headword and as a form. A key, a tab and a
+# gloss drops just that gloss (upstream errors). Comments start with #.
+go	围旗	# Chinese Wiktionary typo for 围棋, which the English table already gives

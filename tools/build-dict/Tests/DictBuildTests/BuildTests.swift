@@ -46,7 +46,7 @@ struct BuildTests {
     #expect(
       try Self.headword("run", in: lexicon).senses == [
         Sense(pos: "verb", gloss: "奔跑"), Sense(pos: "verb", gloss: "经营；管理"),
-        Sense(pos: "noun", gloss: "跑步"), Sense(pos: "noun", gloss: "奔跑"),
+        Sense(pos: "noun", gloss: "跑步"),
       ])
   }
 
@@ -121,6 +121,13 @@ struct BuildTests {
     #expect(try Self.headword("light", in: lexicon).senses.map(\.gloss) == ["光；光线；光亮", "窗；天窗"])
     #expect(try Self.headword("created", in: lexicon).senses.map(\.gloss) == ["创建"])
     #expect(try Self.headword("server", in: lexicon).senses.map(\.gloss) == ["（计算机）伺服器", "侍者"])
+  }
+
+  @Test func readsBlocklistKeysAndSingleGlosses() throws {
+    let url = FileManager.default.temporaryDirectory.appending(path: "blocklist-\(UUID()).txt")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try "# comment\nRun  \ngo\t圍旗 # typo\n\n".write(to: url, atomically: true, encoding: .utf8)
+    #expect(try readBlocklist(url) == ["run", "go\t围旗"])
   }
 
   @Test func blocklistRemovesAHeadwordAndItsForms() throws {

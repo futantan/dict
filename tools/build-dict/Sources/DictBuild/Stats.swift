@@ -3,15 +3,44 @@
 import Foundation
 import NaturalLanguage
 
-/// Coverage of the most frequent FrequencyWords tokens, for `build-dict stats`.
+/// Named figures of a built database, in a fixed order, for `build-dict stats` and for the
+/// before/after comparison of `build-dict update`.
+public typealias Metrics = [(name: String, value: String)]
+
+/// Table sizes, IPA coverage and coverage of the most frequent FrequencyWords tokens.
 /// A token counts as covered when it is a headword or a form that points at one (what the
 /// app's lookup does before lemmatizing); the second figure also lets `NLTagger(.lemma)`
 /// reduce the token first, which is the app's last step (architecture 7.4).
 /// Tokens without a letter (numbers, `'s` fragments) are skipped.
-public func coverageReport(database: URL, frequencies: FrequencyTable, tops: [Int]) throws
-  -> [String]
+public func databaseMetrics(database: URL, frequencies: FrequencyTable, tops: [Int]) throws
+  -> Metrics
 {
   let db = try SQLiteConnection(path: database.path, readOnly: true)
+  func count(_ sql: String) throws -> String {
+    try db.prepare(sql).rows().first?.first.flatMap { $0 } ?? "0"
+  }
+  var metrics: Metrics = [
+    ("headwords", try count("SELECT count(*) FROM headword")),
+    ("senses", try count("SELECT count(*) FROM sense")),
+  ]
+  // Databases before schema 2 have no `source` column.
+  if let rows = try? db.prepare("SELECT source, count(*) FROM sense GROUP BY source").rows() {
+    metrics += rows.map { ("senses from \($0[0] ?? "")", $0[1] ?? "0") }
+  }
+  metrics += [
+    ("forms", try count("SELECT count(*) FROM form")),
+    ("ipa_uk", try count("SELECT count(*) FROM headword WHERE ipa_uk IS NOT NULL")),
+    ("ipa_us", try count("SELECT count(*) FROM headword WHERE ipa_us IS NOT NULL")),
+    (
+      "ipa_uk of zipf >= 4.5",
+      try count(
+        """
+        SELECT printf('%.1f%%', 100.0 * sum(ipa_uk IS NOT NULL) / count(*)) FROM headword
+        WHERE zipf >= 4.5
+        """)
+    ),
+  ]
+
   let headwords = Set(try db.prepare("SELECT lemma_key FROM headword").rows().compactMap { $0[0] })
   let forms = Set(try db.prepare("SELECT form_key FROM form").rows().compactMap { $0[0] })
   let known = headwords.union(forms)
@@ -25,7 +54,7 @@ public func coverageReport(database: URL, frequencies: FrequencyTable, tops: [In
 
   let tokens = frequencies.ranked.filter { $0.contains(where: \.isLetter) && !$0.hasPrefix("'") }
   let lemmas = tokens.prefix(tops.max() ?? 0).map { lemma($0) ?? $0 }
-  return tops.map { top in
+  for top in tops {
     let slice = tokens.prefix(top)
     let direct = slice.count { known.contains($0) }
     let withTagger = zip(slice, lemmas).count { token, lemma in
@@ -34,9 +63,46 @@ public func coverageReport(database: URL, frequencies: FrequencyTable, tops: [In
     // Distinct lemmas (NLTagger's lemma, else the token), each a headword or a form.
     let distinct = Set(lemmas.prefix(top))
     let lemmaHits = distinct.count { known.contains($0) }
-    return "top \(top): tokens direct \(percent(direct, of: slice.count)), "
-      + "with NLTagger \(percent(withTagger, of: slice.count)) of \(slice.count); "
-      + "distinct lemmas \(percent(lemmaHits, of: distinct.count)) of \(distinct.count)"
+    metrics += [
+      ("top \(top) tokens direct", percent(direct, of: slice.count)),
+      ("top \(top) tokens with NLTagger", percent(withTagger, of: slice.count)),
+      ("top \(top) distinct lemmas (\(distinct.count))", percent(lemmaHits, of: distinct.count)),
+    ]
+  }
+  return metrics
+}
+
+/// The query behind architecture 7.4 steps 2 and 3: the term's own headword and every lemma
+/// it is a form of, in display order. Ordered by frequency (`saw` → see before saw the tool,
+/// `found` → find before found), except that an own headword without a translation table of
+/// its own goes last: such an entry is first of all an inflection (`miles` → mile, `taken` →
+/// take, `points` → point). On equal frequency the lemma goes first.
+public let lookupSQL = """
+  SELECT h.id, h.lemma FROM headword h
+  WHERE h.lemma_key = ?1 OR h.id IN (SELECT headword_id FROM form WHERE form_key = ?1)
+  ORDER BY
+    h.lemma_key = ?1
+      AND NOT EXISTS (SELECT 1 FROM sense WHERE headword_id = h.id AND source = 'en'),
+    h.zipf IS NULL, h.zipf DESC, h.lemma_key = ?1, h.lemma_key
+  """
+
+/// The headwords the app shows for a term (`lookupSQL`), each with its first senses.
+public func lookup(_ term: String, database: URL, senses: Int = 3) throws -> [(
+  lemma: String, glosses: [String]
+)] {
+  let db = try SQLiteConnection(path: database.path, readOnly: true)
+  let glosses = try db.prepare("SELECT gloss FROM sense WHERE headword_id = ? ORDER BY ord LIMIT ?")
+  return try db.prepare(lookupSQL).rows([.text(normalizedKey(term))]).compactMap { row in
+    guard let id = row[0].flatMap({ Int($0) }), let lemma = row[1] else { return nil }
+    return (lemma, try glosses.rows([.integer(id), .integer(senses)]).compactMap { $0[0] })
+  }
+}
+
+/// Lines comparing two sets of metrics by name; `before` may be empty.
+public func comparisonLines(before: Metrics, after: Metrics) -> [String] {
+  let previous = Dictionary(before.map { ($0.name, $0.value) }, uniquingKeysWith: { a, _ in a })
+  return after.map { name, value in
+    "\(name): \(previous[name] ?? "—") → \(value)"
   }
 }
 

@@ -4,7 +4,7 @@ import Foundation
 import SQLite3
 
 /// The schema of architecture 7.3. `schema_version` in `meta` changes with it.
-public let schemaVersion = 1
+public let schemaVersion = 2
 
 let schema = """
   CREATE TABLE meta (
@@ -25,6 +25,8 @@ let schema = """
     ord         INTEGER NOT NULL,
     pos         TEXT NOT NULL,
     gloss       TEXT NOT NULL,
+    source      TEXT NOT NULL,
+    hint        TEXT,
     PRIMARY KEY (headword_id, ord)
   ) WITHOUT ROWID;
   CREATE TABLE form (
@@ -54,7 +56,7 @@ public func writeDatabase(_ lexicon: Lexicon, meta: [String: String], to url: UR
     "INSERT INTO headword (id, lemma, lemma_key, zipf, ipa_us, ipa_uk, wiki_title) "
       + "VALUES (?, ?, ?, ?, ?, ?, ?)")
   let insertSense = try db.prepare(
-    "INSERT INTO sense (headword_id, ord, pos, gloss) VALUES (?, ?, ?, ?)")
+    "INSERT INTO sense (headword_id, ord, pos, gloss, source, hint) VALUES (?, ?, ?, ?, ?, ?)")
   var ids: [String: Int] = [:]
   for (index, headword) in lexicon.headwords.enumerated() {
     let id = index + 1
@@ -66,7 +68,10 @@ public func writeDatabase(_ lexicon: Lexicon, meta: [String: String], to url: UR
       .text(headword.wikiTitle),
     ])
     for (ord, sense) in headword.senses.enumerated() {
-      try insertSense.run([.integer(id), .integer(ord), .text(sense.pos), .text(sense.gloss)])
+      try insertSense.run([
+        .integer(id), .integer(ord), .text(sense.pos), .text(sense.gloss),
+        .text(sense.source.rawValue), sense.hint.map(Value.text) ?? .null,
+      ])
     }
   }
 

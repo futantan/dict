@@ -56,21 +56,42 @@ public struct Sound: Sendable, Equatable, Decodable {
 /// phonemic transcriptions (`/…/`) are used. A line labelled with an accent wins; an unlabelled
 /// line fills an accent that is still empty, since Wiktionary leaves the general form unlabelled.
 public func pickIPA(_ sounds: [Sound]) -> (uk: String?, us: String?) {
-  var labelled: [Accent: String] = [:]
+  var choice = IPAChoice()
+  choice.add(sounds)
+  return choice.result
+}
+
+/// `pickIPA` kept as running state, so a word's pronunciation lines need not be stored until
+/// the end of the build: the first labelled transcription per accent, and the first
+/// unlabelled one.
+struct IPAChoice: Sendable {
+  var uk: String?
+  var us: String?
   var unlabelled: String?
-  for sound in sounds {
-    guard let ipa = sound.ipa.map(phonemic) ?? nil else { continue }
-    let tags = sound.tags ?? []
-    let rawTags = sound.rawTags ?? []
-    if tags.isEmpty && rawTags.isEmpty {
-      if unlabelled == nil { unlabelled = ipa }
-      continue
-    }
-    for accent in accents(tags: tags, rawTags: rawTags) where labelled[accent] == nil {
-      labelled[accent] = ipa
+
+  mutating func add(_ sounds: [Sound]) {
+    for sound in sounds {
+      guard let ipa = sound.ipa.map(phonemic) ?? nil else { continue }
+      let tags = sound.tags ?? []
+      let rawTags = sound.rawTags ?? []
+      if tags.isEmpty && rawTags.isEmpty {
+        if unlabelled == nil { unlabelled = ipa }
+        continue
+      }
+      let found = accents(tags: tags, rawTags: rawTags)
+      if found.contains(.uk), uk == nil { uk = ipa }
+      if found.contains(.us), us == nil { us = ipa }
     }
   }
-  return (labelled[.uk] ?? unlabelled, labelled[.us] ?? unlabelled)
+
+  var result: (uk: String?, us: String?) { (uk ?? unlabelled, us ?? unlabelled) }
+
+  /// The choice over `first`'s lines followed by `second`'s.
+  static func + (first: IPAChoice, second: IPAChoice) -> IPAChoice {
+    IPAChoice(
+      uk: first.uk ?? second.uk, us: first.us ?? second.us,
+      unlabelled: first.unlabelled ?? second.unlabelled)
+  }
 }
 
 /// The transcription when it is a single phonemic one (`/ɹʌn/`), trimmed; nil otherwise.

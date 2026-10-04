@@ -3,16 +3,24 @@
 import Foundation
 
 /// Bumped whenever the output for the same inputs changes; recorded in `meta.tool_version`.
-public let toolVersion = "1.0.0"
+public let toolVersion = "2.0.0"
 
-/// Manifest ids of the inputs. Every source whose id starts with `wiktionaryPrefix` is a
-/// wiktextract JSONL file, read in manifest order.
-public let wiktionaryPrefix = "zhwiktionary-"
+/// Manifest ids of the inputs. A source whose id starts with `zhwiktionary-` or
+/// `enwiktionary-` is a wiktextract JSONL file (optionally gzipped) of that edition; they are
+/// read in manifest order.
 public let frequencySourceID = "frequencywords-en"
+
+/// The Wiktionary edition of a manifest source, nil for other inputs.
+public func edition(ofSource id: String) -> Edition? {
+  if id.hasPrefix("zhwiktionary-") { return .zh }
+  if id.hasPrefix("enwiktionary-") { return .en }
+  return nil
+}
 
 public struct BuildSummary: Sendable, Equatable {
   public var headwords = 0
   public var senses = 0
+  public var sensesBySource: [Edition: Int] = [:]
   public var forms = 0
   public var withIPAUK = 0
   public var withIPAUS = 0
@@ -20,7 +28,9 @@ public struct BuildSummary: Sendable, Equatable {
 
   public var lines: [String] {
     [
-      "headwords \(headwords)", "senses \(senses)", "forms \(forms)",
+      "headwords \(headwords)",
+      "senses \(senses) (zh \(sensesBySource[.zh, default: 0]), en \(sensesBySource[.en, default: 0]))",
+      "forms \(forms)",
       "ipa_uk \(withIPAUK) (\(percent(withIPAUK, of: headwords)))",
       "ipa_us \(withIPAUS) (\(percent(withIPAUS, of: headwords)))",
     ] + FrequencyBand.allCases.map { "band \($0.rawValue) \(bands[$0, default: 0])" }
@@ -47,11 +57,13 @@ public func buildDictionary(
   var sample: [String] = []
   var changed = 0
   let decoder = JSONDecoder()
-  for source in manifest.sources where source.id.hasPrefix(wiktionaryPrefix) {
+  for source in manifest.sources {
+    guard let sourceEdition = edition(ofSource: source.id) else { continue }
     guard let file = inputs[source.id] else { throw BuildError("missing input \(source.id)") }
     try forEachLine(of: file) { line in
       let entry = try decoder.decode(WiktionaryEntry.self, from: line)
-      builder.add(entry)
+      builder.add(entry, from: sourceEdition)
+      guard sourceEdition == .zh else { return }
       for gloss in (entry.senses ?? []).flatMap({ $0.glosses ?? [] }) {
         let firstLine = String(gloss.prefix(while: { !$0.isNewline }))
         guard toSimplified(firstLine) != firstLine else { continue }
@@ -86,6 +98,9 @@ public func buildDictionary(
   var summary = BuildSummary()
   summary.headwords = lexicon.headwords.count
   summary.senses = lexicon.headwords.reduce(0) { $0 + $1.senses.count }
+  for sense in lexicon.headwords.flatMap(\.senses) {
+    summary.sensesBySource[sense.source, default: 0] += 1
+  }
   summary.forms = lexicon.forms.count
   summary.withIPAUK = lexicon.headwords.count { $0.ipaUK != nil }
   summary.withIPAUS = lexicon.headwords.count { $0.ipaUS != nil }
@@ -95,10 +110,19 @@ public func buildDictionary(
   return summary
 }
 
-/// Keys to leave out, one per line; `#` starts a comment.
+/// Entries to leave out, one per line; `#` starts a comment. A line is a headword key, or a
+/// key and one gloss separated by a tab (`go<TAB>围旗`, either script) to drop just that gloss.
 public func readBlocklist(_ url: URL) throws -> Set<String> {
   guard FileManager.default.fileExists(atPath: url.path) else { return [] }
   let lines = try String(contentsOf: url, encoding: .utf8).split(whereSeparator: \.isNewline)
   return Set(
-    lines.map { normalizedKey(String($0.prefix(while: { $0 != "#" }))) }.filter { !$0.isEmpty })
+    lines.compactMap { line in
+      let parts = line.prefix(while: { $0 != "#" }).split(separator: "\t", maxSplits: 1)
+      guard let first = parts.first else { return nil }
+      let key = normalizedKey(String(first))
+      guard !key.isEmpty else { return nil }
+      guard parts.count == 2 else { return key }
+      let gloss = toSimplified(parts[1].trimmingCharacters(in: .whitespaces))
+      return gloss.isEmpty ? key : "\(key)\t\(gloss)"
+    })
 }

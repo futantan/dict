@@ -14,6 +14,9 @@
           {"wait": {"ms": 250}},
           {"capture": {"policy": "never"}},
           {"capture": {"policy": "allowed"}},
+          {"read": {}},
+          {"read": {"force": "key"}},
+          {"read": {"force": "paste"}},
           {"unknown": {}}
         ]}
         """
@@ -24,6 +27,9 @@
           .wait(ms: 250),
           .capture(.never),
           .capture(.allowed),
+          .read(force: nil),
+          .read(force: .key),
+          .invalid("read force must be menu or key"),
           .invalid("unknown step"),
         ])
     }

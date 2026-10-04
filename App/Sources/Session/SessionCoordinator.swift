@@ -32,6 +32,8 @@ extension TranslationEngine: SessionTranslator {}
 /// again) and opening a window cancel the running task, and anything that arrives for an
 /// older id is dropped, so a late result never lands in a newer panel (architecture 6.4).
 /// A press while the selection is still being read, before the panel shows, is ignored.
+/// When the first stage reads nothing, the panel shows "reading" at the mouse before the
+/// clipboard fallback, and the outcome then replaces it in place.
 @MainActor
 final class SessionCoordinator {
   struct Environment {
@@ -75,15 +77,16 @@ final class SessionCoordinator {
       Log.ui.info("write shortcut pressed: writing help is not available yet")
       return
     }
-    // Before the panel shows, the selection is still being read: a second capture could
+    // The same shortcut hides a visible panel (architecture 10.1), also the reading panel
+    // shown during the clipboard fallback.
+    if panel.isVisible {
+      end()
+      return
+    }
+    // A capture is still running, or winding down after a cancel: a second capture could
     // snapshot the first one's copy as the user's clipboard, so the press is ignored.
     if isCapturing {
       Log.ui.info("read shortcut pressed while reading the selection: ignored")
-      return
-    }
-    // The same shortcut hides a visible panel (architecture 10.1).
-    if panel.isVisible {
-      end()
       return
     }
     read()
@@ -166,10 +169,28 @@ final class SessionCoordinator {
     let clock = ContinuousClock()
     let start = clock.now
     let status = environment.refreshPermissions()
-    let result = await reader.capture(policy: .allowed)
+    var showedReading = false
+    let result = await reader.capture(policy: .allowed) {
+      guard id == self.id else { return }
+      showedReading = true
+      panel.show(PanelState(phase: .reading), near: .mouse(environment.mouseLocation()))
+      Log.ui.info(
+        """
+        session \(id, privacy: .public): reading panel shown \
+        \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms after the shortcut, before the clipboard fallback
+        """)
+    }
     isCapturing = false
     guard id == self.id, !Task.isCancelled else { return }
     let captured = clock.now - start
+    // After the reading panel, every outcome replaces it where it is.
+    let present: (PanelState, PanelAnchor) -> Void = { state, anchor in
+      if showedReading {
+        self.panel.update(state)
+      } else {
+        self.panel.show(state, near: anchor)
+      }
+    }
 
     switch result {
     case .success(let selection)
@@ -179,7 +200,7 @@ final class SessionCoordinator {
         selection.bounds.map(PanelAnchor.selection) ?? .mouse(environment.mouseLocation())
       // Apple Translation gets its session through the panel's view, so the panel is shown
       // before translating (architecture 6.5).
-      panel.show(PanelState(source: selection.text, phase: .generating("")), near: anchor)
+      present(PanelState(source: selection.text, phase: .generating("")), anchor)
       Log.ui.info(
         """
         session \(id, privacy: .public): capture \(milliseconds(captured), format: .fixed(precision: 1), privacy: .public)ms \
@@ -188,7 +209,7 @@ final class SessionCoordinator {
         """)
       await run(selection.text, id: id, clock: clock, start: start)
     case .success, .failure(.nothingSelected):
-      show(.input, captured: captured, outcome: "nothingSelected")
+      show(.input, captured: captured, outcome: "nothingSelected", present: present)
     case .failure(.ownApp):
       Log.ui.info("session \(id, privacy: .public): Dict itself is in front; nothing to read")
     case .failure(let failure):
@@ -196,17 +217,20 @@ final class SessionCoordinator {
         awaitsPermission = true
         show(
           PanelState(phase: .needsSetup(environment.permissionNotice(issue))), captured: captured,
-          outcome: failure.caseName)
+          outcome: failure.caseName, present: present)
       } else {
         show(
           PanelState(phase: .failure(SessionStrings.captureFailure(failure))), captured: captured,
-          outcome: failure.logDescription)
+          outcome: failure.logDescription, present: present)
       }
     }
   }
 
-  private func show(_ state: PanelState, captured: Duration, outcome: String) {
-    panel.show(state, near: .mouse(environment.mouseLocation()))
+  private func show(
+    _ state: PanelState, captured: Duration, outcome: String,
+    present: (PanelState, PanelAnchor) -> Void
+  ) {
+    present(state, .mouse(environment.mouseLocation()))
     Log.ui.info(
       """
       session \(self.id, privacy: .public): capture \(milliseconds(captured), format: .fixed(precision: 1), privacy: .public)ms \

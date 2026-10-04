@@ -7,13 +7,25 @@
 //
 // Usage: swift scripts/smoke-test.swift "path/to/App.app"
 
+import AppKit
 import ApplicationServices
-import Foundation
 
 nonisolated(unsafe) var launched: Process?
 
+/// Quits like the user would, so the app's quit-time clean-up runs: it restores the
+/// accessibility attributes it switched on in the front app (Chrome's
+/// AXEnhancedUserInterface stayed on after a SIGTERM, measured). SIGTERM only as a last resort.
+func quit(_ process: Process) {
+  guard process.isRunning else { return }
+  NSRunningApplication(processIdentifier: process.processIdentifier)?.terminate()
+  let deadline = Date().addingTimeInterval(5)
+  while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
+  if process.isRunning { process.terminate() }
+  process.waitUntilExit()
+}
+
 func fail(_ message: String) -> Never {
-  if let launched, launched.isRunning { launched.terminate() }
+  if let launched { quit(launched) }
   FileHandle.standardError.write(Data("smoke-test: FAIL: \(message)\n".utf8))
   exit(1)
 }
@@ -66,8 +78,7 @@ while !found && Date() < deadline {
   if !found { Thread.sleep(forTimeInterval: 0.2) }
 }
 
-process.terminate()
-process.waitUntilExit()
+quit(process)
 guard found else {
   fail("menu bar item \"\(expectedName)\" did not appear within \(Int(timeout)) s")
 }

@@ -81,5 +81,16 @@ enum ClipboardPolicy: Sendable { case never, allowed }
 @MainActor
 protocol SelectionReader {
   /// The hotkey path passes `.allowed`; the selection-icon path passes `.never`.
-  func capture(policy: ClipboardPolicy) async -> Result<Selection, CaptureFailure>
+  /// `beforeFallback` runs once, synchronously, when the first stage read nothing and the
+  /// clipboard fallback is about to start (before any snapshot or copy), so the caller can
+  /// show the "reading" panel first. It does not run when there is no fallback.
+  func capture(
+    policy: ClipboardPolicy, beforeFallback: () -> Void
+  ) async -> Result<Selection, CaptureFailure>
+}
+
+extension SelectionReader {
+  func capture(policy: ClipboardPolicy) async -> Result<Selection, CaptureFailure> {
+    await capture(policy: policy, beforeFallback: {})
+  }
 }

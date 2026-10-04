@@ -13,6 +13,8 @@ struct CaptureReport: Sendable {
   var firstStageMs: Double?
   var secondStageMs: Double?
   var fallbackMs: Double?
+  /// From triggering the copy to the clipboard change; nil when no copy landed.
+  var copyWaitMs: Double?
   var totalMs = 0.0
 }
 
@@ -48,11 +50,13 @@ final class AccessibilitySelectionReader: SelectionReader {
   /// Starts warming Chromium and Electron apps as they come to the front.
   func start() { warmer.start() }
 
-  func capture(policy: ClipboardPolicy) async -> Result<Selection, CaptureFailure> {
+  func capture(
+    policy: ClipboardPolicy, beforeFallback: () -> Void
+  ) async -> Result<Selection, CaptureFailure> {
     let clock = ContinuousClock()
     let start = clock.now
     var report = CaptureReport()
-    let result = await capture(policy: policy, report: &report)
+    let result = await capture(policy: policy, beforeFallback: beforeFallback, report: &report)
     report.totalMs = milliseconds(clock.now - start)
     lastReport = report
     log(result, report)
@@ -60,7 +64,7 @@ final class AccessibilitySelectionReader: SelectionReader {
   }
 
   private func capture(
-    policy: ClipboardPolicy, report: inout CaptureReport
+    policy: ClipboardPolicy, beforeFallback: () -> Void, report: inout CaptureReport
   ) async -> Result<Selection, CaptureFailure> {
     guard AXIsProcessTrusted() else { return .failure(.noAccessibilityPermission) }
     guard let front = NSWorkspace.shared.frontmostApplication else {
@@ -98,12 +102,14 @@ final class AccessibilitySelectionReader: SelectionReader {
     guard needsCopyFallback(after: firstFailure, kind: app.kind, policy: policy) else {
       return .failure(firstFailure)
     }
+    beforeFallback()
     let clock = ContinuousClock()
     let fallbackStart = clock.now
     defer { report.fallbackMs = milliseconds(clock.now - fallbackStart) }
-    let copied = await copyFallback(for: app).run(
+    let run = await copyFallback(for: app).run(
       after: firstFailure, accessDenied: clipboard.isAccessDenied)
-    return copied.map { copied in
+    report.copyWaitMs = run.copyWait.map(milliseconds)
+    return run.result.map { copied in
       Selection(
         text: copied.text, source: copied.source, app: app, bounds: nil, context: nil,
         target: nil)
@@ -117,10 +123,11 @@ final class AccessibilitySelectionReader: SelectionReader {
     return await queue.run { readSelection(pid: pid, kind: kind, screens: screens) }
   }
 
-  private func copyFallback(for app: TargetApp) -> CopyFallback {
+  /// `useMenu: false` skips the menu bar Copy item, for the e2e probe of the ⌘C path.
+  private func copyFallback(for app: TargetApp, useMenu: Bool = true) -> CopyFallback {
     CopyFallback(
       clipboard: clipboard,
-      findMenuCopy: { await self.findMenuCopy(app) },
+      findMenuCopy: { useMenu ? await self.findMenuCopy(app) : .notFound },
       pressMenuCopy: { await self.pressMenuCopy(app) },
       canPostEvents: { AXIsProcessTrusted() && CGPreflightPostEventAccess() },
       secureInputBlock: {
@@ -166,10 +173,50 @@ final class AccessibilitySelectionReader: SelectionReader {
       first=\(report.firstStageMs ?? -1, format: .fixed(precision: 1), privacy: .public)ms \
       second=\(report.secondStageMs ?? -1, format: .fixed(precision: 1), privacy: .public)ms \
       fallback=\(report.fallbackMs ?? -1, format: .fixed(precision: 1), privacy: .public)ms \
+      copyWait=\(report.copyWaitMs ?? -1, format: .fixed(precision: 1), privacy: .public)ms \
       total=\(report.totalMs, format: .fixed(precision: 1), privacy: .public)ms
       """)
   }
 }
+
+#if DEBUG
+  /// The copy path the e2e entry point forces, to measure it in apps whose selection
+  /// accessibility reads (architecture 14.2).
+  enum ForcedCopy: String, Sendable {
+    case menu, key
+  }
+
+  extension AccessibilitySelectionReader {
+    /// Skips the accessibility read and runs the copy fallback on the front app, through the
+    /// menu bar Copy item or straight to ⌘C. `beforeCopying` runs first, as in `capture`.
+    func captureByCopying(
+      _ via: ForcedCopy, beforeCopying: () -> Void = {}
+    ) async -> Result<Selection, CaptureFailure> {
+      let clock = ContinuousClock()
+      let start = clock.now
+      var report = CaptureReport()
+      defer {
+        report.totalMs = milliseconds(clock.now - start)
+        lastReport = report
+      }
+      guard let front = NSWorkspace.shared.frontmostApplication else {
+        return .failure(.unreadable(axError: nil))
+      }
+      let app = resolver.resolve(front)
+      report.bundleID = app.bundleID
+      report.kind = app.kind
+      beforeCopying()
+      let run = await copyFallback(for: app, useMenu: via == .menu).run(
+        after: .unreadable(axError: nil), accessDenied: clipboard.isAccessDenied)
+      report.fallbackMs = milliseconds(clock.now - start)
+      report.copyWaitMs = run.copyWait.map(milliseconds)
+      return run.result.map {
+        Selection(
+          text: $0.text, source: $0.source, app: app, bounds: nil, context: nil, target: nil)
+      }
+    }
+  }
+#endif
 
 /// Both stages of the accessibility read (architecture 3.4, 3.5). Accessibility queue only.
 /// The first stage has 150 ms in all; the second, best effort, another 100 ms, and a field it

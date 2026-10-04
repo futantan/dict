@@ -39,6 +39,13 @@ struct CopiedSelection: Equatable, Sendable {
   let source: CaptureSource
 }
 
+/// What the fallback returns: the result, and how long the copy took to land (nil when no
+/// copy was triggered or none landed), for the log and the e2e report.
+struct CopyRun: Sendable {
+  let result: Result<CopiedSelection, CaptureFailure>
+  var copyWait: Duration? = nil
+}
+
 /// The copy fallback: the menu bar Copy item, then ⌘C posted to the target, read through the
 /// clipboard, which is always put back. The hooks are injected so the order can be tested.
 @MainActor
@@ -55,19 +62,19 @@ struct CopyFallback {
   var lateCopyWindow: Duration = .seconds(1)
 
   /// Runs after `first` failed; on any failure of its own, `first` is kept unless the
-  /// fallback learned something more specific.
-  func run(
-    after first: CaptureFailure, accessDenied: Bool = false
-  ) async -> Result<CopiedSelection, CaptureFailure> {
-    if accessDenied { return .failure(.clipboardDenied) }
+  /// fallback learned something more specific. A cancelled task copies nothing, and once a
+  /// copy was triggered the clipboard is put back even if the task is cancelled.
+  func run(after first: CaptureFailure, accessDenied: Bool = false) async -> CopyRun {
+    if accessDenied { return CopyRun(result: .failure(.clipboardDenied)) }
     var fieldText: String?
     if case .nothingSelected(let text) = first { fieldText = text }
 
     var snapshot: ClipboardSnapshot?
     switch await findMenuCopy() {
     case .disabled:
-      return .failure(.nothingSelected(fieldText: fieldText))
+      return CopyRun(result: .failure(.nothingSelected(fieldText: fieldText)))
     case .enabled:
+      guard !Task.isCancelled else { return CopyRun(result: .failure(first)) }
       let taken = clipboard.snapshot()
       snapshot = taken
       if await pressMenuCopy() == nil {
@@ -77,8 +84,12 @@ struct CopyFallback {
       break
     }
 
-    guard canPostEvents() else { return .failure(.noPostEventPermission) }
-    if let blocked = secureInputBlock() { return .failure(blocked) }
+    guard canPostEvents() else { return CopyRun(result: .failure(.noPostEventPermission)) }
+    if let blocked = secureInputBlock() { return CopyRun(result: .failure(blocked)) }
+    guard !Task.isCancelled else {
+      if let snapshot { clipboard.restore(snapshot) }
+      return CopyRun(result: .failure(first))
+    }
     let taken = snapshot ?? clipboard.snapshot()
     postCopyKey()
     return await finish(taken, source: .keyCopy, first: first, fieldText: fieldText)
@@ -87,20 +98,26 @@ struct CopyFallback {
   private func finish(
     _ snapshot: ClipboardSnapshot, source: CaptureSource, first: CaptureFailure,
     fieldText: String?
-  ) async -> Result<CopiedSelection, CaptureFailure> {
-    let copied = await clipboard.waitForCopy(since: snapshot.changeCount, timeout: copyTimeout)
-    let content = copied ? clipboard.copiedContent() : .none
-    clipboard.restore(snapshot)
-    guard copied else {
+  ) async -> CopyRun {
+    let clock = ContinuousClock()
+    let start = clock.now
+    let copy = await clipboard.waitForCopy(since: snapshot.changeCount, timeout: copyTimeout)
+    guard let copy else {
+      clipboard.restore(snapshot)
       let clipboard = self.clipboard
       let window = lateCopyWindow
       Task { await clipboard.undoLateCopy(of: snapshot, window: window) }
-      return .failure(first)
+      return CopyRun(result: .failure(first))
     }
+    let wait = clock.now - start
+    let content = clipboard.copiedContent()
+    clipboard.restore(snapshot, after: copy)
     guard case .text(let text) = content,
       !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
       !isWholeLineCopy(text, fieldText: fieldText)
-    else { return .failure(.nothingSelected(fieldText: fieldText)) }
-    return .success(CopiedSelection(text: text, source: source))
+    else {
+      return CopyRun(result: .failure(.nothingSelected(fieldText: fieldText)), copyWait: wait)
+    }
+    return CopyRun(result: .success(CopiedSelection(text: text, source: source)), copyWait: wait)
   }
 }

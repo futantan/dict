@@ -114,7 +114,9 @@ struct OnboardingLiveTests {
 /// The sample never reads a selection.
 @MainActor
 private final class NoReader: SelectionReader {
-  func capture(policy: ClipboardPolicy) async -> Result<Selection, CaptureFailure> {
+  func capture(
+    policy: ClipboardPolicy, beforeFallback: () -> Void
+  ) async -> Result<Selection, CaptureFailure> {
     Issue.record("the sample must not capture")
     return .failure(.ownApp)
   }

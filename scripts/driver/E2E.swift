@@ -14,6 +14,9 @@ struct E2EScenario: Decodable {
     /// A `CaptureFailure` case name; when set, the capture must fail with it.
     var failure: String?
     var copyEvents: Int?
+    /// `read` scenarios: whether the reading panel must show before the clipboard fallback
+    /// (true) or not at all (false).
+    var readingPanel: Bool?
   }
 
   var name: String
@@ -21,6 +24,11 @@ struct E2EScenario: Decodable {
   var text: String
   var content: String?
   var policy: String
+  /// "capture" (default) calls the reader; "read" presses the shortcut through the
+  /// coordinator and the real panel.
+  var step: String?
+  /// For "read": "menu" or "key" forces that copy path.
+  var force: String?
   var expect: Expectation
 }
 
@@ -119,8 +127,11 @@ struct E2E {
     let mark = fixture.mark
     var select: [String: Any] = ["control": scenario.control, "text": scenario.text]
     select["content"] = scenario.content
-    let outcome = runner.run(
-      [["select": select], ["capture": ["policy": scenario.policy]]], name: scenario.name)
+    let action: [String: Any] =
+      scenario.step == "read"
+      ? ["read": scenario.force.map { ["force": $0] } ?? [:]]
+      : ["capture": ["policy": scenario.policy]]
+    let outcome = runner.run([["select": select], action], name: scenario.name)
     let events = fixture.entries(since: mark)
     var notes: [String] = []
     var ms: Double?
@@ -148,8 +159,9 @@ struct E2E {
     case .noResult(let reason):
       notes.append(reason)
     case .finished(let steps):
-      if let capture = steps.last(where: { $0.step == "capture" }) {
-        ms = capture.ms
+      if let capture = steps.last(where: { $0.step == "capture" || $0.step == "read" }) {
+        // A `read` step's own ms includes showing the panel and letting it settle.
+        ms = capture.captureEndedMs ?? capture.ms
         notes += check(capture, against: scenario.expect)
       } else {
         notes.append("the result has no capture step")
@@ -165,13 +177,19 @@ struct E2E {
       ? "ok, source \(capture.source ?? "nil"), \(Self.quote(capture.text))"
       : "failure \(capture.failure ?? "nil")"
     var notes: [String] = []
+    switch expect.readingPanel {
+    case true?: notes += capture.readingPanelProblems
+    case false?:
+      if let shown = capture.readingShownMs { notes.append("reading panel shown at \(shown) ms") }
+    case nil: break
+    }
     if let failure = expect.failure {
       if capture.ok || capture.failure != failure {
         notes.append("expected failure \(failure), got \(got)")
       }
       return notes
     }
-    guard capture.ok else { return ["expected success, got \(got)"] }
+    guard capture.ok else { return notes + ["expected success, got \(got)"] }
     if let source = expect.source, capture.source != source {
       notes.append("expected source \(source), got \(capture.source ?? "nil")")
     }

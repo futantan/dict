@@ -36,9 +36,15 @@ final class ClipboardGateway {
     return ClipboardSnapshot(changeCount: pasteboard.changeCount, items: items)
   }
 
-  /// Puts the snapshot back if the clipboard changed since, marked as auto-generated.
-  func restore(_ snapshot: ClipboardSnapshot) {
+  /// Puts the snapshot back if the clipboard changed since, with every type and its data as
+  /// they were plus the empty auto-generated marker. With `copy`, the change count our copy
+  /// left: anything later was written by someone else and is kept.
+  func restore(_ snapshot: ClipboardSnapshot, after copy: Int? = nil) {
     guard pasteboard.changeCount != snapshot.changeCount else { return }
+    if let copy, pasteboard.changeCount != copy {
+      Log.capture.info("clipboard written again after the copy: not restored")
+      return
+    }
     pasteboard.clearContents()
     let items = snapshot.items.map { entries in
       let item = NSPasteboardItem()
@@ -49,16 +55,30 @@ final class ClipboardGateway {
     if !items.isEmpty { pasteboard.writeObjects(items) }
   }
 
-  /// Waits until the change count moves past `start` and the clipboard has types again
-  /// (apps often clear first and write after), checking every 5 ms.
-  func waitForCopy(since start: Int, timeout: Duration) async -> Bool {
+  /// Waits until the change count moves past `start` and the clipboard holds what a copy of
+  /// a selection leaves: readable plain text, a file URL or concealed data. Apps often clear
+  /// first and write after; Safari writes its rich types before the plain text and may
+  /// declare the text before it can be read (measured). Checks every 5 ms; returns the
+  /// change count the copy left, or nil when it timed out or was cancelled.
+  func waitForCopy(since start: Int, timeout: Duration) async -> Int? {
     let clock = ContinuousClock()
     let deadline = clock.now + timeout
-    while clock.now < deadline {
-      if pasteboard.changeCount != start, !(pasteboard.types ?? []).isEmpty { return true }
-      try? await Task.sleep(for: .milliseconds(5))
+    while true {
+      if pasteboard.changeCount != start, copyHasLanded() { return pasteboard.changeCount }
+      guard clock.now < deadline else { return nil }
+      do {
+        try await Task.sleep(for: .milliseconds(5))
+      } catch {
+        return nil
+      }
     }
-    return pasteboard.changeCount != start && !(pasteboard.types ?? []).isEmpty
+  }
+
+  /// Concealed content is recognised by its type alone, never read.
+  private func copyHasLanded() -> Bool {
+    let types = pasteboard.types ?? []
+    if types.contains(Self.concealedType) || types.contains(.fileURL) { return true }
+    return types.contains(.string) && pasteboard.string(forType: .string) != nil
   }
 
   /// What a copy put on the clipboard. Concealed content is reported but never read.

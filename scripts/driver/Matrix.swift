@@ -23,6 +23,9 @@ struct MatrixRow {
   var ms: Double?
   var textMatches = false
   var clipboardIntact = false
+  /// Rows from `read` steps: "reading panel key" when the reading panel showed before the
+  /// fallback and stayed key, "no reading panel", or the problems found.
+  var panel: String?
   var note: String?
 
   var key: String { "\(app) | \(control) | \(state)" }
@@ -32,6 +35,7 @@ struct MatrixRow {
     [
       "ok": String(ok), "source": source ?? "-", "failure": failure ?? "-",
       "textMatches": String(textMatches), "clipboardIntact": String(clipboardIntact),
+      "panel": panel ?? "-",
     ]
   }
 
@@ -43,6 +47,7 @@ struct MatrixRow {
     object["source"] = source ?? NSNull()
     object["failure"] = failure ?? NSNull()
     object["ms"] = ms.map { (($0 * 10).rounded() / 10) as Any } ?? NSNull()
+    object["panel"] = panel ?? NSNull()
     object["note"] = note ?? NSNull()
     return object
   }
@@ -63,6 +68,7 @@ struct MatrixRow {
     ms = (object["ms"] as? NSNumber)?.doubleValue
     textMatches = object["textMatches"] as? Bool ?? false
     clipboardIntact = object["clipboardIntact"] as? Bool ?? false
+    panel = object["panel"] as? String
     note = object["note"] as? String
   }
 
@@ -72,7 +78,8 @@ struct MatrixRow {
       ? "\(source ?? "?") \(textMatches ? "text ok" : "TEXT DIFFERS")" : "failure \(failure ?? "?")"
     let timing = ms.map { String(format: "%.1f ms", $0) } ?? "-"
     let clipboard = clipboardIntact ? "clipboard ok" : "CLIPBOARD CHANGED"
-    return "\(key): \(result), \(timing), \(clipboard)" + (note.map { " (\($0))" } ?? "")
+    return "\(key): \(result), \(timing), \(clipboard)" + (panel.map { ", \($0)" } ?? "")
+      + (note.map { " (\($0))" } ?? "")
   }
 }
 
@@ -148,6 +155,11 @@ struct Matrix {
   }
 
   static let captureStep: [String: Any] = ["capture": ["policy": "allowed"]]
+  /// A "read" shortcut press through the coordinator and the real panel.
+  static let readStep: [String: Any] = ["read": [String: Any]()]
+  static func forcedRead(_ via: String) -> [String: Any] { ["read": ["force": via]] }
+  /// Samples per copy path in `copyProbe`.
+  static let probeSamples = 5
 
   /// Runs `steps` in one Dict process and records a row for each capture step, named by
   /// `states` in order. `during` runs on the driver while Dict runs the steps.
@@ -157,13 +169,13 @@ struct Matrix {
   ) {
     let before = Clipboard.hash()
     let outcome = runner.run(
-      steps, name: "\(app)-\(control)-\(states.joined(separator: "-"))", during: during)
+      steps, name: "\(app)-\(control)-\(states.first ?? "")", during: during)
     let clipboardIntact = Clipboard.hash() == before
     let results: [StepResult]
     var note: String?
     switch outcome {
     case .finished(let steps):
-      results = steps.filter { $0.step == "capture" }
+      results = steps.filter { $0.step == "capture" || $0.step == "read" }
       if results.count < states.count { note = "\(results.count) capture steps in the result" }
     case .noEntryPoint:
       results = []
@@ -183,8 +195,66 @@ struct Matrix {
         row.failure = step.failure
         row.ms = step.ms
         row.textMatches = step.ok && step.text == expect
+        if step.step == "read" {
+          row.panel = Self.panelSummary(step)
+          row.ms = step.captureEndedMs
+          var details: [String] = []
+          if let shown = step.readingShownMs {
+            details.append(String(format: "reading panel at %.1f ms", shown))
+          }
+          if let wait = step.copyWaitMs {
+            details.append(String(format: "copy wait %.1f ms", wait))
+          }
+          row.note = details.isEmpty ? nil : details.joined(separator: ", ")
+        }
         if step.ok && !row.textMatches { row.note = "got \(E2E.quote(step.text))" }
       }
+      say("  " + row.line)
+      rows.append(row)
+    }
+  }
+
+  static func panelSummary(_ step: StepResult) -> String {
+    guard step.readingShownMs != nil else { return "no reading panel" }
+    let problems = step.readingPanelProblems
+    return problems.isEmpty ? "reading panel key" : problems.joined(separator: "; ")
+  }
+
+  /// Forces the copy fallback with the reading panel key, `probeSamples` times through the
+  /// menu bar Copy item and as many through ⌘C, in one Dict process. Each path gives one row:
+  /// ok only if every sample captured the text with the panel key; `ms` is the median time
+  /// from triggering the copy to the clipboard change, and the note lists every sample.
+  private mutating func copyProbe(_ app: String, _ control: String, expect: String) {
+    let paths = ["menu", "key"]
+    let steps = paths.flatMap { path in
+      Array(repeating: Self.forcedRead(path), count: Self.probeSamples)
+    }
+    let before = Clipboard.hash()
+    let outcome = runner.run(steps, name: "\(app)-\(control)-copy-probe")
+    let clipboardIntact = Clipboard.hash() == before
+    let results: [StepResult]
+    if case .finished(let steps) = outcome {
+      results = steps.filter { $0.step == "read" }
+    } else {
+      results = []
+    }
+    for (index, path) in paths.enumerated() {
+      let samples = Array(
+        results.dropFirst(index * Self.probeSamples).prefix(Self.probeSamples))
+      var row = MatrixRow(app: app, control: control, state: "panel key, \(path) copy")
+      row.clipboardIntact = clipboardIntact
+      let waits = samples.compactMap(\.copyWaitMs)
+      row.ok = samples.count == Self.probeSamples && samples.allSatisfy(\.ok)
+      row.source = samples.first?.source
+      row.failure = samples.first { !$0.ok }?.failure
+      row.textMatches = row.ok && samples.allSatisfy { $0.text == expect }
+      let problems = Set(samples.map(Self.panelSummary)).sorted()
+      row.panel = problems.joined(separator: "; ")
+      row.ms = waits.sorted().dropFirst(waits.count / 2).first
+      row.note =
+        samples.count == Self.probeSamples
+        ? "copy wait ms: " + waits.map { String(format: "%.1f", $0) }.joined(separator: ", ")
+        : "\(samples.count) of \(Self.probeSamples) samples"
       say("  " + row.line)
       rows.append(row)
     }
@@ -218,6 +288,7 @@ struct Matrix {
       selectRange(text, of: target, in: Self.sentence)
     else { return skip("TextEdit", "could not select text through accessibility") }
     capture("TextEdit", "textView", "warm", expect: target)
+    copyProbe("TextEdit", "textView", expect: target)
   }
 
   private mutating func safari() throws {
@@ -228,7 +299,9 @@ struct Matrix {
         skip("Safari", "the page for \(control) did not load")
         continue
       }
-      capture("Safari", control, wasRunning ? "warm" : "first", expect: Self.webText[control] ?? "")
+      let text = Self.webText[control] ?? ""
+      capture("Safari", control, wasRunning ? "warm" : "first", expect: text)
+      if control == "web.paragraph" { copyProbe("Safari", control, expect: text) }
       closeTab(pid, control: control)
     }
     if !wasRunning, let pid = runningPids(bundleID).first { quit(pid) }
@@ -259,6 +332,7 @@ struct Matrix {
       capture("Chrome", control, "first", expect: text)
       pause(2.5)
       capture("Chrome", control, "warm", expect: text)
+      if control == "web.paragraph" { copyProbe("Chrome", control, expect: text) }
       closeTab(pid, control: control)
     }
   }
@@ -287,9 +361,16 @@ struct Matrix {
     else { return skip("Chrome (isolated)", "the isolated instance did not show the page") }
     pause(0.3)
     let text = Self.webText[control] ?? ""
-    capture("Chrome (isolated)", control, "cold", expect: text)
-    pause(2.5)
-    capture("Chrome (isolated)", control, "warm", expect: text)
+    // Both cold: the forced ⌘C skips the accessibility read, so it does not switch the tree
+    // on; the shortcut press then finds the tree off, shows the reading panel and copies.
+    // The warm row runs in the same Dict process: Dict switches the tree off again when it
+    // quits, so a new process would find Chrome cold once more.
+    captures(
+      "Chrome (isolated)", control, ["cold, panel key, key copy", "cold, shortcut", "warm"],
+      steps: [
+        Self.forcedRead("key"), Self.readStep, ["wait": ["ms": 2500]], Self.captureStep,
+      ], expect: text)
+    copyProbe("Chrome (isolated)", control, expect: text)
   }
 
   /// An isolated VS Code: throwaway user data and extensions under $TMPDIR (its IPC socket
@@ -335,9 +416,18 @@ struct Matrix {
     pause(0.3)
     // Both rows run in one Dict process: Dict keeps the tree on while it runs and turns it off
     // again when it quits, so a second process would find VS Code cold once more.
+    // The cold press goes through the coordinator: the reading panel shows, then the
+    // fallback copies with the panel key. The probes run last, on the warm editor.
+    let probes = ["menu", "key"].flatMap {
+      Array(repeating: Self.forcedRead($0), count: Self.probeSamples)
+    }
     captures(
-      "VS Code (isolated)", "editor", ["cold", "warm"],
-      steps: [Self.captureStep, ["wait": ["ms": 6000]], Self.captureStep], expect: Self.sentence
+      "VS Code (isolated)", "editor",
+      ["cold, shortcut", "warm"]
+        + (1...Self.probeSamples).map { "panel key, menu copy #\($0)" }
+        + (1...Self.probeSamples).map { "panel key, key copy #\($0)" },
+      steps: [Self.readStep, ["wait": ["ms": 6000]], Self.captureStep] + probes,
+      expect: Self.sentence
     ) {
       // Electron loads the text only after Dict's second write (~2.5 s after the first), and
       // that rebuild drops the selection. A ⌘A posted after it did not select (measured), so

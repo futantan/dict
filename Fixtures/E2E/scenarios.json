@@ -90,6 +90,83 @@
       "text": "horse",
       "policy": "allowed",
       "expect": { "failure": "secureField", "copyEvents": 0 }
+    },
+    {
+      "name": "shortcut, plain text view: no reading panel",
+      "control": "textView.plain",
+      "text": "quick brown fox",
+      "policy": "allowed",
+      "step": "read",
+      "expect": { "source": "accessibility", "text": "quick brown fox", "copyEvents": 0, "readingPanel": false }
+    },
+    {
+      "name": "shortcut, custom view: reading panel, then menu Copy",
+      "control": "custom.noSelectedText",
+      "text": "big sphinx",
+      "policy": "allowed",
+      "step": "read",
+      "expect": { "source": "menuCopy", "text": "big sphinx", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, custom view: reading panel, then ⌘C",
+      "control": "custom.noSelectedText",
+      "text": "big sphinx",
+      "policy": "allowed",
+      "step": "read",
+      "force": "key",
+      "expect": { "source": "keyCopy", "text": "big sphinx", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, custom view without selection: reading panel, then input",
+      "control": "custom.empty",
+      "text": "",
+      "policy": "allowed",
+      "step": "read",
+      "expect": { "failure": "nothingSelected", "copyEvents": 0, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, custom view copying the whole line: reading panel, then input",
+      "control": "custom.copiesLine",
+      "text": "let second",
+      "policy": "allowed",
+      "step": "read",
+      "expect": { "failure": "nothingSelected", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, text view: menu Copy with the panel key",
+      "control": "textView.plain",
+      "text": "lazy dog",
+      "policy": "allowed",
+      "step": "read",
+      "force": "menu",
+      "expect": { "source": "menuCopy", "text": "lazy dog", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, text view: ⌘C with the panel key",
+      "control": "textView.plain",
+      "text": "lazy dog",
+      "policy": "allowed",
+      "step": "read",
+      "force": "key",
+      "expect": { "source": "keyCopy", "text": "lazy dog", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, web paragraph: menu Copy with the panel key",
+      "control": "web.paragraph",
+      "text": "jumps over the lazy dog",
+      "policy": "allowed",
+      "step": "read",
+      "force": "menu",
+      "expect": { "source": "menuCopy", "text": "jumps over the lazy dog", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "shortcut, web paragraph: ⌘C with the panel key",
+      "control": "web.paragraph",
+      "text": "jumps over the lazy dog",
+      "policy": "allowed",
+      "step": "read",
+      "force": "key",
+      "expect": { "source": "keyCopy", "text": "jumps over the lazy dog", "copyEvents": 1, "readingPanel": true }
     }
   ]
 }

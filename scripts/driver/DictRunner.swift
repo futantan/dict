@@ -16,6 +16,15 @@ struct StepResult {
   let source: String?
   let text: String?
   let failure: String?
+  /// `read` steps: what the coordinator asked of the panel, e.g. "show:reading@12.3".
+  let panelCalls: [String]
+  let readingShownMs: Double?
+  let captureEndedMs: Double?
+  let panelKeyAtShow: Bool?
+  let panelKeyAfterCopy: Bool?
+  let frontAppUnchanged: Bool?
+  let copyWaitMs: Double?
+  let fallbackMs: Double?
 
   init(_ object: [String: Any]) {
     step = object["step"] as? String ?? ""
@@ -24,6 +33,35 @@ struct StepResult {
     source = object["source"] as? String
     text = object["text"] as? String
     failure = object["failure"] as? String
+    panelCalls = object["panel"] as? [String] ?? []
+    readingShownMs = (object["readingShownMs"] as? NSNumber)?.doubleValue
+    captureEndedMs = (object["captureEndedMs"] as? NSNumber)?.doubleValue
+    panelKeyAtShow = object["panelKeyAtShow"] as? Bool
+    panelKeyAfterCopy = object["panelKeyAfterCopy"] as? Bool
+    frontAppUnchanged = object["frontAppUnchanged"] as? Bool
+    let stages = object["stages"] as? [String: Any]
+    copyWaitMs = (stages?["copyWaitMs"] as? NSNumber)?.doubleValue
+    fallbackMs = (stages?["fallbackMs"] as? NSNumber)?.doubleValue
+  }
+
+  /// Problems with the reading panel of a `read` step that went through the fallback: it
+  /// must show before the capture ends, be key, stay key while copying, keep the target app
+  /// in front, and be updated in place rather than shown again.
+  var readingPanelProblems: [String] {
+    var problems: [String] = []
+    guard let shown = readingShownMs else { return ["no reading panel before the fallback"] }
+    if let ended = captureEndedMs, shown >= ended {
+      problems.append("reading panel at \(shown) ms, not before the capture ended (\(ended) ms)")
+    }
+    if panelKeyAtShow != true { problems.append("the reading panel was not key") }
+    if panelKeyAfterCopy != true { problems.append("the panel was not key after the copy") }
+    if frontAppUnchanged != true { problems.append("the front app changed") }
+    if panelCalls.first?.hasPrefix("show:reading") != true
+      || panelCalls.dropFirst().contains(where: { $0.hasPrefix("show:") })
+    {
+      problems.append("panel calls \(panelCalls): expected one show, then updates")
+    }
+    return problems
   }
 }
 

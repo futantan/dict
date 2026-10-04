@@ -107,7 +107,7 @@ final class FallbackHarness {
   func run(_ first: CaptureFailure = .unreadable(axError: -25212)) async -> Result<
     CopiedSelection, CaptureFailure
   > {
-    await fallback.run(after: first)
+    await fallback.run(after: first).result
   }
 }
 
@@ -168,7 +168,7 @@ struct CopyFallbackTests {
     let h = FallbackHarness()
     let fallback = h.fallback
     let result = await fallback.run(after: .unreadable(axError: nil), accessDenied: true)
-    #expect(result == .failure(.clipboardDenied))
+    #expect(result.result == .failure(.clipboardDenied))
     #expect(h.events.isEmpty)
   }
 
@@ -178,6 +178,45 @@ struct CopyFallbackTests {
     let result = await h.run(.unreadable(axError: -25212))
     #expect(result == .failure(.unreadable(axError: -25212)))
     #expect(h.pasteboard.string(forType: .string) == "user clipboard")
+  }
+
+  @Test func reportsHowLongTheCopyTook() async {
+    let h = FallbackHarness()
+    let run = await h.fallback.run(after: .unreadable(axError: nil))
+    #expect(run.copyWait.map { $0 < .milliseconds(60) } == true)
+  }
+
+  /// Cancelled while waiting for a copy that never lands: it returns at once, with the
+  /// user's clipboard in place.
+  @Test func cancelledWaitStopsAndKeepsTheClipboard() async {
+    let h = FallbackHarness()
+    h.copies = nil
+    var fallback = h.fallback
+    fallback.copyTimeout = .milliseconds(400)
+    let clock = ContinuousClock()
+    let start = clock.now
+    let task = Task { @MainActor in await fallback.run(after: .unreadable(axError: nil)) }
+    try? await Task.sleep(for: .milliseconds(20))
+    task.cancel()
+    let run = await task.value
+
+    #expect(clock.now - start < .milliseconds(200))
+    #expect(run.result == .failure(.unreadable(axError: nil)))
+    #expect(h.pasteboard.string(forType: .string) == "user clipboard")
+  }
+
+  /// A task cancelled before the copy presses nothing and posts nothing.
+  @Test func cancelledTaskCopiesNothing() async {
+    let h = FallbackHarness()
+    let fallback = h.fallback
+    let task = Task { @MainActor in
+      withUnsafeCurrentTask { $0?.cancel() }
+      return await fallback.run(after: .unreadable(axError: nil))
+    }
+    let run = await task.value
+
+    #expect(run.result == .failure(.unreadable(axError: nil)))
+    #expect(h.events == ["find"])
   }
 
   @Test func wholeLineCopyIsDiscarded() async {

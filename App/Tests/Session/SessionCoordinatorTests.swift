@@ -32,21 +32,29 @@ private final class FakeClipboard {
   init(_ text: String) { self.text = text }
 }
 
-/// Answers each capture with the next scripted result, optionally after a gate. With a
-/// clipboard it acts like the copy fallback: snapshot, copy the selection, wait at the gate
-/// for the copy, then restore the snapshot.
+/// Answers each capture with the next scripted result, optionally after a gate. With
+/// `fallsBack` it reports entering the clipboard fallback first. With a clipboard it acts
+/// like the copy fallback: snapshot, copy the selection, wait at the gate for the copy, then
+/// restore the snapshot, cancelled or not.
 @MainActor
 private final class StubReader: SelectionReader {
   var results: [(Result<Selection, CaptureFailure>, Gate?)]
+  var fallsBack = false
   var clipboard: FakeClipboard?
   private(set) var calls = 0
+  /// Captures that have returned, cancelled or not.
+  private(set) var finished = 0
 
   init(_ results: [(Result<Selection, CaptureFailure>, Gate?)]) { self.results = results }
 
-  func capture(policy: ClipboardPolicy) async -> Result<Selection, CaptureFailure> {
+  func capture(
+    policy: ClipboardPolicy, beforeFallback: () -> Void
+  ) async -> Result<Selection, CaptureFailure> {
     #expect(policy == .allowed)
     calls += 1
+    defer { finished += 1 }
     let (result, gate) = results.removeFirst()
+    if fallsBack { beforeFallback() }
     let snapshot = clipboard?.text
     if case .success(let selection) = result { clipboard?.text = selection.text }
     await gate?.wait()
@@ -326,6 +334,118 @@ struct SessionCoordinatorTests {
 
     #expect(harness.reader.calls == 2)
     #expect(harness.translator.requests.map(\.text) == ["Hello"])
+  }
+
+  // MARK: The reading panel before the clipboard fallback (architecture 11.1)
+
+  /// The first stage read the text: no reading panel, straight to the selection.
+  @Test func firstStageSuccessShowsNoReadingPanel() async {
+    let harness = Harness([(.success(selection("Hello")), nil)])
+    await harness.press()
+
+    #expect(!harness.panel.calls.contains(.show(PanelState(phase: .reading), .mouse(mouse))))
+    #expect(
+      harness.panel.calls.first
+        == .show(PanelState(source: "Hello", phase: .generating("")), .selection(bounds)))
+  }
+
+  /// The panel shows "reading" at the mouse before the fallback copies anything, and the
+  /// result then replaces it in place instead of showing the panel again.
+  @Test func fallbackShowsReadingFirstThenUpdatesInPlace() async {
+    let copied = Gate()
+    let harness = Harness([(.success(selection("Hello", bounds: nil)), copied)])
+    harness.reader.fallsBack = true
+
+    harness.coordinator.hotkeyPressed(.read)
+    for _ in 0..<5 { await Task.yield() }
+    #expect(harness.panel.calls == [.show(PanelState(phase: .reading), .mouse(mouse))])
+    #expect(harness.panel.isVisible)
+
+    copied.open()
+    await harness.coordinator.settle()
+    #expect(
+      harness.panel.calls == [
+        .show(PanelState(phase: .reading), .mouse(mouse)),
+        .update(PanelState(source: "Hello", phase: .generating(""))),
+        .update(PanelState(source: "Hello", phase: .generating("你"))),
+        .update(PanelState(source: "Hello", phase: .result("你好"))),
+      ])
+    #expect(harness.translator.requests.map(\.text) == ["Hello"])
+  }
+
+  @Test func fallbackFailureReplacesTheReadingPanel() async {
+    let harness = Harness([(.failure(.unreadable(axError: -25212)), nil)])
+    harness.reader.fallsBack = true
+    await harness.press()
+
+    #expect(
+      harness.panel.calls == [
+        .show(PanelState(phase: .reading), .mouse(mouse)),
+        .update(
+          PanelState(
+            phase: .failure(SessionStrings.captureFailure(.unreadable(axError: -25212))))),
+      ])
+  }
+
+  @Test func fallbackWithNothingSelectedTurnsIntoTheInput() async {
+    let harness = Harness([(.failure(.nothingSelected(fieldText: nil)), nil)])
+    harness.reader.fallsBack = true
+    await harness.press()
+
+    #expect(
+      harness.panel.calls == [.show(PanelState(phase: .reading), .mouse(mouse)), .update(.input)])
+  }
+
+  /// The shortcut hides the reading panel; the capture still puts the clipboard back, nothing
+  /// is translated, and presses are ignored until that capture has wound down.
+  @Test func theShortcutDuringTheFallbackHidesAndCancels() async {
+    let copied = Gate()
+    let harness = Harness([
+      (.success(selection("Hello", bounds: nil)), copied), (.success(selection("Next")), nil),
+    ])
+    harness.reader.fallsBack = true
+    let clipboard = FakeClipboard("the user's clipboard")
+    harness.reader.clipboard = clipboard
+
+    harness.coordinator.hotkeyPressed(.read)
+    for _ in 0..<5 { await Task.yield() }
+    harness.coordinator.hotkeyPressed(.read)
+    #expect(harness.panel.calls.last == .hide)
+    harness.coordinator.hotkeyPressed(.read)
+    #expect(harness.reader.calls == 1)
+
+    copied.open()
+    await harness.coordinator.settle()
+    for _ in 0..<10 { await Task.yield() }
+
+    #expect(harness.reader.finished == 1)
+    #expect(clipboard.text == "the user's clipboard")
+    #expect(harness.translator.requests.isEmpty)
+    #expect(
+      harness.panel.calls == [.show(PanelState(phase: .reading), .mouse(mouse)), .hide])
+
+    await harness.press()
+    #expect(harness.reader.calls == 2)
+  }
+
+  /// Esc on the reading panel ends the session the same way.
+  @Test func dismissingTheReadingPanelCancelsTheCapture() async {
+    let copied = Gate()
+    let harness = Harness([(.success(selection("Hello", bounds: nil)), copied)])
+    harness.reader.fallsBack = true
+    let clipboard = FakeClipboard("the user's clipboard")
+    harness.reader.clipboard = clipboard
+
+    harness.coordinator.hotkeyPressed(.read)
+    for _ in 0..<5 { await Task.yield() }
+    harness.panel.dismissByUser()
+    harness.coordinator.panelDismissed(.escape)
+    copied.open()
+    await harness.coordinator.settle()
+
+    #expect(clipboard.text == "the user's clipboard")
+    #expect(harness.translator.requests.isEmpty)
+    #expect(harness.panel.calls == [.show(PanelState(phase: .reading), .mouse(mouse))])
   }
 
   @Test func theSameKeyWhileShownHidesAndCancels() async {

@@ -45,6 +45,28 @@
         }
       }
     },
+    "Only Read is needed to start. You can change both later in Settings." : {
+      "comment" : "Footnote in the onboarding step that picks the two shortcuts",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始使用只需要「读」快捷键。两个快捷键以后都可以在设置里更改。"
+          }
+        }
+      }
+    },
+    "Optional" : {
+      "comment" : "Next to the Write shortcut in onboarding: it can be left empty",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选"
+          }
+        }
+      }
+    },
     "Press keys…" : {
       "comment" : "Shown in the shortcut field while waiting for a key press",
       "localizations" : {
@@ -179,17 +201,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "写"
-          }
-        }
-      }
-    },
-    "You can change them later in Settings." : {
-      "comment" : "Footnote in the onboarding step that picks the two shortcuts",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "之后可以在设置里更改。"
           }
         }
       }

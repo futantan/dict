@@ -4,22 +4,23 @@ import DictCore
 import Foundation
 import NaturalLanguage
 
-/// Translates one selection into result panel states (architecture 6.4, 6.5): the model when
-/// one is configured, Apple Translation otherwise, and Apple Translation again when the model
-/// fails.
+/// Translates one selection into result panel states (architecture 6.4, 6.5): the model
+/// when one is configured, otherwise Apple Translation if the pair's languages happen to be
+/// installed, otherwise a notice that a model is needed. Apple Translation also stands in
+/// when the model fails. Dict never asks to download translation languages.
 @MainActor
 final class TranslationEngine {
-  /// The configured model; nil uses Apple Translation only.
+  /// The configured model; nil without a usable model.
   var model: ModelTranslator?
   private let apple: any Translator
   private let appleAvailability:
-    @Sendable (Locale.Language?, Locale.Language) async -> AppleTranslationAvailability
+    @Sendable (Locale.Language, Locale.Language) async -> AppleTranslationAvailability
 
   init(
     model: ModelTranslator? = nil,
     apple: any Translator = AppleTranslator.shared,
     appleAvailability:
-      @escaping @Sendable (Locale.Language?, Locale.Language) async ->
+      @escaping @Sendable (Locale.Language, Locale.Language) async ->
       AppleTranslationAvailability = AppleTranslator.availability
   ) {
     self.model = model
@@ -36,36 +37,26 @@ final class TranslationEngine {
   ) async {
     let languages = appleLanguages(
       direction: direction, pair: pair, detected: dominantLanguage(of: text))
-    let availability = await appleAvailability(languages.source, languages.target)
+    // An unrecognized source is checked as the pair's other language: the framework would
+    // otherwise be asked anyway and could offer a download.
+    let source = languages.source ?? (languages.target == pair.mine ? pair.learning : pair.mine)
+    let installed = await appleAvailability(source, languages.target) == .installed
     guard !Task.isCancelled else { return }
     let chosen = engine(
-      for: .translate, modelConfigured: model != nil,
-      appleTranslationSupportsPair: availability != .unsupported)
+      for: .translate, modelConfigured: model != nil, appleTranslationInstalled: installed)
     Log.model.info("translation engine: \(String(describing: chosen), privacy: .public)")
 
-    func show(_ phase: PanelPhase, note: String? = nil) {
+    func show(_ phase: PanelPhase, note: PanelNote? = nil) {
       guard !Task.isCancelled else { return }
       update(PanelState(source: text, phase: phase, note: note))
     }
-    func translateWithApple(note: String?) async {
-      // Without its languages the framework would wait for a download prompt that may never
-      // show on the panel, so the panel offers the download instead (architecture 6.5).
-      guard availability == .installed else {
-        show(.needsSetup(TranslationStrings.languagesNotDownloaded))
-        return
-      }
+    func translateWithApple(note: PanelNote?) async throws {
       show(.generating(""), note: note)
       var result = ""
-      do {
-        for try await element in apple.translate(text, from: languages.source, to: languages.target)
-        {
-          result = element
-        }
-        show(.result(result), note: note)
-      } catch {
-        Log.model.error("apple translation failed: \(errorKind(error), privacy: .public)")
-        if let phase = TranslationStrings.appleFailure(error) { show(phase) }
+      for try await element in apple.translate(text, from: languages.source, to: languages.target) {
+        result = element
       }
+      show(.result(result), note: note)
     }
 
     switch chosen {
@@ -83,19 +74,33 @@ final class TranslationEngine {
         Log.model.error("model translation failed: \(errorKind(error), privacy: .public)")
         let hasText = !shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         switch translationRecovery(
-          after: error, hasText: hasText,
-          appleTranslationSupportsPair: availability == .installed)
+          after: error, hasText: hasText, appleTranslationInstalled: installed)
         {
         case .stop: return
         case .keepPartial: show(.result(shown), note: TranslationStrings.truncatedNote)
-        case .fallBack: await translateWithApple(note: TranslationStrings.fallbackNote(error))
+        case .fallBack:
+          let modelError = error
+          do {
+            try await translateWithApple(note: TranslationStrings.fallbackNote(modelError))
+          } catch {
+            Log.model.error("apple translation failed: \(errorKind(error), privacy: .public)")
+            // The model's error is the one to fix; Apple Translation was only standing in.
+            if !(error is CancellationError) {
+              show(.failure(TranslationStrings.modelFailure(modelError)))
+            }
+          }
         case .showError: show(.failure(TranslationStrings.modelFailure(error)))
         }
       }
     case .appleTranslation:
-      await translateWithApple(note: nil)
+      do {
+        try await translateWithApple(note: nil)
+      } catch {
+        Log.model.error("apple translation failed: \(errorKind(error), privacy: .public)")
+        if let phase = TranslationStrings.appleFailure(error) { show(phase) }
+      }
     default:
-      show(.needsSetup(TranslationStrings.unsupportedPair))
+      show(.needsSetup(TranslationStrings.needsModel))
     }
   }
 }

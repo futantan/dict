@@ -10,9 +10,9 @@ struct PanelState: Sendable, Equatable {
   var phase: PanelPhase
   /// A remark under a generating or finished result, for example that Apple Translation
   /// stood in for a failed model.
-  var note: String?
+  var note: PanelNote?
 
-  init(source: String? = nil, phase: PanelPhase, note: String? = nil) {
+  init(source: String? = nil, phase: PanelPhase, note: PanelNote? = nil) {
     self.source = source
     self.phase = phase
     self.note = note
@@ -33,8 +33,8 @@ enum PanelPhase: Sendable, Equatable {
   case result(String)
   /// Something went wrong; the caller supplies the wording.
   case failure(PanelNotice)
-  /// A permission, model or language pack is missing; the content comes from the caller
-  /// (architecture 11.1, M1.10).
+  /// A permission or a model is missing; the content comes from the caller (architecture
+  /// 11.1, M1.10).
   case needsSetup(PanelNotice)
 
   /// The text ⌘C copies when nothing in the panel is selected.
@@ -61,6 +61,19 @@ struct PanelNotice: Sendable, Equatable {
     self.title = title
     self.message = message
     self.actions = actions
+  }
+}
+
+/// A line under the result, with an optional button at its end, for example "Open Settings"
+/// when the model failed because of its key.
+struct PanelNote: Sendable, Equatable {
+  var text: String
+  /// Reported through `PanelController.onAction` like a notice button; never the default.
+  var action: PanelAction?
+
+  init(_ text: String, action: PanelAction? = nil) {
+    self.text = text
+    self.action = action
   }
 }
 

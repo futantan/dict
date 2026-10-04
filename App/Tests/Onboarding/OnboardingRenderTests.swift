@@ -13,8 +13,8 @@ private let renderDirectory = ProcessInfo.processInfo.environment["DICT_ONBOARDI
 /// state into `<dir>`, offscreen; add `-testLanguage zh-Hans` for the Chinese UI.
 @MainActor
 struct OnboardingRenderTests {
-  @Test func everyStepLaysOut() async {
-    for (_, model) in await Self.samples() {
+  @Test func everyStepLaysOut() {
+    for (_, model) in Self.samples() {
       let view = NSHostingView(rootView: OnboardingView(model: model, appName: "Dict"))
       view.layoutSubtreeIfNeeded()
       #expect(view.fittingSize.width == OnboardingView.width)
@@ -23,10 +23,11 @@ struct OnboardingRenderTests {
   }
 
   @Test(.enabled(if: renderDirectory != nil))
-  func renderSteps() async throws {
+  func renderSteps() throws {
     let directory = URL(fileURLWithPath: try #require(renderDirectory))
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    for (name, model) in await Self.samples() {
+    let language = Bundle.main.preferredLocalizations.first?.hasPrefix("zh") == true ? "zh" : "en"
+    for (name, model) in Self.samples() {
       for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
         // Offscreen, the window background must be drawn by the view itself.
         let view = NSHostingView(
@@ -42,32 +43,53 @@ struct OnboardingRenderTests {
         let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: bitmap)
         let png = try #require(bitmap.representation(using: .png, properties: [:]))
-        try png.write(to: directory.appendingPathComponent("\(scheme)-\(name).png"))
+        try png.write(
+          to: directory.appendingPathComponent("onboarding-\(language)-\(scheme)-\(name).png"))
       }
     }
   }
 
-  private static func samples() async -> [(String, OnboardingModel)] {
+  private static func samples() -> [(String, OnboardingModel)] {
     func model(
-      _ step: OnboardingStep, accessibility: Bool = false,
-      languages: AppleTranslationAvailability = .installed
-    ) async -> OnboardingModel {
-      let defaults = UserDefaults(suiteName: "OnboardingRenderTests") ?? .standard
+      _ step: OnboardingStep, accessibility: Bool = false, read: Bool = false,
+      provider: String? = nil, key: String? = nil, connection: ConnectionStatus = .idle
+    ) -> OnboardingModel {
+      let suite = "OnboardingRenderTests.\(UUID().uuidString)"
+      let defaults = UserDefaults(suiteName: suite) ?? .standard
+      defaults.removePersistentDomain(forName: suite)
+      if read {
+        HotkeyStore(defaults: defaults).save([
+          .read: KeyCombo(keyCode: 2, modifiers: [.control, .option])
+        ])
+      }
+      PreferencesStore(defaults: defaults).save(
+        Preferences(model: ModelPreferences(providerID: provider)))
+      let secrets = InMemorySecretStore(provider.flatMap { id in key.map { [id: $0] } } ?? [:])
+      let settings = SettingsModel(defaults: defaults, secrets: secrets)
+      settings.showConnection(connection)
       let model = OnboardingModel(
-        hotkeys: HotkeyCenter(defaults: defaults),
+        hotkeys: HotkeyCenter(defaults: defaults), settings: settings,
         permissions: PermissionStatus(accessibility: accessibility, postEvent: accessibility),
-        defaults: defaults, languageStatus: { _, _ in languages })
+        defaults: defaults)
       model.step = step
-      await model.refreshLanguages(LanguagePair())
       return model
     }
+    let key = "sk-render-sample-0000000000000000"
     return [
-      ("accessibility-off", await model(.accessibility)),
-      ("accessibility-on", await model(.accessibility, accessibility: true)),
-      ("shortcuts", await model(.shortcuts)),
-      ("translation-ready", await model(.translation)),
-      ("translation-download", await model(.translation, languages: .needsDownload)),
-      ("translation-unsupported", await model(.translation, languages: .unsupported)),
+      ("1-accessibility-off", model(.accessibility)),
+      ("1-accessibility-on", model(.accessibility, accessibility: true)),
+      ("2-shortcuts", model(.shortcuts)),
+      ("2-shortcuts-read", model(.shortcuts, read: true)),
+      ("3-model-empty", model(.model, provider: "openai")),
+      (
+        "3-model-tested",
+        model(.model, provider: "openai", key: key, connection: .succeeded(.milliseconds(820)))
+      ),
+      (
+        "3-model-rejected",
+        model(.model, provider: "openai", key: key, connection: .failed(.model(.unauthorized)))
+      ),
+      ("4-try", model(.tryIt, read: true)),
     ]
   }
 }

@@ -3,12 +3,13 @@
 import SwiftUI
 
 /// The onboarding step that picks the "read" and "write" shortcuts (architecture 11.4).
-/// There are no defaults; the onboarding window (M1.11) moves on once `isComplete` holds.
+/// There are no defaults. Only "read" is required: "write" has no action until writing help
+/// exists, so the onboarding window moves on once `isComplete` holds.
 struct HotkeyStepView: View {
   let center: HotkeyCenter
 
   static func isComplete(_ center: HotkeyCenter) -> Bool {
-    HotkeyRole.allCases.allSatisfy { center.combos[$0] != nil }
+    center.combos[.read] != nil
   }
 
   var body: some View {
@@ -35,7 +36,18 @@ struct HotkeyStepView: View {
         ForEach(HotkeyRole.allCases, id: \.self) { role in
           GridRow {
             VStack(alignment: .leading, spacing: 2) {
-              Text(role.title).font(.headline)
+              HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(role.title).font(.headline)
+                if role == .write {
+                  Text(
+                    String(
+                      localized: "Optional", table: "Hotkeys",
+                      comment: "Next to the Write shortcut in onboarding: it can be left empty")
+                  )
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                }
+              }
               Text(role.summary).font(.callout).foregroundStyle(.secondary)
             }
             ShortcutRecorder(role: role, center: center)
@@ -45,7 +57,8 @@ struct HotkeyStepView: View {
 
       Text(
         String(
-          localized: "You can change them later in Settings.", table: "Hotkeys",
+          localized: "Only Read is needed to start. You can change both later in Settings.",
+          table: "Hotkeys",
           comment: "Footnote in the onboarding step that picks the two shortcuts")
       )
       .font(.footnote)

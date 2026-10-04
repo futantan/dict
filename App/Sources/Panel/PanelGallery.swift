@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #if DEBUG
+  import DictCore
   import SwiftUI
 
   /// Sample states for previews, offscreen renders and the on-screen demo
@@ -20,7 +21,18 @@
         ("needs-setup", PanelState(phase: .needsSetup(text.setup))),
         (
           "result-note",
-          PanelState(source: text.source, phase: .result(text.result), note: text.note)
+          PanelState(source: text.source, phase: .result(text.result), note: PanelNote(text.note))
+        ),
+        // The real wording, in the UI language of the run.
+        (
+          "needs-model",
+          PanelState(source: text.source, phase: .needsSetup(TranslationStrings.needsModel))
+        ),
+        (
+          "result-note-settings",
+          PanelState(
+            source: text.source, phase: .result(text.result),
+            note: TranslationStrings.fallbackNote(ModelError.unauthorized))
         ),
       ]
     }

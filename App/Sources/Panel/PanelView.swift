@@ -98,7 +98,7 @@ private struct PanelContent: View {
           notice: notice, defaultSymbol: "gearshape.fill", tint: .accentColor, onAction: onAction)
       }
       if let note = state.note, state.phase.showsNote {
-        NoteLine(text: note)
+        NoteLine(note: note, onAction: onAction)
       }
     }
     .padding(state.phase == .input ? 0 : Metrics.padding)
@@ -139,14 +139,23 @@ private struct ResultText: View {
 }
 
 private struct NoteLine: View {
-  let text: String
+  let note: PanelNote
+  let onAction: (PanelAction.ID) -> Void
 
   var body: some View {
-    Label(text, systemImage: "info.circle")
-      .font(Metrics.sourceFont)
-      .foregroundStyle(.secondary)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .fixedSize(horizontal: false, vertical: true)
+    HStack(alignment: .center, spacing: 8) {
+      Label(note.text, systemImage: "info.circle")
+        .font(Metrics.sourceFont)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+      if let action = note.action {
+        Button(action.title) { onAction(action.id) }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .fixedSize()
+      }
+    }
   }
 }
 

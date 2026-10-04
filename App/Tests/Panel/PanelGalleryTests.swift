@@ -48,6 +48,13 @@ struct PanelGalleryTests {
     #expect(height == 48)
   }
 
+  /// ⌘` cycles through Dict's own windows and skips the panel.
+  @Test func panelIsLeftOutOfWindowCycling() {
+    let panel = PanelController().window
+    #expect(panel.collectionBehavior.contains(.ignoresCycle))
+    #expect(panel.collectionBehavior.contains(.canJoinAllSpaces))
+  }
+
   @Test(.enabled(if: renderDirectory != nil))
   func renderGallery() throws {
     let directory = URL(fileURLWithPath: try #require(renderDirectory))

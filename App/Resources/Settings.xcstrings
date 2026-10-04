@@ -144,6 +144,17 @@
         }
       }
     },
+    "Dict translates with a model you choose, using your own API key or Ollama on this Mac. Correcting and polishing your writing need it too." : {
+      "comment" : "Footer when no model provider is chosen",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 用你选择的模型翻译，使用你自己的 API 密钥，或这台 Mac 上的 Ollama。纠错和润色同样需要模型。"
+          }
+        }
+      }
+    },
     "Enter a URL that starts with https://, such as https://api.example.com/v1." : {
       "comment" : "The base URL is not a valid web address",
       "localizations" : {
@@ -569,17 +580,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dict 朗读英文单词和句子时使用。"
-          }
-        }
-      }
-    },
-    "Without a model, Dict translates with Apple Translation on this Mac. Correcting and polishing your writing need a model." : {
-      "comment" : "Footer when no model provider is chosen",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不使用模型时，Dict 在这台 Mac 上用 Apple 翻译。纠错和润色需要模型。"
           }
         }
       }

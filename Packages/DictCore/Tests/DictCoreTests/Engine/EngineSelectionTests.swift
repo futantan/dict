@@ -4,10 +4,11 @@ import Testing
 
 @testable import DictCore
 
-/// The zero-configuration table of architecture 6.5.
+/// The engine table of architecture 6.5: with a model, without one but with the languages
+/// installed, and with neither.
 struct EngineSelectionTests {
   @Test(arguments: [
-    // (capability, model configured, Apple supports the pair, expected)
+    // (capability, model configured, Apple Translation installed for the pair, expected)
     (Capability.translate, true, true, Engine.model),
     (.translate, true, false, .model),
     (.translate, false, true, .appleTranslation),
@@ -29,7 +30,7 @@ struct EngineSelectionTests {
   ])
   func table(capability: Capability, model: Bool, apple: Bool, expected: Engine) {
     #expect(
-      engine(for: capability, modelConfigured: model, appleTranslationSupportsPair: apple)
+      engine(for: capability, modelConfigured: model, appleTranslationInstalled: apple)
         == expected)
   }
 }

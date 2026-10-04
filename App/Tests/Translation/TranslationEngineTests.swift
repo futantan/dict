@@ -62,7 +62,7 @@ private func states(
   return states
 }
 
-private func state(_ phase: PanelPhase, note: String? = nil) -> PanelState {
+private func state(_ phase: PanelPhase, note: PanelNote? = nil) -> PanelState {
   PanelState(source: "Hello, world", phase: phase, note: note)
 }
 
@@ -131,29 +131,82 @@ struct TranslationEngineTests {
     #expect(apple.calls.withLock { $0.first?.1 } == chinese)
   }
 
-  @Test func withoutAnyEngineAsksForSetup() async {
-    #expect(
-      await states(model: nil, availability: .unsupported) == [
-        state(.needsSetup(TranslationStrings.unsupportedPair))
-      ])
-  }
-
-  @Test func missingLanguagesOfferTheDownloadWithoutTranslating() async {
+  /// Without a model, languages that are merely supported count as missing: no download is
+  /// ever offered, and the panel asks for a model.
+  @Test(arguments: [AppleTranslationAvailability.notInstalled, .unsupported])
+  func withoutAModelOrInstalledLanguagesAsksForAModel(availability: AppleTranslationAvailability)
+    async
+  {
     let apple = FakeApple(.success("你好，世界"))
     #expect(
-      await states(model: nil, apple: apple, availability: .needsDownload) == [
-        state(.needsSetup(TranslationStrings.languagesNotDownloaded))
+      await states(model: nil, apple: apple, availability: availability) == [
+        state(.needsSetup(TranslationStrings.needsModel))
       ])
     #expect(apple.calls.withLock { $0.isEmpty })
   }
 
-  @Test func modelFailureWithoutDownloadedLanguagesShowsTheError() async {
+  @Test(arguments: [AppleTranslationAvailability.notInstalled, .unsupported])
+  func modelFailureWithoutInstalledLanguagesShowsTheError(
+    availability: AppleTranslationAvailability
+  ) async {
     let error = ModelError.network(code: -1009)
     let apple = FakeApple(.success("你好，世界"))
     #expect(
-      await states(model: ScriptedModel(error: error), apple: apple, availability: .needsDownload)
+      await states(model: ScriptedModel(error: error), apple: apple, availability: availability)
         == [state(.generating("")), state(.failure(TranslationStrings.modelFailure(error)))])
     #expect(apple.calls.withLock { $0.isEmpty })
+  }
+
+  /// A missing or rejected key points to Settings: in the note under Apple Translation's
+  /// result, or as the error's button.
+  @Test(arguments: [ModelError.missingKey, .unauthorized])
+  func keyProblemsOfferSettings(error: ModelError) async throws {
+    let fallBack = await states(model: ScriptedModel(error: error)).last
+    let note = try #require(fallBack?.note)
+    #expect(note.action?.id == TranslationStrings.openSettingsAction)
+    #expect(fallBack == state(.result("你好，世界"), note: note))
+
+    let shown = await states(model: ScriptedModel(error: error), availability: .notInstalled)
+    guard case .failure(let notice) = shown.last?.phase else {
+      Issue.record("expected a failure, got \(String(describing: shown.last))")
+      return
+    }
+    #expect(notice.actions.map(\.id) == [TranslationStrings.openSettingsAction])
+  }
+
+  @Test func otherModelFailuresOfferRetryNotSettings() {
+    let error = ModelError.network(code: -1009)
+    #expect(TranslationStrings.fallbackNote(error).action == nil)
+    #expect(
+      TranslationStrings.modelFailure(error).actions.map(\.id) == [TranslationStrings.retryAction])
+  }
+
+  /// When Apple Translation fails while standing in, the model's error is what to fix.
+  @Test func failedFallbackShowsTheModelError() async {
+    struct Broken: Error {}
+    let error = ModelError.unauthorized
+    #expect(
+      await states(model: ScriptedModel(error: error), apple: FakeApple(.failure(Broken()))).last
+        == state(.failure(TranslationStrings.modelFailure(error))))
+  }
+
+  /// Text in no recognizable language is checked as the pair's other language, never
+  /// assumed installed.
+  @Test func unrecognizedTextIsCheckedAgainstThePair() async {
+    let checked = Mutex<[(Locale.Language, Locale.Language)]>([])
+    let engine = TranslationEngine(
+      model: nil, apple: FakeApple(.success("1234")),
+      appleAvailability: { source, target in
+        checked.withLock { $0.append((source, target)) }
+        return .notInstalled
+      })
+    var states: [PanelState] = []
+    await engine.translate("1234", direction: .intoMine, pair: LanguagePair()) {
+      states.append($0)
+    }
+    #expect(checked.withLock { $0.map(\.0) } == [english])
+    #expect(checked.withLock { $0.map(\.1) } == [chinese])
+    #expect(states.map(\.phase) == [.needsSetup(TranslationStrings.needsModel)])
   }
 
   @Test func appleFailureIsShown() async throws {

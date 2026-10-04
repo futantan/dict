@@ -67,7 +67,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | C 默认快捷键 | 不用 ⌥ 加字母；只设「读」「写」两个键，首次启动时由用户选 | 第 10.1 节 |
 | D 词库 | 自动记录所有查询，分「查过」「要学」两档；最小复习用用户自己的句子做填空；按天记录，每日回顾 | 第 8 节 |
 | E 即时词典 | 原决定是 ECDICT 做基础层。**已被后续核查推翻**：ECDICT 的中文释义里有逐字照搬必应词典的内容，词频列是付费的 COCA 精确排名，作者无权整体授权；按「版权查不清就换源」的授权，改用维基词典提取数据（CC BY-SA 4.0），模型负责上下文义 | 第 7 节 |
-| F 零配置档 | Apple 翻译框架、拼写检查、系统语音，无需 Key；纠错和润色需要 Key 或本机 Ollama | 第 6.5 节 |
+| F 零配置档 | 2026-10-04 修订：翻译的主路径是用户自带 API Key（或本机 Ollama）；Apple 翻译框架只在语言包恰好已装时静默使用（没有 Key 时兜底、模型失败时降级），任何地方都不引导下载语言包；拼写检查、系统语音无需 Key；纠错和润色需要 Key 或本机 Ollama | 第 6.5 节 |
 | G OCR | 进 v1，作为只读来源 | 第 10.3 节 |
 | H 先原型再改架构 | 三个原型（面板为 key 时的替换、安全输入、菜单栏拷贝项）已在 TextEdit、Chrome、Safari、VS Code 上做完 | 第 3、4 节的证据表 |
 | 补充：开源加订阅 | GPL-3.0，以后卖订阅；订阅的具体内容未定 | 第 6.1 节的服务商接口留出自家后端；第 16 节未决问题 |
@@ -748,32 +748,38 @@ public enum TimeoutStage: Sendable, Equatable { case firstEvent, idle, total }
   取消、401/403、404、429、5xx、超时都不自动重试，面板显示原因和「重试」按钮。
 - **错误文案**：Key 无效、模型不存在（提供「列出可用模型」）、额度或频率限制、服务商故障、网络离线、超时；错误信息和日志里出现的 Key 一律替换成 `••••`。
 - **降级**：
-  - 句子翻译：模型失败且 Apple 翻译框架支持这对语言时，自动改用它，并在面板上注明。
+  - 句子翻译：模型失败且这对语言的 Apple 翻译语言包恰好已装时，自动改用它，并在面板上注明。
     注明方式是译文下方一行说明（`PanelState.note`），写出模型失败的原因；模型译文被截断（`.truncated`）时保留已得译文并注明，不降级。
-    决策是 `DictCore` 的纯函数 `translationRecovery(after:hasText:appleTranslationSupportsPair:)`。
+    失败原因是 Key 缺失或被拒（`missingKey`、`unauthorized`）时，说明行末尾带「打开设置」按钮，直达设置的模型页；不降级而直接显示错误时，错误的按钮也是「打开设置」而不是「重试」。
+    语言包没装时不降级，直接显示模型的错误。
+    Apple 翻译在降级时也失败，显示的仍是模型的错误，因为要修的是模型。
+    决策是 `DictCore` 的纯函数 `translationRecovery(after:hasText:appleTranslationInstalled:)`。
   - 查词：模型失败时词典层仍在，卡片区显示错误和重试。
   - 纠错：模型失败时提供「只检查拼写」（系统拼写检查）。
   - 润色：没有替代，显示错误。
 
-### 6.5 零配置档与引擎选择
+### 6.5 引擎选择与 Apple 翻译兜底
 
-没有配置任何模型时，应用也要能用。
+产品决定（2026-10-04）：翻译的主路径是用户自带 API Key（或本机 Ollama）请求模型，现在不做自家后端。
+Apple 翻译框架只在这对语言的语言包恰好已装时静默使用：没有可用模型时作为兜底，模型失败时作为降级。
+语言包没装就当它不存在：任何界面、文案、文档都不提示或引导用户下载语言包。
+「有模型」指 `configuredModel` 能给出配置：选了服务商，并且需要 Key 的服务商已经填了 Key。
 
-| 能力 | 有模型 | 没有模型 |
-|---|---|---|
-| 句子翻译 | 模型流式 | Apple 翻译框架 |
-| 查词（外语词） | 词典层 + 模型卡片 | 词典层；「在系统词典中打开」按钮 |
-| 母语词找外语说法 | 模型（1 到 3 个候选，带用法区分） | Apple 翻译框架给一个译法 |
-| 纠错 | 模型（错处列表） | 系统拼写检查，只查拼写，转换成同样的错处列表 |
-| 润色 | 模型 | 不可用，提示配置模型 |
-| 译成外语并替换 | 模型 | Apple 翻译框架，同样先显示对照再确认替换 |
-| 朗读 | 系统语音 | 系统语音 |
+| 能力 | 有模型 | 没有模型、语言包已装 | 没有模型、语言包未装 |
+|---|---|---|---|
+| 句子翻译 | 模型流式 | Apple 翻译框架 | 面板显示「需要配置翻译模型」和「打开设置」 |
+| 查词（外语词） | 词典层 + 模型卡片 | 词典层；「在系统词典中打开」按钮 | 同左 |
+| 母语词找外语说法 | 模型（1 到 3 个候选，带用法区分） | Apple 翻译框架给一个译法 | 提示配置模型 |
+| 纠错 | 模型（错处列表） | 系统拼写检查，只查拼写，转换成同样的错处列表 | 同左 |
+| 润色 | 模型 | 不可用，提示配置模型 | 同左 |
+| 译成外语并替换 | 模型 | Apple 翻译框架，同样先显示对照再确认替换 | 提示配置模型 |
+| 朗读 | 系统语音 | 系统语音 | 系统语音 |
 
 ```swift
 // DictCore
 public enum Capability: Sendable { case translate, lookup, equivalents, proofread, improve, translateOut }
 public enum Engine: Sendable, Equatable { case model, appleTranslation, spellChecker, dictionaryOnly, unavailable }
-public func engine(for capability: Capability, modelConfigured: Bool, appleTranslationSupportsPair: Bool) -> Engine
+public func engine(for capability: Capability, modelConfigured: Bool, appleTranslationInstalled: Bool) -> Engine
 
 public protocol Translator: Sendable {
   /// 每个元素是到目前为止的完整译文；Apple 翻译框架只产出一个元素，模型逐步产出。
@@ -784,17 +790,19 @@ public protocol Translator: Sendable {
 Apple 翻译框架：
 
 - macOS 15 上 `TranslationSession` 只能通过 SwiftUI 的 `.translationTask` 修饰符拿到；macOS 26 起可以直接构造 `TranslationSession(installedSource:target:)`，但语言包没装时抛错且不能发起下载【源码：官方文档】。
-- 做法：macOS 15 上把 `.translationTask` 挂在结果面板的 SwiftUI 视图上，面板本来就可见，系统的语言包下载提示可以挂在它上面；macOS 26 起语言包已装时直接构造会话。
-  非激活面板上能否正常弹出下载提示【未验证】，所以不依赖它：翻译前先用 `LanguageAvailability().status(from:to:)` 查状态，`.supported`（支持但未下载）时不调用翻译，面板直接显示「翻译语言尚未下载」和「下载语言…」按钮；按钮打开首次引导窗口的语言步骤，那是普通窗口，在那里用 `.translationTask` 拿到会话并调用 `prepareTranslation()`。
-  不加超时兜底：状态已知时不会进入可能等不到会话的路径。
-  模型失败后的降级只在状态为 `.installed` 时进行，否则显示模型的错误。
+- 做法：macOS 15 上把 `.translationTask` 挂在结果面板的 SwiftUI 视图上；macOS 26 起直接构造会话。
+  翻译前先用 `LanguageAvailability().status(from:to:)` 查状态，只有 `.installed` 才调用框架；`.supported`（支持但未下载）与 `.unsupported` 一样当作不可用，所以不会出现系统的下载提示，也没有 `prepareTranslation()` 的下载流程。
+  原文语言识别不出来时，按这对语言里的另一种语言查状态（目标是我的语言就查学习语言，反之亦然），不能当作已装。
+  不加超时兜底：只对已装的语言调用，不会进入可能等不到会话的路径。
+  没有模型、语言包也没装时，面板显示「需要配置翻译模型」，说明要填 API Key（或使用本机 Ollama），带一个直达「设置 → 模型」的按钮。
+  框架在没有模型时报「不支持」或「未安装」，同样显示这条「需要配置」。
 - 全部在设备上处理，没有逐字流式。
 - 源语言和目标语言相同时（包括 en-GB 对 en-US）不支持。
 - 支持的语言以运行时的 `LanguageAvailability` 为准；评审在本机查到 21 种，含简体和繁体中文【实测，评审】。
 - `LSUIElement` 应用和非沙盒应用里能否使用，没有官方说明；参考项目的代码表明可行，但没有编译运行【源码】，所以列为第一个里程碑的验证项。
 - 实现放在 `DictApp`（依赖 Translation 和 SwiftUI），`DictCore` 只有 `Translator` 协议。
 - `Translator` 表达不了 `.undecided`：模型翻译器 `ModelTranslator`（`DictCore`）另有 `translate(_:direction:pair:)`；Apple 翻译这时按系统识别出的原文语言决定目标，是我的语言就译成学习语言，否则译成我的语言。
-- 本机实测【实测，macOS 26.5.2，`LSUIElement` 的 Dict Dev，屏幕锁定】：`.translationTask` 挂在非激活面板的视图上，面板显示后约 1 ms 就交出会话；英中语言包状态是 `.supported`（未下载），`translate` 在 20 s 内没有返回，下载提示能否在非激活面板上出现、译文能否产出仍未验证。
+- 本机实测【实测，macOS 26.5.2，`LSUIElement` 的 Dict Dev，屏幕锁定】：`.translationTask` 挂在非激活面板的视图上，面板显示后约 1 ms 就交出会话；英中语言包状态是 `.supported`（未下载），`translate` 在 20 s 内没有返回，译文能否产出仍未验证；产品决定不再引导下载语言包后，下载提示是否出现不再需要验证。
 
 系统拼写检查（`NSSpellChecker`）：用学习语言检查拼写，每个错误取第一个建议，转换成 `Edit(kind: .spelling, wrong:, right:)`。
 它只抓拼写，语法检查的质量【未验证】，v1 不用。
@@ -1363,6 +1371,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 ### 11.1 结果面板
 
 - `NSPanel` 子类，`styleMask` 含 `.nonactivatingPanel` 和 `.fullSizeContentView`，`canBecomeKey = true`，`canBecomeMain = false`，`hidesOnDeactivate = false`，`level = .floating`，可加入所有桌面空间和全屏应用；内容是 SwiftUI 视图（`NSHostingView`）。
+  集合行为含 `.ignoresCycle`：⌘` 在 Dict 自己的窗口之间切换时跳过面板。
 - 显示时成为 key 窗口（要接收回车、Esc、输入法），但不激活 Dict：原应用仍是前台应用，只是它的窗口暂时失去 key。
   实测这时 TextEdit 和 Chrome 的焦点元素不变，VS Code 的应用级焦点元素变成 `noValue` 但快照的元素仍可用【实测】；所以替换目标在面板出现前快照，取词兜底只用面板为 key 时仍可用的两条途径（菜单栏拷贝项、定向 ⌘C）。
 - 出现时机：「读」键在取词第一段结束（最迟 150 ms）就出现，先显示原文和「读取中」；需要兜底时兜底在面板显示后进行。
@@ -1370,10 +1379,12 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
   「写」键要等第二段（含替换目标快照）结束才出现，面板出现前的预算是两段合计 250 ms。
 - 位置：有选区矩形时放在选区下方 8 pt；下方放不下就放到上方并以底边为锚向上生长；没有矩形时放在鼠标附近；鼠标位置也不可用时放在屏幕水平居中、顶边在可见高度 20% 处。
   宽度固定，高度上限为屏幕可见高度的 60%，内容超出时滚动。
-- 状态：读取中、生成中（流式）、结果、错误、需要设置（权限、模型、语言包）。
+- 状态：读取中、生成中（流式）、结果、错误、需要设置（权限、模型）。
   所有提示都在面板里，不弹系统对话框。
   唯一的例外由用户点击触发：辅助功能说明里的「打开系统设置」按钮先调用带 prompt 选项的 `AXIsProcessTrustedWithOptions`，把应用登记进辅助功能列表（系统可能弹出自己的提示），再跳到系统设置；按快捷键的路径和权限检查只用不弹窗的 `AXIsProcessTrusted()`、`CGPreflightPostEventAccess()`，绝不弹系统对话框。
 - Esc、点面板外、再按同一个快捷键都会隐藏面板；隐藏即结束会话并取消进行中的请求。
+- 取词期间（面板出现之前）再按「读」键会被忽略：两轮取词的剪贴板快照和恢复可能交错，把选中文字留在用户剪贴板里。
+  面板出现之后再按，照旧隐藏面板、结束会话。
 - 输入法：输入框里有未上屏的组字时，回车、Esc、Tab 交给输入法。
 
 ### 11.2 焦点与替换的关系
@@ -1391,7 +1402,17 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 - 首次引导、设置、每日回顾与词库、复习都是普通窗口，打开时激活 Dict。
   打开它们会结束当前会话，所以此时不存在待替换的目标。
-- 首次引导的步骤：辅助功能授权；选「读」「写」两个快捷键；我的语言、学习语言、口音；说明并选择是否为 Chrome 和 Electron 应用开启无障碍支持；可选的模型配置（可以跳过，零配置档立即可用）；准备 Apple 翻译的语言包；提示下载高质量音色。
+- 首次引导的步骤（M1）：
+  1. 辅助功能授权。
+     停在这一步且没有授权时，每秒查一次权限（系统的变更通知不可靠）；授权后自动进入下一步，并把引导窗口拉回最前。
+  2. 选快捷键。
+     只要求设好「读」键；「写」键在 M1 没有功能，标为可选。
+  3. 填 API Key：服务商、模型、Key 和「测试」按钮，与设置的模型页共用同一个界面和校验（`ModelSections` 与 `SettingsModel`）。
+     进入这一步时如果还没选服务商，预选第一个（OpenAI）；没有可用模型时主按钮是「以后再说」。
+  4. 试一下：用一段示例英文直接走一次面板翻译（`SessionCoordinator.translateSample`，不经过取词，因为在 Dict 自己的窗口里取词什么也读不到），然后「完成」。
+- 以后的版本再加进引导：我的语言、学习语言、口音；Chrome 和 Electron 应用的无障碍支持说明；登录时启动；提示下载高质量音色。
+  引导里没有、也不会有下载翻译语言包的步骤。
+- 应用已在运行时再次打开（Finder、Spotlight、`open`，即收到 reopen 事件）：引导没完成就显示引导，完成了就打开设置；没有 Dock 图标，窗口是用户唯一能看到的反应。
 - 菜单栏菜单：今天（每日回顾）、复习（显示待复习数）、截图取词、暂停记录、设置、关于（含数据署名）、退出。
   M1 只有设置、关于、退出；快捷键注册失败或与某个键盘布局冲突时，菜单最上面多出警告项，点击打开设置的快捷键页。
 - 登录时启动用 `SMAppService.mainApp`，设置里一个开关，首次引导里询问。
@@ -1503,7 +1524,8 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 ### 15.1 M1：取词加句子翻译
 
 目标：快捷键 → 取到选中文字 → 面板显示翻译。
-零配置档用 Apple 翻译框架；配置了 Key 时用模型流式翻译。
+配置了 Key（或本机 Ollama）时用模型流式翻译。
+没有可用模型时，语言包恰好已装就用 Apple 翻译框架，否则面板显示「需要配置」。
 这个里程碑把所有选区都当作段落翻译，分类和查词在 M2。
 「写」键在 M1 只能设置，按下没有动作（只记一行日志），写作在 M3。
 
@@ -1529,7 +1551,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 1. `make lint test` 通过（`test-core`、`test-app`、`smoke`）。
 2. `make e2e` 通过：夹具的 `NSTextView`、`NSTextField`、`WKWebView` 三种控件经无障碍取到的文字与预期一致、来源是 `accessibility`、拷贝事件数为 0；自绘控件经菜单栏拷贝项取到文字；密码框返回 `secureField` 且没有任何拷贝事件；所有场景前后剪贴板哈希一致。
 3. `make matrix` 输出并人工确认：Chrome 热状态经无障碍取词，第一段耗时不超过 150 ms；Chrome 冷状态（隔离实例）第一次走菜单栏拷贝项且剪贴板原样，约 2 s 后同一页面走无障碍；Safari 只读文字经文本标记取到；VS Code 隔离实例第一次走兜底、之后走无障碍；TextEdit 走无障碍。
-4. 人工：在 TextEdit 里选中一句英文，按真实的「读」键，面板在选区下方出现并显示原文；日志里取词到面板出现不超过 200 ms；没有配置模型时显示 Apple 翻译的中文译文；TextEdit 仍是前台应用，按 Esc 后光标和选区还在原处。
+4. 人工：在 TextEdit 里选中一句英文，按真实的「读」键，面板在选区下方出现并显示原文；日志里取词到面板出现不超过 200 ms；没有配置模型时显示「需要配置翻译模型」，语言包恰好已装时显示 Apple 翻译的中文译文；TextEdit 仍是前台应用，按 Esc 后光标和选区还在原处。
 5. 人工：配置 OpenAI Key 后同一操作流式显示译文；连续 10 次的首个内容耗时中位数小于 1.5 s（看日志）；断网时显示网络错误并自动改用 Apple 翻译。
 6. `log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"'` 能看到每个阶段的耗时，看不到任何用户文字和 Key。
 7. 没有 `dict-en-zh.sqlite` 时以上全部成立。
@@ -1630,8 +1652,8 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 平台与数据：
 
-- Apple 翻译框架在 `LSUIElement`、非沙盒应用里能否使用；非激活面板上的语言包下载提示。
-  已测到非激活面板上的 `.translationTask` 能交出会话；译文产出和下载提示要在解锁、已下载或可确认下载的机器上重跑 `AppleTranslationLiveTests`。
+- Apple 翻译框架在 `LSUIElement`、非沙盒应用里能否使用。
+  已测到非激活面板上的 `.translationTask` 能交出会话；译文产出要在解锁、语言包已装的机器上重跑 `AppleTranslationLiveTests`。
 - `localhost` 是否被应用传输安全默认放行。
 - compact 系统音色的听感；多音词 IPA 读法。
 - ICU 繁转简的词级准确度。

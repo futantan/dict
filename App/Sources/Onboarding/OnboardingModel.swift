@@ -1,24 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import DictCore
 import Foundation
 import Observation
-import Translation
 
-/// The first-run steps that M1 needs (architecture 11.4): accessibility, the two shortcuts,
-/// and Apple Translation's languages. Languages and a model live in Settings.
+/// The first-run steps (architecture 11.4): accessibility, the "read" shortcut, a model with
+/// the user's own API key (skippable), and a sample translation in the real panel.
 enum OnboardingStep: Int, CaseIterable, Sendable {
-  case accessibility, shortcuts, translation
-}
-
-/// Whether Apple Translation can translate the user's pair on this Mac.
-enum LanguagePackState: Sendable, Equatable {
-  case checking
-  case installed
-  case needsDownload
-  /// Waiting for the system's download prompt or the download itself.
-  case downloading
-  case unsupported
+  case accessibility, shortcuts, model, tryIt
 }
 
 /// State behind the onboarding window.
@@ -27,34 +15,33 @@ enum LanguagePackState: Sendable, Equatable {
 final class OnboardingModel {
   static let completedKey = "onboarding.completed"
 
-  /// The model whose window is open; `.translationTask` reports back to it.
-  @ObservationIgnored static weak var active: OnboardingModel?
+  /// English on purpose: the default pair translates it into the user's language. It is
+  /// sample content, not interface text.
+  static let sample =
+    "The best tools disappear into the work: you notice them only when they get in your way."
 
   var step: OnboardingStep = .accessibility
   private(set) var permissions: PermissionStatus
-  private(set) var pair = LanguagePair()
-  private(set) var languages = LanguagePackState.checking
-  /// Watched by `.translationTask`; setting it asks for the session that downloads languages.
-  private(set) var preparation: TranslationSession.Configuration?
 
   let hotkeys: HotkeyCenter
+  /// The same model as the Settings window, so the key, provider and "Test" work alike.
+  let settings: SettingsModel
   @ObservationIgnored var openAccessibilitySettings: () -> Void = {}
-  @ObservationIgnored var openSettings: () -> Void = {}
+  /// Shows `sample` translated in the result panel.
+  @ObservationIgnored var translateSample: () -> Void = {}
+  /// Where the sample is, in the window's SwiftUI global coordinates; the panel goes below.
+  @ObservationIgnored var sampleFrame = CGRect.zero
   @ObservationIgnored var finish: () -> Void = {}
   @ObservationIgnored private let defaults: UserDefaults
-  @ObservationIgnored private let languageStatus:
-    @Sendable (Locale.Language, Locale.Language) async -> AppleTranslationAvailability
 
   init(
-    hotkeys: HotkeyCenter, permissions: PermissionStatus, defaults: UserDefaults = .standard,
-    languageStatus:
-      @escaping @Sendable (Locale.Language, Locale.Language) async ->
-      AppleTranslationAvailability = { await AppleTranslator.availability(from: $0, to: $1) }
+    hotkeys: HotkeyCenter, settings: SettingsModel, permissions: PermissionStatus,
+    defaults: UserDefaults = .standard
   ) {
     self.hotkeys = hotkeys
+    self.settings = settings
     self.permissions = permissions
     self.defaults = defaults
-    self.languageStatus = languageStatus
   }
 
   var isCompleted: Bool { defaults.bool(forKey: Self.completedKey) }
@@ -65,14 +52,31 @@ final class OnboardingModel {
     // The permission can be granted later; the panel explains it when it is missing.
     case .accessibility: true
     case .shortcuts: HotkeyStepView.isComplete(hotkeys)
-    case .translation: true
+    // Skippable: "Not Now" stands in for Continue until a model is set up.
+    case .model, .tryIt: true
     }
   }
 
+  /// A provider is chosen and nothing it needs is missing.
+  var hasModel: Bool {
+    settings.selectedPreset != nil && settings.setupIssue == nil
+  }
+
+  /// The model step offers "Not Now" instead of Continue until a model is set up.
+  var isSkipping: Bool { step == .model && !hasModel }
+
+  /// Polling stands in for the system's change notification, which may not arrive.
+  var needsPermissionPolling: Bool { step == .accessibility && !permissions.accessibility }
+
   func goForward() {
     guard canContinue else { return }
+    if step == .model { settings.commitKey() }
     if let next = OnboardingStep(rawValue: step.rawValue + 1) {
       step = next
+      // The key field shows only for a provider; most people want the first preset.
+      if next == .model, settings.selectedPreset == nil, let first = settings.presets.first {
+        settings.selectProvider(first.id)
+      }
     } else {
       defaults.set(true, forKey: Self.completedKey)
       finish()
@@ -83,54 +87,14 @@ final class OnboardingModel {
     if let previous = OnboardingStep(rawValue: step.rawValue - 1) { step = previous }
   }
 
-  /// A fresh permission reading. Turning accessibility on moves past its step by itself.
-  func permissionsChanged(_ status: PermissionStatus) {
+  /// A fresh permission reading. Turning accessibility on moves past its step by itself;
+  /// returns true then, so the window can come back to the front.
+  @discardableResult
+  func permissionsChanged(_ status: PermissionStatus) -> Bool {
     let wasGranted = permissions.accessibility
     permissions = status
-    if step == .accessibility, status.accessibility, !wasGranted { goForward() }
-  }
-
-  /// Reads the language pair from the preferences and checks its languages.
-  func refreshLanguages(_ pair: LanguagePair) async {
-    self.pair = pair
-    if languages != .downloading { languages = .checking }
-    let status = await languageStatus(pair.learning, pair.mine)
-    guard pair == self.pair else { return }
-    switch status {
-    case .installed: languages = .installed
-    case .unsupported: languages = .unsupported
-    case .needsDownload: if languages != .downloading { languages = .needsDownload }
-    }
-  }
-
-  /// Asks Apple Translation for a session in this window, which shows the system's download
-  /// prompt (architecture 6.5).
-  func downloadLanguages() {
-    languages = .downloading
-    Self.active = self
-    if var current = preparation, current.source == pair.learning, current.target == pair.mine {
-      current.invalidate()
-      preparation = current
-    } else {
-      preparation = TranslationSession.Configuration(source: pair.learning, target: pair.mine)
-    }
-  }
-
-  /// Called by `.translationTask`. Nonisolated, so the session stays in the modifier's task.
-  nonisolated static func prepare(_ session: TranslationSession) async {
-    do {
-      try await session.prepareTranslation()
-      Log.model.info("onboarding: translation languages prepared")
-    } catch {
-      Log.model.error(
-        "onboarding: preparing translation failed: \(String(describing: type(of: error)), privacy: .public)"
-      )
-    }
-    await MainActor.run { active?.preparationEnded() }
-  }
-
-  private func preparationEnded() {
-    languages = .checking
-    Task { await refreshLanguages(pair) }
+    guard step == .accessibility, status.accessibility, !wasGranted else { return false }
+    goForward()
+    return true
   }
 }

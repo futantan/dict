@@ -132,7 +132,7 @@
 - 拥有：`App/Sources/Translation/`（新建）、`App/Tests/Translation/`、`App/Resources/Translation.xcstrings`。
 - 拥有：`Packages/DictCore/Sources/DictCore/Engine/EngineSelection.swift`，以及在 `Engine/` 下新建的文件（例如用 `TextModel` 和 `PromptBuilder` 实现 `Translator` 的模型翻译器）。
 - 拥有：`Packages/DictCore/Tests/DictCoreTests/Engine/`。
-- 实现：`engine(for:modelConfigured:appleTranslationSupportsPair:)`、Apple 翻译框架的 `Translator`（macOS 15 用 `.translationTask`，26 起直接构造）、模型 `Translator`、模型失败时的降级。
+- 实现：`engine(for:modelConfigured:appleTranslationInstalled:)`、Apple 翻译框架的 `Translator`（macOS 15 用 `.translationTask`，26 起直接构造）、模型 `Translator`、模型失败时的降级。
 - M1.7 合并后，允许在面板的 SwiftUI 视图上挂 `.translationTask` 修饰符，只加这一处。
 - 不能改：`Engine/Engine.swift`、`Model/` 下的契约文件、`Prompt/`。
 

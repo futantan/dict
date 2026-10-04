@@ -3,8 +3,9 @@
 Dict is a native macOS menu bar app, written in Swift; the planned UI is AppKit windows hosting SwiftUI views.
 It requires macOS 15 or later and is licensed under GPL-3.0-or-later.
 Select text in any app and press the Read shortcut: Dict reads the selection and shows its translation in a panel next to it.
-It translates with Apple Translation on the Mac, or streams from a model when an API key is set in Settings.
-A first-run window asks for Accessibility permission, the two shortcuts and Apple Translation's languages.
+It streams the translation from a model with your own API key, or from Ollama on the Mac.
+Without a model it uses Apple Translation, but only for languages already installed on the Mac; otherwise the panel asks for a key.
+A first-run window asks for Accessibility permission, the Read shortcut and an API key (which can wait), then translates a sample in the panel.
 Writing help (the Write shortcut), word lookup and the vocabulary come in later milestones.
 
 ## Layout

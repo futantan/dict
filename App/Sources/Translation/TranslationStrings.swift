@@ -8,22 +8,27 @@ import Translation
 enum TranslationStrings {
   /// Action ids reported through `PanelController.onAction`.
   static let retryAction = "translation.retry"
+  /// Opens Settings on the Model pane.
   static let openSettingsAction = "translation.openSettings"
-  /// Opens the window that downloads the translation languages.
-  static let downloadLanguagesAction = "translation.downloadLanguages"
 
-  static func fallbackNote(_ error: any Error) -> String {
-    String(
-      format: String(
-        localized: "The model failed (%@), so Apple Translation was used.", table: "Translation",
-        comment: "Under a translation by Apple Translation after the model failed; %@ is the reason"
-      ),
-      modelFailureReason(error))
+  /// Under Apple Translation's result after the model failed. A missing or rejected key gets
+  /// a button to Settings, or the user might never notice the model is not working.
+  static func fallbackNote(_ error: any Error) -> PanelNote {
+    PanelNote(
+      String(
+        format: String(
+          localized: "The model failed (%@), so Apple Translation was used.",
+          table: "Translation",
+          comment:
+            "Under a translation by Apple Translation after the model failed; %@ is the reason"),
+        modelFailureReason(error)),
+      action: isKeyProblem(error) ? openSettings(isDefault: false) : nil)
   }
 
-  static let truncatedNote = String(
-    localized: "The translation was cut off at the length limit.", table: "Translation",
-    comment: "Shown under a translation the model stopped early")
+  static let truncatedNote = PanelNote(
+    String(
+      localized: "The translation was cut off at the length limit.", table: "Translation",
+      comment: "Shown under a translation the model stopped early"))
 
   static func modelFailure(_ error: any Error) -> PanelNotice {
     PanelNotice(
@@ -35,20 +40,27 @@ enum TranslationStrings {
           localized: "Reason: %@.", table: "Translation",
           comment: "Why the model failed; the argument is a short reason"),
         modelFailureReason(error)),
-      actions: [retry])
+      actions: [isKeyProblem(error) ? openSettings(isDefault: true) : retry])
   }
 
-  /// The notice for an error of Apple's framework, or nil for cancellation.
+  /// The key is missing or the provider rejected it: only Settings can fix that.
+  static func isKeyProblem(_ error: any Error) -> Bool {
+    switch error {
+    case ModelError.missingKey, ModelError.unauthorized: true
+    default: false
+    }
+  }
+
+  /// The notice for an error of Apple's framework when it translated without a model, or nil
+  /// for cancellation. Languages it cannot translate on this Mac mean a model is needed.
   static func appleFailure(_ error: any Error) -> PanelPhase? {
     if error is CancellationError { return nil }
     if TranslationError.unsupportedLanguagePairing ~= error
       || TranslationError.unsupportedSourceLanguage ~= error
       || TranslationError.unsupportedTargetLanguage ~= error
+      || isNotInstalled(error)
     {
-      return .needsSetup(unsupportedPair)
-    }
-    if #available(macOS 26, *), TranslationError.notInstalled ~= error {
-      return .needsSetup(languagesNotDownloaded)
+      return .needsSetup(needsModel)
     }
     let message =
       TranslationError.unableToIdentifyLanguage ~= error
@@ -66,41 +78,29 @@ enum TranslationStrings {
         message: message, actions: [retry]))
   }
 
-  /// Apple Translation supports the pair but its languages are not downloaded.
-  static let languagesNotDownloaded = PanelNotice(
-    symbol: "arrow.down.circle.fill",
+  /// No model is set up and Apple Translation has no installed languages for the text.
+  static let needsModel = PanelNotice(
+    symbol: "key.fill",
     title: String(
-      localized: "Translation languages aren’t downloaded", table: "Translation",
-      comment: "Title when Apple Translation lacks a language pack"),
+      localized: "Set up a model to translate", table: "Translation",
+      comment: "Title when there is no model to translate with"),
     message: String(
       localized:
-        "Download them to translate on this Mac, or in System Settings → General → Language & Region → Translation Languages.",
-      table: "Translation", comment: "How to download Apple Translation languages"),
-    actions: [
-      PanelAction(
-        id: downloadLanguagesAction,
-        title: String(
-          localized: "Download Languages…", table: "Translation",
-          comment: "Button that opens the window that downloads translation languages"),
-        isDefault: true)
-    ])
+        "Dict translates with a model you choose, using your own API key. Add the key in Settings → Model, or use Ollama on this Mac.",
+      table: "Translation", comment: "How to set up a model for translating"),
+    actions: [openSettings(isDefault: true)])
 
-  /// Neither a model nor Apple Translation can translate this pair.
-  static let unsupportedPair = PanelNotice(
-    symbol: "globe",
-    title: String(
-      localized: "Apple Translation doesn’t support these languages", table: "Translation",
-      comment: "Title when no engine can translate the text"),
-    message: String(
-      localized: "Set up a model in Settings to translate them.", table: "Translation",
-      comment: "How to translate a language pair Apple Translation does not support"),
-    actions: [
-      PanelAction(
-        id: openSettingsAction,
-        title: String(
-          localized: "Open Settings", table: "Translation", comment: "Button that opens Settings"),
-        isDefault: true)
-    ])
+  private static func isNotInstalled(_ error: any Error) -> Bool {
+    if #available(macOS 26, *) { TranslationError.notInstalled ~= error } else { false }
+  }
+
+  private static func openSettings(isDefault: Bool) -> PanelAction {
+    PanelAction(
+      id: openSettingsAction,
+      title: String(
+        localized: "Open Settings", table: "Translation", comment: "Button that opens Settings"),
+      isDefault: isDefault)
+  }
 
   private static let retry = PanelAction(
     id: retryAction,

@@ -48,6 +48,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
   }
 
+  /// Opening Dict again while it runs (Finder, Spotlight, `open`): with no Dock icon, a
+  /// window is the only sign that it heard. Unfinished onboarding comes back, else Settings.
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool)
+    -> Bool
+  {
+    // The test host and the e2e runner have no session and show no windows.
+    guard coordinator != nil else { return false }
+    switch ReopenTarget(onboardingCompleted: onboardingCompleted) {
+    case .onboarding: showOnboarding()
+    case .settings: SettingsWindowController.shared.show()
+    }
+    return false
+  }
+
   func applicationWillTerminate(_ notification: Notification) {
     hotkeys.stop()
     permissions.stop()
@@ -73,14 +87,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     permissions.onChange = { [weak self] status, granted in
       self?.coordinator?.permissionsChanged(granted: granted)
-      self?.onboarding?.model.permissionsChanged(status)
+      // The grant happened in System Settings; bring the window back to show it worked.
+      if self?.onboarding?.model.permissionsChanged(status) == true {
+        self?.onboarding?.show()
+      }
     }
     permissions.start()
     observeOwnWindows()
 
-    let model = OnboardingModel(hotkeys: hotkeys, permissions: permissions.status)
-    if showingOnboarding && !model.isCompleted {
-      showOnboarding(model: model)
+    if showingOnboarding && !onboardingCompleted {
+      showOnboarding()
     }
     Log.ui.info(
       "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.combos.count, privacy: .public)"
@@ -110,7 +126,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         permissionNotice: { guide.notice(for: $0) },
         performPermissionAction: { guide.perform($0) },
         openSettings: { SettingsWindowController.shared.show(.model) },
-        openLanguageDownload: { [weak self] in self?.showOnboarding(step: .translation) },
         mouseLocation: { NSEvent.mouseLocation }))
   }
 
@@ -126,31 +141,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
           guard let self, let window, window !== self.panel.window else { return }
           self.coordinator?.end()
           self.permissions.refresh()
-          if window === self.onboarding?.window {
-            self.refreshOnboardingLanguages()
-          }
         }
       })
   }
 
   // MARK: - Onboarding
 
-  private func showOnboarding(model: OnboardingModel? = nil, step: OnboardingStep? = nil) {
+  private var onboardingCompleted: Bool {
+    UserDefaults.standard.bool(forKey: OnboardingModel.completedKey)
+  }
+
+  private func showOnboarding() {
     if onboarding == nil {
-      let model = model ?? OnboardingModel(hotkeys: hotkeys, permissions: permissions.status)
+      let model = OnboardingModel(
+        hotkeys: hotkeys, settings: SettingsWindowController.shared.model,
+        permissions: permissions.status)
       model.openAccessibilitySettings = { [guide] in
         _ = guide.perform(PermissionGuide.ActionID.openSettings)
       }
-      model.openSettings = { SettingsWindowController.shared.show(.model) }
-      onboarding = OnboardingWindowController(model: model, appName: appName)
+      model.translateSample = { [weak self] in
+        guard let self, let onboarding = self.onboarding else { return }
+        self.coordinator?.translateSample(OnboardingModel.sample, near: onboarding.sampleAnchor())
+      }
+      onboarding = OnboardingWindowController(
+        model: model, appName: appName,
+        refreshPermissions: { [permissions] in permissions.refresh() })
     }
-    onboarding?.show(step)
-  }
-
-  private func refreshOnboardingLanguages() {
-    guard let model = onboarding?.model else { return }
-    let pair = PreferencesStore(defaults: .standard).load().languagePair
-    Task { await model.refreshLanguages(pair) }
+    onboarding?.show()
   }
 
   // MARK: - Menu
@@ -180,6 +197,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
   @objc func showShortcutSettings(_ sender: Any?) {
     SettingsWindowController.shared.show(.shortcuts)
+  }
+}
+
+/// What opening Dict again shows.
+enum ReopenTarget: Equatable {
+  case onboarding, settings
+
+  init(onboardingCompleted: Bool) {
+    self = onboardingCompleted ? .settings : .onboarding
   }
 }
 

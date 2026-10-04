@@ -3,8 +3,10 @@
 本文逐条列出 `Design/architecture.md` 第 15.1 节的 8 条验收，写明当前状态、证据，以及还没验证的条目由谁、用哪条命令或哪些步骤来验证。
 记录时间：2026-10-04，main 分支（基于 `5c5e990` 的工作区）。
 第一轮记录时屏幕锁定；本次更新在解锁的真实屏幕上跑了不需要用户授权的部分（见下文「解锁后的真实屏幕验证」）。
-此时 Dict Dev 还没有辅助功能授权，英语和简体中文翻译语言包也还没下载，依赖这两项的条目标为「等用户」。
+第二轮记录时 Dict Dev 还没有辅助功能授权，依赖它的条目当时标为「等用户」。
 之后用户给 Dict Dev 授权了辅助功能，第 2、3 条已在 2026-10-04 重跑并通过（见各条）。
+2026-10-04 产品决定：翻译的主路径是用户自带 API Key（或本机 Ollama）；Apple 翻译只在语言包恰好已装时静默使用，不引导用户下载语言包。
+下面的步骤已按这个决定更新。
 
 ## 前置条件（人工，一次性）
 
@@ -14,12 +16,11 @@
    系统可能先弹出自己的「Dict Dev 想要控制这台电脑」提示，选择打开系统设置。
    在「系统设置 → 隐私与安全性 → 辅助功能」里打开 Dict Dev 的开关；引导窗口会自动进入第 2 步。
    如果开关显示已打开但面板仍说需要重置，在终端运行 `tccutil reset Accessibility au.ibra.dict.dev` 后重新打开开关。
-3. 在引导窗口第 2 步设置「读」「写」两个快捷键，例如 ⌃⌥D 和 ⌃⌥F（不能用只带 ⌥ 的字母组合）。
-4. 下载翻译语言包：在引导窗口第 3 步点「下载语言…」，在系统弹出的对话框里确认下载英语和简体中文。
-   也可以手动：「系统设置 → 通用 → 语言与地区 → 翻译语言」，下载「英语」和「中文（简体）」。
-   引导窗口显示「英语和中文（简体）已就绪。」后点「完成」。
+3. 在引导窗口第 2 步设置「读」快捷键，例如 ⌃⌥D（不能用只带 ⌥ 的字母组合）；「写」键可选，M1 里按下没有动作。
+4. 引导窗口第 3 步「填写 API 密钥」：第 4 条验收要在没有 Key 时做，所以先点「以后再说」。
+   第 4 步「试一下」点「翻译示例」：没有 Key 时面板应显示「需要配置翻译模型」（语言包恰好已装时显示 Apple 翻译的译文）；然后点「完成」。
 5. 验收第 5 条之前在设置里填 Key：菜单栏图标 → 设置… → 模型 → 服务商选 OpenAI → 粘贴 Key → 点「测试」应显示成功。
-   第 4 条要在没有配置模型时做：服务商选「无」，或先做第 4 条再填 Key。
+   也可以在引导第 3 步直接填 Key 并点「测试」，再在第 4 步点「翻译示例」看到模型的译文。
 
 `make e2e` 和 `make matrix` 用 `open -g -n` 启动 Dict Dev，走的是应用自己的签名身份，不借用终端的辅助功能授权。
 所以在完成上面第 2 步之前，它们会报 `noAccessibilityPermission`，这不是代码缺陷。
@@ -73,21 +74,23 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
 ### 4. TextEdit 里读一句英文（零配置）
 
 状态：等用户（需要前置条件 1–4 和真实按键）。
-已在真实屏幕上分段验证（都不是真实按键）：TextEdit 取词走无障碍；面板不激活 Dict 也能成为 key 窗口、菜单栏仍属前台应用、Esc 隐藏后焦点交回；语言包缺失时真实面板约 0.7 s 内显示「Translation languages aren’t downloaded」和「Download Languages…」，没有转圈；日志里没有 `apple translation: panel session` 或 `direct session`，说明没有创建翻译会话，因此不会触发系统下载提示。
+已在真实屏幕上分段验证（都不是真实按键）：TextEdit 取词走无障碍；面板不激活 Dict 也能成为 key 窗口、菜单栏仍属前台应用、Esc 隐藏后焦点交回；语言包未装时真实面板很快给出需要设置的说明而不转圈，日志里没有 `apple translation: panel session` 或 `direct session`，说明没有创建翻译会话（这次记录时的文案后来按产品决定改成了「需要配置翻译模型」）。
 会话协调者的整条链路（按键 → 取词 → 面板 → 翻译）没有在真实屏幕上跑过：应用内取词需要 Dict Dev 自己的辅助功能授权。
 验证者：人。
-前提：完成前置条件 1–4，设置里没有配置模型。
+前提：完成前置条件 1–4，设置里没有配置模型（服务商选「不使用」，或选了 OpenAI 但没填 Key）。
 步骤：
 
 1. 打开 TextEdit，新建文稿，输入 `The weather is lovely today, so we are going for a walk.`，用鼠标选中整句。
 2. 按「读」快捷键。
-3. 应看到：面板出现在选区正下方约 8 pt 处，上面一行是灰色的原文，下面先短暂显示「正在翻译…」，然后显示 Apple 翻译的中文译文。
-4. 应看到：菜单栏仍是 TextEdit 的菜单（TextEdit 仍是前台应用）。
-5. 按 Esc：面板消失，TextEdit 里的选区仍高亮，光标位置不变；直接打字会替换选区，说明焦点回到了 TextEdit。
-6. 再选中一句、按「读」键，等译文出现后再按一次「读」键：面板应隐藏。
-7. 在终端运行 `log show --last 5m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "panel shown"`，每次按键一行，形如 `session 3: capture 18.4ms via accessibility, panel shown 19.0ms after the shortcut`；`panel shown` 后的毫秒数应不超过 200。
+3. 应看到：面板出现在选区正下方约 8 pt 处，上面一行是灰色的原文，下面是钥匙图标和「需要配置翻译模型」，说明要在「设置 → 模型」里填 API 密钥或使用本机 Ollama，右下角有「打开设置」按钮。
+   如果这台 Mac 恰好已装英语和简体中文的翻译语言包，面板改为先短暂显示「正在翻译…」，然后显示 Apple 翻译的中文译文；两种结果都算通过，记录看到的是哪一种。
+   面板和别处都不应出现任何下载语言包的提示。
+4. 显示「需要配置翻译模型」时点「打开设置」：面板隐藏，设置窗口打开在「模型」页并在最前面；关掉设置窗口。
+5. 应看到：菜单栏仍是 TextEdit 的菜单（TextEdit 仍是前台应用）。
+6. 再按一次「读」键让面板出现，按 Esc：面板消失，TextEdit 里的选区仍高亮，光标位置不变；直接打字会替换选区，说明焦点回到了 TextEdit。
+7. 再选中一句、按「读」键，等面板出现后再按一次「读」键：面板应隐藏。
+8. 在终端运行 `log show --last 5m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "panel shown"`，每次按键一行，形如 `session 3: capture 18.4ms via accessibility, panel shown 19.0ms after the shortcut`；`panel shown` 后的毫秒数应不超过 200。
 
-如果第 3 步面板显示「翻译语言尚未下载」：说明语言包没下载完，点「下载语言…」完成前置条件 4 后重试。
 
 ### 5. 配置 OpenAI Key 后流式翻译与断网降级
 
@@ -99,8 +102,14 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
 1. 完成前置条件 5。
 2. 在 TextEdit 选中同一句英文，按「读」键：译文应逐步出现（流式），而不是一次性出现。
 3. 连续做 10 次（每次可以换一句），然后运行 `log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"' | grep "first text"`，取 10 个毫秒数的中位数，应小于 1500。
-4. 关掉 Wi-Fi（或拔网线），再选中一句按「读」键：面板应显示 Apple 翻译的译文，译文下方有一行说明「模型出错（网络错误），已改用 Apple 翻译。」。
+4. 关掉 Wi-Fi（或拔网线），再选中一句按「读」键：
+   语言包恰好已装时，面板显示 Apple 翻译的译文，译文下方有一行说明「模型出错（网络错误），已改用 Apple 翻译。」；
+   语言包未装时，面板显示「模型没能翻译这段文字」「原因：网络错误。」和「重试」按钮。
+   记录看到的是哪一种。
 5. 恢复网络。
+6. 在设置里把 Key 改成一个错误的值（例如在末尾多加一个字符），再选中一句按「读」键：
+   面板显示「模型没能翻译这段文字」「原因：API Key 无效。」和「打开设置」按钮（语言包恰好已装时则是 Apple 译文，说明行末尾有「打开设置」）。
+   点「打开设置」应打开设置的「模型」页；把 Key 改回正确的值。
 
 ### 6. 日志只有耗时、没有用户文字和 Key
 
@@ -146,7 +155,7 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
    修掉一个测试缺陷：测试宿主在后台启动，macOS 会忽略它的 `NSApp.activate()`，窗口成不了 key；演示现在先经 Launch Services 激活自己，相当于真实应用里用户点菜单栏图标。
    深色模式选中标签页：离屏渲染（`DICT_SETTINGS_RENDER_DIR`）里选中项是一块白色、文字看不见，但浅色模式同样是一块白色，只是与背景同色；在屏上把窗口切到深色后检查视图树，选中项背景是系统的 `NSGlassView`，外观为 `NSAppearanceNameVibrantDark`，没有纯色图层。
    结论：白块是玻璃材质无法离屏渲染的退化，视图树里没有找到缺陷；屏上像素需要人眼确认（不允许截屏）。
-5. Apple 翻译：`reportsLanguageStatus()` 报 `en → zh-Hans: supported`、`zh-Hans → en: supported`（未安装），所以 `AppleTranslationLiveTests` 的翻译用例等用户下载语言包；`engineWithoutAModelUpdatesThePanel()` 在真实面板上得到的是 `needsSetup`「Translation languages aren’t downloaded」，与语言包缺失时的预期一致。
+5. Apple 翻译：`reportsLanguageStatus()` 报 `en → zh-Hans: supported`、`zh-Hans → en: supported`（未安装），所以 `AppleTranslationLiveTests` 的翻译用例在这台机器上不适用；`engineWithoutAModelUpdatesThePanel()` 在真实面板上得到的是 `needsSetup`，与语言包未装时的预期一致。
 
 ## 本次串联的其他人工检查（解锁后）
 
@@ -155,13 +164,16 @@ Chrome 的 `AXEnhancedUserInterface` 每次都恢复为测前的值；第二次�
 - 默认中英配对下选中日文 `会議は明日の午後三時に開始します。` 按「读」键，应译成中文而不是英文。
 - 按「写」键：M1 没有动作，面板不出现，日志里有一行 `write shortcut pressed`。
 - 撤销 Dict Dev 的辅助功能授权（在系统设置里关掉开关）后按「读」键：面板说明需要辅助功能权限，按快捷键时不应弹出任何系统对话框；点「打开系统设置」才可能出现系统提示并跳转。
-- 在「系统设置 → 通用 → 语言与地区 → 翻译语言」删除简体中文后按「读」键：面板应立刻显示「翻译语言尚未下载」和「下载语言…」，不应一直转圈；点按钮打开引导窗口的语言步骤。
-- 首次引导窗口里来回切换三个步骤，并在第 2 步录一个会被拒绝的组合（例如 ⌥A）：窗口高度应跟着内容变化，说明文字和按钮都不被裁掉。
+- 首次引导窗口里来回切换四个步骤，并在第 2 步录一个会被拒绝的组合（例如 ⌥A）：窗口高度应跟着内容变化，说明文字和按钮都不被裁掉。
+- 引导停在第 1 步时在系统设置里打开 Dict Dev 的辅助功能开关：一两秒内引导窗口自动进入第 2 步并回到最前面。
+- 引导没完成时关掉引导窗口，再在 Finder 里双击 Dict Dev（或 `open` 它）：引导窗口重新出现在最前面；引导完成后再这样做，打开的是设置窗口。
+  `make window-test` 用 reopen 事件覆盖了这两种情况。
+- 用 ⌘` 在 Dict 的窗口之间切换（例如引导窗口或设置窗口打开、面板也在显示时）：不会切到面板上。
 - 把某个快捷键改成会冲突的组合（或切换到会冲突的键盘布局）后打开菜单栏菜单：最上面应有警告项，点击打开设置的快捷键页。
 - 设置窗口在深色模式下：选中的标签页文字清晰可读，没有被白块盖住（只能人眼看，见上文第 4 项）。
 - 屏幕演示（都要持锁，都会抢焦点）：`TEST_RUNNER_DICT_PANEL_DEMO=1`、`TEST_RUNNER_DICT_SETTINGS_DEMO=1`、`TEST_RUNNER_DICT_TRANSLATION_LIVE=1`，分别配 `-only-testing:'DictAppTests/PanelGalleryTests/demoOnScreen()'`、`'DictAppTests/SettingsWindowTests/demoOnScreen()'`、`DictAppTests/AppleTranslationLiveTests` 运行 `xcodebuild test`。
   Swift Testing 的用例名要带 `()`，否则 `xcodebuild` 静默执行 0 个测试。
-  `AppleTranslationLiveTests` 要在语言包下载完之后跑。
+  `AppleTranslationLiveTests` 只在语言包恰好已装的机器上有意义。
 
 ## 已知差异
 

@@ -28,9 +28,10 @@ extension TranslationEngine: SessionTranslator {}
 /// and translates (architecture 2.1, 15.1). M1 translates every selection as a passage; the
 /// "write" shortcut has no action until writing help exists.
 ///
-/// Every operation gets a new session id. A new press, hiding the panel and opening a window
-/// cancel the running task, and anything that arrives for an older id is dropped, so a late
-/// result never lands in a newer panel (architecture 6.4).
+/// Every operation gets a new session id. Hiding the panel (also by pressing the shortcut
+/// again) and opening a window cancel the running task, and anything that arrives for an
+/// older id is dropped, so a late result never lands in a newer panel (architecture 6.4).
+/// A press while the selection is still being read, before the panel shows, is ignored.
 @MainActor
 final class SessionCoordinator {
   struct Environment {
@@ -43,8 +44,8 @@ final class SessionCoordinator {
     var permissionNotice: (PermissionIssue) -> PanelNotice
     /// Handles a permission notice button; false for ids it does not know.
     var performPermissionAction: (PanelAction.ID) -> Bool
+    /// Opens Settings on the Model pane.
     var openSettings: () -> Void
-    var openLanguageDownload: () -> Void
     var mouseLocation: () -> CGPoint
   }
 
@@ -57,6 +58,9 @@ final class SessionCoordinator {
   private var text: String?
   /// The panel shows a permission notice; a grant reads the selection again.
   private var awaitsPermission = false
+  /// A capture is running. It may be in the clipboard fallback, whose snapshot and restore
+  /// must not interleave with another capture's.
+  private var isCapturing = false
 
   init(reader: any SelectionReader, panel: any SessionPanel, environment: Environment) {
     self.reader = reader
@@ -69,6 +73,12 @@ final class SessionCoordinator {
   func hotkeyPressed(_ role: HotkeyRole) {
     guard role == .read else {
       Log.ui.info("write shortcut pressed: writing help is not available yet")
+      return
+    }
+    // Before the panel shows, the selection is still being read: a second capture could
+    // snapshot the first one's copy as the user's clipboard, so the press is ignored.
+    if isCapturing {
+      Log.ui.info("read shortcut pressed while reading the selection: ignored")
       return
     }
     // The same shortcut hides a visible panel (architecture 10.1).
@@ -89,6 +99,19 @@ final class SessionCoordinator {
     translate(text, source: .typed)
   }
 
+  /// Translates `text` in a newly shown panel without reading any selection, for the
+  /// onboarding window's sample: a capture in Dict's own window reads nothing.
+  func translateSample(_ text: String, near anchor: PanelAnchor) {
+    cancel()
+    self.text = text
+    let id = id
+    panel.show(PanelState(source: text, phase: .generating("")), near: anchor)
+    Log.ui.info("session \(id, privacy: .public): translating the onboarding sample")
+    let clock = ContinuousClock()
+    let start = clock.now
+    task = Task { await self.run(text, id: id, clock: clock, start: start) }
+  }
+
   func perform(_ action: PanelAction.ID) {
     switch action {
     case TranslationStrings.retryAction:
@@ -96,9 +119,6 @@ final class SessionCoordinator {
     case TranslationStrings.openSettingsAction:
       end()
       environment.openSettings()
-    case TranslationStrings.downloadLanguagesAction:
-      end()
-      environment.openLanguageDownload()
     default:
       if !environment.performPermissionAction(action) {
         Log.ui.error("unknown panel action \(action, privacy: .public)")
@@ -138,6 +158,7 @@ final class SessionCoordinator {
   private func read() {
     cancel()
     let id = id
+    isCapturing = true
     task = Task { await self.read(id) }
   }
 
@@ -146,6 +167,7 @@ final class SessionCoordinator {
     let start = clock.now
     let status = environment.refreshPermissions()
     let result = await reader.capture(policy: .allowed)
+    isCapturing = false
     guard id == self.id, !Task.isCancelled else { return }
     let captured = clock.now - start
 

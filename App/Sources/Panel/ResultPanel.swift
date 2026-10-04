@@ -27,7 +27,8 @@ final class ResultPanel: NSPanel {
     level = .floating
     hidesOnDeactivate = false
     becomesKeyOnlyIfNeeded = false
-    collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    // `.ignoresCycle`: ⌘` cycles through Dict's own windows, never to the panel.
+    collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
     isReleasedWhenClosed = false
     isOpaque = false
     backgroundColor = .clear

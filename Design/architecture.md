@@ -1034,24 +1034,17 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 
 | 用途 | 数据源 | 许可 |
 |---|---|---|
-| 英 → 简中释义（主） | 中文维基词典的英语词条，经 wiktextract / kaikki.org 提取（合并「英語」「英语」两个标题），繁体转简体 | CC BY-SA 4.0（维基词典双许可，我们只按 CC BY-SA 使用） |
-| 英 → 中释义（补，可选） | 英文维基词典词条的 Mandarin 翻译表，同上提取 | CC BY-SA 4.0 |
-| 音标 | 维基词典 IPA（英式、美式分开）；缺失时英式用 Britfone，美式用 CMUdict 转 IPA（补源尚未接入构建工具） | CC BY-SA 4.0 / MIT / BSD-2 |
+| 英 → 简中释义 | 两个来源，默认都启用：英文维基词典英语词条的翻译表里的「Chinese Mandarin」一行；中文维基词典的英语词条（合并「英語」「英语」两个标题）。都经 wiktextract / kaikki.org 提取，繁体转简体 | CC BY-SA 4.0（维基词典双许可，我们只按 CC BY-SA 使用） |
+| 音标 | 维基词典 IPA（英式、美式分开），两个版本都取，英文版优先 | CC BY-SA 4.0 |
 | 词频分档 | FrequencyWords 英语全量词表（OpenSubtitles 2018）换算的 Zipf 值 | CC BY-SA 4.0 |
-| 词形还原 | 维基词典的 form-of 与变形数据建反查表；运行时再用系统 `NLTagger(.lemma)` 补充 | CC BY-SA 4.0 / 系统框架 |
+| 词形还原 | 两个版本维基词典的 form-of 与变形表建反查表；运行时再用系统 `NLTagger(.lemma)` 补充 | CC BY-SA 4.0 / 系统框架 |
 
-覆盖抽样（每个词频段随机 200 词，筛出真正的词元；样本小，误差大）【实测，核查报告】：
-
-| 词频段 | 词元数 | 中文维基词典有词条 | 两个来源至少有一个 |
-|---|---|---|---|
-| 前 5 千 | 168 | 150 | 159 |
-| 5 千–2 万 | 135 | 106 | 116 |
-| 2 万–5 万 | 107 | 75 | 83 |
-
-两者都没有的多是人名和变形；变形在查询前会先还原成词元。
-质量抽样（214 条）：182 条带 IPA，16 条没有释义，10 条只是「另一种写法」的指向，32 条释义用了繁体字【实测，核查报告】。
+只用中文维基词典时覆盖不够：很多常用词的页面存在，但英语段落格式不规范，提取不出释义（and、make、people、bank 等），FrequencyWords 前 5 千个词只有 42.8% 能直接查到【实测，构建报告 `docs/reviews/dictionary-build-report.md`】。
+加上英文维基词典的翻译表后是 94.5%，前 1 千个词 97.2%【实测，构建报告】。
 维基词典的义项常比商业词典少，长尾词往往只有一个义项；查不到或义项太少时，模型卡片补上。
-全量构建后的实测远低于上面的抽样：很多常用词的页面存在，但英语段落格式不规范，提取不出释义（and、make、people、bank 等），FrequencyWords 前 5 千个词只有约 42% 能查到中文释义【实测，构建报告 `docs/reviews/dictionary-build-report.md`】。
+
+Britfone（MIT）和 CMUdict（BSD-2）补音标评估过，没有接入：两个维基词典合起来，Zipf ≥ 4.5 的常用词已有 99.4% 带英式和美式 IPA；补上后常用词只到 99.8%（英式）和 99.9%（美式），Zipf ≥ 3.5 的从 95.4% / 96.0% 到 97.8% / 99.8%，全部词条的美式从 30.8% 到 37.5%，增量几乎都在少见词【实测，构建报告】。
+而 CMUdict 的 ARPAbet 要转 IPA，重音标在元音上，转成 IPA 惯例的音节首重音还要做音节切分，收益不抵复杂度。
 
 美音和英音音标分别存储；澳音没有对应的开放音标数据，选澳音时显示英式音标并标注【推断：澳音更接近英式记音】。
 
@@ -1059,13 +1052,33 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 
 - 数据库是独立生成的 `dict-en-zh.sqlite`，许可 CC BY-SA 4.0，旁边放独立的 `LICENSE` 和 `ATTRIBUTION`；库内 `meta` 表也写明来源、快照日期和许可，文件被单独拿走时信息不丢。
 - 数据库不进 git。
-  仓库里只有构建工具 `tools/build-dict/`（GPL-3.0，独立 Swift 包，不依赖第三方库）和一个清单文件，清单固定每个输入的下载地址、快照日期和 sha256，保证可复现。
-- `make dict` 下载输入到 `build/dict/cache/`，生成 `build/dict/dict-en-zh.sqlite`，打印各表行数；`make dict-stats` 打印覆盖统计和查询耗时。
+  仓库里只有构建工具 `tools/build-dict/`（GPL-3.0，独立 Swift 包，不依赖第三方库）和一个清单文件，清单固定每个输入的下载地址、快照日期、大小和 sha256，保证可复现。
+- `make dict` 下载输入到 `build/dict/cache/`，生成 `build/dict/dict-en-zh.sqlite`，打印各表行数；`make dict-stats` 打印覆盖统计和查询耗时；`build-dict lookup 词…` 按 7.4 的顺序打印查词结果。
+- 英文维基词典的提取文件压缩后 523 MB（解压 3.3 GB），构建时用系统 `gzip` 流式解压逐行读，不落盘。
+  首次构建要下载约 630 MB；有缓存时构建约 54 s，峰值内存约 300 MB【实测，构建报告】。
 - 繁转简用 ICU 的 `Traditional-Simplified` 变换（即 `Hant-Hans`，`String.applyingTransform`），不引入 OpenCC；ICU 是逐字转换，字形全部转成简体，但台湾用词（线上、塑胶）不改【实测，构建报告】，构建工具把抽样对照写到 `build/dict/simplification-sample.tsv` 供人检查。
-- 收录中文维基词典里所有有可用中文释义的英语词条，不按词频截断；库里不限释义条数，专名释义排在最后，界面只显示前几条。
-  2026-10-02 快照约 6.8 万词条、10 万条释义，数据库 8.7 MB【实测，构建报告】。
-- kaikki.org 约每周在同一地址覆盖更新提取文件，不保留旧版本；上游更新后清单的大小和 sha256 校验会失败，要同时更新清单里的地址、日期、大小和哈希再构建。
-- 构建工具支持按词条黑名单剔除内容，收到侵权通知时在下个版本删掉。
+- 收录两个来源里所有有可用中文释义的英语词条，不按词频截断；库里不限释义条数，界面只显示前几条。
+  2026-10-02 快照约 10.4 万词条、15.1 万条释义（中文版 9.2 万、英文版翻译表 5.9 万），数据库 17.6 MB【实测，构建报告】。
+- 释义的合并与排序（`LexiconBuilder`，规则都在构建工具的单测里）：
+  1. 英文版翻译表一张表算一条释义：取表里「Chinese Mandarin」一行的全部译词（`繁 /简` 取简体，`&` 连接的备选拆开，去掉括号里的限定语和拼音，没有汉字的和编辑注释丢掉），用「、」连接；标了台湾、港澳、新马、书面、旧时等的译词排在同一行最后，标了废弃、古旧、方言、罕用的不要。
+     表的英文义项提示（`sense`，例如 institution、edge of river or lake）存进 `sense.hint`，界面可以用来标注义项。
+  2. kaikki.org 后处理会把翻译表挂到某个义项下，这个挂法常常错（light 的「光」挂在「打火机」义下），所以不看挂在哪里，按义项提示重新分表。
+  3. 排序分四档：英文版翻译表；中文版释义；中文版里降权的释义（单个汉字的释义，例如 peaceful 的「康」「宁」；含「姓氏」「地名」「人名」的释义）；专名词条（两个来源的 `name` 词性，例如 Long 这个姓、Turkey 这个国家）。
+     第一档内按翻译表覆盖的语言数从多到少：编辑会把一个词最核心的意思译成最多的语言（light：电磁波 264 种语言、重量轻 126 种、观点 15 种）；其余各档按页面顺序。
+     翻译表放在中文版释义前面，是因为它的第一条更可靠：中文版的首条释义常是俚语、古义或错字（go 的「围旗」、long 的姓氏），翻译表的首条是最常用义的概率高（构建报告第 5 节）。
+  4. 去重：一条释义按「、，；」切成词，切出来的词全都已在前面出现过就丢掉（「跑、奔跑、走」之后的「奔跑」、bank 第二张表里的「银行」）；比较在繁转简之后。
+  5. 每条释义记 `sense.source`（`zh` 或 `en`），署名链接是 `https://<source>.wiktionary.org/wiki/<wiki_title>`，排查问题时也知道来自哪边。
+  6. 单个错误释义可以写进黑名单（`词<TAB>释义`），例如 go 的「围旗」。
+- 变形反查表来自两个版本的变形表（复数、过去式、分词、第三人称、比较级、最高级、标准拼写变体）和 form-of 释义；标了废弃、古旧、方言、非标准的变形不收（went→wend、goed→go），带地区限定的拼写变体不收（苏格兰拼法 girl→grill），展开成多个词的缩略语不收（HALT→angry）。
+  英文版补上了 went→go、made→make、geese→goose、studies→study、worse→bad 这类中文版缺的反查。
+- 输入在缓存里按 sha256 命名（`<sha256>-<文件名>`），不同快照的文件并存，只要缓存还在，旧清单就能逐字节复现旧构建。
+- kaikki.org 约每周在同一地址覆盖更新提取文件，不保留旧版本。
+  `make dict` 发现下载的文件和清单不符时停下，打印钉住的和下载到的大小、哈希，把新文件按哈希留在缓存里，并给出两条路：`make dict-update`，或把旧文件按提示的文件名放回缓存。
+  `make dict-update` 重新下载全部输入，更新清单里变了的那些来源的日期（取 HTTP Last-Modified）、大小、哈希和提取说明（读 kaikki.org 页面上「extracted on … from the … dump dated … using wiktextract (…)」那句），重新构建，打印更新前后的词条数、释义数、IPA 和四档覆盖率对比；人看过数字、抽查几个词后再提交清单。
+- 以后可以把用到的输入放进自己的存储（发布附件或镜像），清单指向那份副本，就不再依赖上游保留旧文件；现在没做。
+- kaikki.org 已宣布要撤掉按语言拆分的「后处理」下载（wiktextract issue 1178，一年多了还在），我们用的三个维基词典文件都是这种。
+  撤掉后的替代是全量原始提取：英文版 2.98 GB 压缩（含所有语言，按 `lang_code` 过滤），中文版 234 MB；英文版的原始提取保留翻译表的页面顺序，但单次下载接近 3 GB，要先定再换。
+- 构建工具支持按词条或单条释义的黑名单剔除内容，收到侵权通知时在下个版本删掉。
 - 打包时把数据库复制进应用的 `Resources`，同时作为发布附件单独提供下载，「关于 → 致谢」页列出全部署名和下载链接。
 - 仓库根目录的 `LICENSE` 只覆盖代码，README 说明词典数据另行许可。
 - 应用在没有这个文件时完全可用，只是没有即时层；单元测试用一个几十行的测试库。
@@ -1075,13 +1088,13 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 ```sql
 CREATE TABLE meta (
   key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL            -- schema_version、built_at（快照日期，不用构建时刻，保证可复现）、tool_version、
+  value TEXT NOT NULL            -- schema_version（现为 2）、built_at（快照日期，不用构建时刻，保证可复现）、tool_version、
                                  -- license、license_url、sources（JSON：名称、地址、快照日期、sha256、许可）、attribution
 ) WITHOUT ROWID;
 
 CREATE TABLE headword (
   id         INTEGER PRIMARY KEY,
-  lemma      TEXT NOT NULL,      -- 原样写法，例如 take off
+  lemma      TEXT NOT NULL,      -- 显示用写法，例如 take off；大小写不同的条目合并时取大写字母最少的写法
   lemma_key  TEXT NOT NULL UNIQUE, -- normalizedKey(lemma)
   zipf       REAL,               -- 词频，保留两位小数；界面只显示分档；多词条目和极少见的词为 NULL
   ipa_us     TEXT,
@@ -1091,9 +1104,11 @@ CREATE TABLE headword (
 
 CREATE TABLE sense (
   headword_id INTEGER NOT NULL REFERENCES headword(id),
-  ord         INTEGER NOT NULL,
-  pos         TEXT NOT NULL,     -- 与模型卡片同一组词性枚举；来源没标词性时为空串（约 46% 的释义）
-  gloss       TEXT NOT NULL,     -- 简体中文短释义
+  ord         INTEGER NOT NULL,  -- 显示顺序，规则见 7.2
+  pos         TEXT NOT NULL,     -- 与模型卡片同一组词性枚举；来源没标词性时为空串
+  gloss       TEXT NOT NULL,     -- 简体中文短释义；翻译表是「、」连接的译词
+  source      TEXT NOT NULL,     -- 'zh' 或 'en'：来自哪个版本的维基词典
+  hint        TEXT,              -- 翻译表的英文义项提示，例如 institution；中文版释义为 NULL
   PRIMARY KEY (headword_id, ord)
 ) WITHOUT ROWID;
 
@@ -1105,13 +1120,19 @@ CREATE TABLE form (
 ```
 
 应用以只读方式打开（`SQLITE_OPEN_READONLY`）。
+`schema_version` 2 比 1 多了 `sense.source` 和 `sense.hint` 两列，应用还没有读这个库，不需要兼容旧版本。
 
 ### 7.4 查询
 
 ```swift
 // DictCore
 public enum FrequencyBand: Sendable, Equatable { case common, moderate, rare }
-public struct LexiconSense: Sendable, Equatable { public var pos: String; public var gloss: String }
+public struct LexiconSense: Sendable, Equatable {
+  public var pos: String
+  public var gloss: String
+  public var hint: String?           // 翻译表的英文义项提示
+  public var source: String          // "zh" 或 "en"，署名链接用
+}
 public struct LexiconEntry: Sendable, Equatable {
   public var lemma: String
   public var ipaUS: String?
@@ -1127,14 +1148,18 @@ public actor Lexicon {
 ```
 
 1. 去掉首尾标点，算 `normalizedKey`。
-2. `headword.lemma_key` 命中就返回。
-3. 否则查 `form` 反查表。
-4. 否则用 `NLTagger(.lemma)` 还原（有上下文句时带上下文，更准）再查。
-   `NLTagger` 单词还原 16 个里对 13 个，`saw`、`found`、`better` 不还原【实测，评审】。
-5. 多个候选按词频降序。
+2. 精确匹配和变形反查都查：`headword.lemma_key` 等于这个键的词条，加上 `form` 表里这个键指向的所有词元。
+   只查精确匹配会让变形自己的薄弱词条遮住词元（taken 的「迷上」遮住 take，miles 的俚语义遮住 mile）。
+3. 候选按词频（`zipf`）降序合并，相等时词元在前；例外是变形自己的词条如果没有一条来自英文版翻译表（`source = 'en'`），排到最后，因为这样的词条首先是个变形。
+   效果：saw → see、锯；found → find、设立；left → leave、左；miles → mile、miles；taken → take、taken；points → point、points。
+   参考实现是构建工具里的 `lookupSQL`（一条 SQL），单测守着；应用照抄这条查询。
+4. 都没有时用 `NLTagger(.lemma)` 还原（有上下文句时带上下文，更准）再走第 2、3 步。
+   `NLTagger` 单词还原 16 个里对 13 个，`saw`、`found`、`better` 不还原【实测，评审】；反查表已覆盖这三个。
+
+已知不理想（构建报告第 5 节）：同形词的词频是共用的，按词频排有时把罕见的词元排在前面（broker → broke「没钱」，fig → figure，better → well「井」）；变形自己的意思和词元都会显示，只是先后不对。
 
 分档按 Zipf 值切：`common` ≥ 4.5，`moderate` 3.5 到 4.5，其余和没有词频的为 `rare`；构建工具的 `FrequencyBand` 用同一组阈值。
-目标耗时 5 ms 以内【推断】，用单测里的计时断言守护。
+目标耗时 5 ms 以内【推断】，用单测里的计时断言守护；构建报告实测两条查询热态约 0.014 ms、冷启动约 0.4 ms。
 不使用系统词典的文本作为预览：公开接口返回的是用户启用顺序第一本词典的整段文本，中文母语用户默认拿到的是英英释义和美式重拼音标，短语动词查到的是错的词条【实测，评审】。
 卡片上保留「在系统词典中打开」按钮。
 
@@ -1658,7 +1683,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 | 2 | Chromium 多段文字的替换 | 建议：用拷贝取带换行的原文、粘贴替换、读回确认，M3 用人工验收；不满足就降级为只复制 |
 | 3 | 复习算法 | 建议 v1 用固定间隔阶梯加完整复习日志，FSRS 以后再换 |
 | 4 | 词频数据来源 | wordfreq 质量更好但导出需要 Python 包；FrequencyWords 是纯文本、零工具。建议 v1 用 FrequencyWords，后续再换 |
-| 5 | 英文维基词典的中文翻译表 | 实测（构建报告）：只用中文维基词典时 FrequencyWords 前 5 千个词只有 42.9% 有中文释义，加上英文维基词典的 Mandarin 翻译表是 93.0%；英语部分提取压缩 523 MB、解压 3.3 GB，可流式处理。不打开就达不到 M2 的 85% 验收；建议打开 |
+| 5 | 词典输入的来源文件 | 已定：英文维基词典翻译表作为第二来源默认启用，前 5 千个词覆盖 94.5%（构建报告）。待定：kaikki.org 要撤掉按语言拆分的后处理文件（我们用的三个都是）。选项一是届时换成全量原始提取（英文版 2.98 GB 压缩、含所有语言，接近单次下载 3 GB 的上限，构建时多解压约 20 GB；好处是翻译表保留页面顺序）；选项二是现在就把用到的输入（约 630 MB）存进自己的存储，清单指向副本。建议先做选项二，上游真撤掉时再评估选项一 |
 | 6 | 自动更新 | Sparkle 是唯一考虑中的第三方依赖；替代是只在应用内检查新版本并打开下载页。建议 M6 再定 |
 | 7 | 订阅的范围 | 托管模型、云同步、高质量语音之一或组合；不影响 v1 结构，只影响 `TextModel` 的第三个实现何时做 |
 | 8 | M3 与 M4 的先后 | 本文先做写作替换（风险已被原型降低，且是五个需求里的两个半），再做图标与截图取词；如果阅读体验优先，可以对调，两者没有依赖 |
@@ -1702,7 +1727,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - `localhost` 是否被应用传输安全默认放行。
 - compact 系统音色的听感；多音词 IPA 读法。
 - ICU 繁转简的词级准确度：字形全部转对，台湾用词不改（抽查 50 对，构建报告）；没有系统评估。
-- 英文维基词典 Mandarin 翻译表的释义质量（只测了覆盖，没有逐条抽查）。
+- 英文维基词典 Mandarin 翻译表的释义质量：抽样 100 词、20 个多义词、20 个变形人工看过（构建报告）；按翻译表的语言数排序在同形异义词上会排错（fine 先给「罚款」、match 先给「火柴」、well 先给「井」），还没有更好的开放信号。
 - 开发版和正式版同时注册同一组合时 Carbon 的行为。
 - CC BY-SA 4.0 的技术保护措施条款与应用商店分发的关系（v1 不上应用商店，风险搁置）。
 
@@ -1715,6 +1740,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 | 服务商默认模型下线或改参数 | 默认配置突然失效 | 预设是数据；「测试」按钮发现 404 时列出可用模型；评测随预设变更必跑 |
 | 用户长期处于安全输入（终端） | 快捷键可能不触发 | 菜单栏标记加说明；划词图标不依赖键盘 |
 | 词典数据的众包内容含侵权条目 | 下架通知 | 构建工具支持黑名单，数据文件与代码分离 |
+| kaikki.org 每周覆盖提取文件、不留旧版，且要撤掉按语言拆分的下载 | 新检出复现不了旧构建；输入地址失效 | 缓存按哈希保留旧输入；`make dict-update` 一步更新清单并对比前后数字；以后自存输入副本（16.1 第 5 项） |
 | 自动记录引发隐私担忧 | 用户关掉记录，定位失效 | 只存本机、可暂停、可按应用排除、可按天删除，首次引导说明 |
 
 ## 17. 相对第一版的修正

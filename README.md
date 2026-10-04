@@ -51,18 +51,23 @@ It takes focus, so it is not part of `make test` and holds `/private/tmp/dict-ui
 ## Dictionary data
 
 The instant English to Simplified Chinese dictionary is a separate data file, `dict-en-zh.sqlite`, licensed CC BY-SA 4.0 with its own `LICENSE` and `ATTRIBUTION`; the repository's `LICENSE` covers the code only.
-The data is not in git: `tools/build-dict/` is a standalone Swift package that builds it from pinned public snapshots.
+The data is not in git: `tools/build-dict/` is a standalone Swift package that builds it from pinned public snapshots of the Chinese and English Wiktionaries (wiktextract extractions by kaikki.org) and a word-frequency list.
 
 ```sh
-make dict        # download the inputs pinned in tools/build-dict/manifest.json, build build/dict/dict-en-zh.sqlite
-make dict-stats  # coverage of the most frequent words and lookup timing
-make test-dict   # the builder's tests on hand-written fixtures (also part of make test)
+make dict         # download the inputs pinned in tools/build-dict/manifest.json, build build/dict/dict-en-zh.sqlite
+make dict-stats   # coverage of the most frequent words and lookup timing
+make dict-update  # pin the current upstream snapshots in the manifest, rebuild, print the figures before and after
+make test-dict    # the builder's tests on hand-written fixtures (also part of make test)
 ```
 
-Downloads go to `build/dict/cache/` and are reused when their size and SHA-256 match the manifest.
-kaikki.org replaces its Wiktionary extractions about weekly at the same URLs, so a fresh checkout fails verification once the pinned snapshot is gone; update the manifest's URL, date, size and hash together, then rebuild.
+The first `make dict` downloads about 630 MB (the English Wiktionary extraction is 523 MB gzipped and is read without unpacking it); a build takes about a minute and under 300 MB of memory.
+Downloads stay in `build/dict/cache/`, named by their SHA-256, and are reused as long as they are there.
+kaikki.org replaces its extractions about weekly at the same URLs and keeps no old versions.
+When a pinned file is gone upstream, `make dict` stops and says so; run `make dict-update`, review the before and after figures it prints, and commit `tools/build-dict/manifest.json`.
+A build from an old manifest still works as long as its files are in the cache.
 The same inputs always produce a byte-identical database.
-Keys listed in `tools/build-dict/blocklist.txt` are left out, for example after a takedown notice.
+Keys listed in `tools/build-dict/blocklist.txt` are left out, for example after a takedown notice; a key, a tab and a gloss removes a single wrong gloss.
+`tools/build-dict/.build/release/build-dict lookup WORD...` shows what the app's lookup returns for a word.
 
 ## Distribution
 

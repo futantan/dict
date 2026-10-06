@@ -17,30 +17,14 @@ struct KeyboardLayout: Sendable {
     TISCopyCurrentKeyboardLayoutInputSource().flatMap { KeyboardLayout($0.takeRetainedValue()) }
   }
 
-  /// Every enabled keyboard layout, plus the current one in case only an input method is
-  /// enabled.
-  @MainActor static func enabled() -> [KeyboardLayout] {
-    var layouts = sources(matching: [:], includeAllInstalled: false)
-    if let current = current(), !layouts.contains(where: { $0.id == current.id }) {
-      layouts.append(current)
-    }
-    return layouts
-  }
-
   /// A layout that ships with macOS, enabled or not.
   @MainActor static func installed(id: String) -> KeyboardLayout? {
-    sources(matching: [kTISPropertyInputSourceID: id], includeAllInstalled: true).first
-  }
-
-  @MainActor private static func sources(
-    matching properties: [CFString: Any], includeAllInstalled: Bool
-  ) -> [KeyboardLayout] {
-    var filter = properties
+    var filter: [CFString: Any] = [kTISPropertyInputSourceID: id]
     filter[kTISPropertyInputSourceType] = kTISTypeKeyboardLayout
     let list =
-      TISCreateInputSourceList(filter as CFDictionary, includeAllInstalled)?
+      TISCreateInputSourceList(filter as CFDictionary, true)?
       .takeRetainedValue() as? [TISInputSource]
-    return (list ?? []).compactMap(KeyboardLayout.init)
+    return list?.first.flatMap(KeyboardLayout.init)
   }
 
   private init?(_ source: TISInputSource) {
@@ -58,37 +42,21 @@ struct KeyboardLayout: Sendable {
     return Unmanaged<AnyObject>.fromOpaque(raw).takeUnretainedValue() as? T
   }
 
-  /// What pressing the key with these modifiers types, or nil when it types nothing.
-  func output(keyCode: UInt16, modifiers: KeyCombo.Modifiers) -> KeyOutput? {
-    let result = translate(keyCode: keyCode, modifiers: modifiers, allowDeadKeys: true)
-    if result.deadKeyState != 0 && result.text.isEmpty { return .deadKey }
-    return result.text.isEmpty ? nil : .text(result.text)
-  }
-
   /// The character printed on the key: what it types without modifiers, with dead keys
   /// resolved to their own character.
   func character(keyCode: UInt16) -> String? {
-    let text = translate(keyCode: keyCode, modifiers: [], allowDeadKeys: false).text
-    return text.isEmpty ? nil : text
-  }
-
-  private func translate(
-    keyCode: UInt16, modifiers: KeyCombo.Modifiers, allowDeadKeys: Bool
-  ) -> (text: String, deadKeyState: UInt32) {
     keyMap.withUnsafeBytes { bytes in
       guard let layout = bytes.baseAddress?.assumingMemoryBound(to: UCKeyboardLayout.self) else {
-        return ("", 0)
+        return nil
       }
       var deadKeyState: UInt32 = 0
       var length = 0
       var chars = [UniChar](repeating: 0, count: 8)
       let status = UCKeyTranslate(
-        layout, keyCode, UInt16(kUCKeyActionDown), (modifiers.carbon >> 8) & 0xFF,
-        UInt32(LMGetKbdType()),
-        allowDeadKeys ? 0 : OptionBits(kUCKeyTranslateNoDeadKeysMask),
-        &deadKeyState, chars.count, &length, &chars)
-      guard status == noErr else { return ("", 0) }
-      return (String(utf16CodeUnits: chars, count: length), deadKeyState)
+        layout, keyCode, UInt16(kUCKeyActionDown), 0, UInt32(LMGetKbdType()),
+        OptionBits(kUCKeyTranslateNoDeadKeysMask), &deadKeyState, chars.count, &length, &chars)
+      guard status == noErr, length > 0 else { return nil }
+      return String(utf16CodeUnits: chars, count: length)
     }
   }
 }

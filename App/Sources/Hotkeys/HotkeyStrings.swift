@@ -53,16 +53,6 @@ extension HotkeyProblem {
       String(
         localized: "The Write shortcut already uses this.", table: "Hotkeys",
         comment: "The other shortcut already has this combination")
-    case .typesCharacter(let character, let layoutName):
-      String(
-        localized: "This types “\(character)” with the \(layoutName) layout.", table: "Hotkeys",
-        comment:
-          "The shortcut would type a letter. The arguments are the letter and a keyboard layout name"
-      )
-    case .deadKey(let layoutName):
-      String(
-        localized: "This is an accent key in the \(layoutName) layout.", table: "Hotkeys",
-        comment: "The shortcut is a dead key. The argument is a keyboard layout name")
     case .registrationFailed(let status):
       // Another app holding the same combination does not make registration fail
       // (observed on macOS 26.5), so the message does not blame another app.

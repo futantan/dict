@@ -166,34 +166,6 @@
         }
       }
     },
-    "This is an accent key in the %@ layout." : {
-      "comment" : "The shortcut is a dead key. The argument is a keyboard layout name",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这个组合在「%@」布局下是重音符号键。"
-          }
-        }
-      }
-    },
-    "This types “%@” with the %@ layout." : {
-      "comment" : "The shortcut would type a letter. The arguments are the letter and a keyboard layout name",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This types “%1$@” with the %2$@ layout."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这个组合在「%2$@」布局下会输入“%1$@”。"
-          }
-        }
-      }
-    },
     "Write" : {
       "comment" : "Name of the shortcut that corrects or translates what the user is writing",
       "localizations" : {

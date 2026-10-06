@@ -13,36 +13,20 @@ enum HotkeyProblem: Equatable, Sendable {
   case reserved
   /// The other role already has it.
   case usedBy(HotkeyRole)
-  /// It types a letter in one of the enabled layouts.
-  case typesCharacter(String, layoutName: String)
-  /// It is a dead key (an accent prefix) in one of the enabled layouts.
-  case deadKey(layoutName: String)
   /// `RegisterEventHotKey` returned a non-zero status.
   case registrationFailed(OSStatus)
-}
-
-/// What a key types in one keyboard layout.
-enum KeyOutput: Equatable, Sendable {
-  case text(String)
-  case deadKey
-}
-
-struct LayoutOutput: Equatable, Sendable {
-  let layoutName: String
-  let output: KeyOutput
 }
 
 /// Pure rules for choosing and showing combinations; the system queries live in
 /// `KeyboardLayout` and `SystemShortcuts`.
 enum HotkeyRules {
-  /// Checks `combo` for `role`. `outputs` is what the combination types in each enabled
-  /// layout; it only matters when neither ⌘ nor ⌃ is held, since those never type text.
+  /// Checks `combo` for `role`. ⌥ with a letter is allowed even though it types a
+  /// character such as "å": the user chose it, as they would in Raycast or macOS itself.
   static func problem(
     for combo: KeyCombo,
     role: HotkeyRole,
     assigned: [HotkeyRole: KeyCombo],
-    reserved: Set<KeyCombo>,
-    outputs: [LayoutOutput]
+    reserved: Set<KeyCombo>
   ) -> HotkeyProblem? {
     let modifiers = combo.modifiers
     let isFunctionKey = functionKeyNames[combo.keyCode] != nil
@@ -57,17 +41,6 @@ enum HotkeyRules {
     if reserved.contains(combo) { return .reserved }
     if let other = assigned.first(where: { $0.key != role && $0.value == combo })?.key {
       return .usedBy(other)
-    }
-    guard modifiers.isDisjoint(with: [.control, .command]) else { return nil }
-    for entry in outputs {
-      switch entry.output {
-      case .deadKey:
-        return .deadKey(layoutName: entry.layoutName)
-      case .text(let text) where text.unicodeScalars.contains(where: CharacterSet.letters.contains):
-        return .typesCharacter(text, layoutName: entry.layoutName)
-      case .text:
-        continue
-      }
     }
     return nil
   }

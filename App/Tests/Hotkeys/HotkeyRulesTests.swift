@@ -18,11 +18,9 @@ struct HotkeyRulesTests {
     _ combo: KeyCombo,
     role: HotkeyRole = .read,
     assigned: [HotkeyRole: KeyCombo] = [:],
-    reserved: Set<KeyCombo> = [],
-    outputs: [LayoutOutput] = []
+    reserved: Set<KeyCombo> = []
   ) -> HotkeyProblem? {
-    HotkeyRules.problem(
-      for: combo, role: role, assigned: assigned, reserved: reserved, outputs: outputs)
+    HotkeyRules.problem(for: combo, role: role, assigned: assigned, reserved: reserved)
   }
 
   @Test func plainOrShiftedCharacterKeysNeedAModifier() {
@@ -54,38 +52,12 @@ struct HotkeyRulesTests {
     #expect(problem(mine, role: .read, assigned: [.read: mine]) == nil)
   }
 
-  @Test func optionLetterThatTypesALetterIsRejectedNamingTheLayout() {
-    let outputs = [
-      LayoutOutput(layoutName: "ABC", output: .text("å")),
-      LayoutOutput(layoutName: "Polish", output: .text("ą")),
-    ]
-    #expect(
-      problem(combo(Self.keyA, .option), outputs: outputs)
-        == .typesCharacter("å", layoutName: "ABC"))
-    #expect(
-      problem(combo(Self.keyA, [.option, .shift]), outputs: outputs)
-        == .typesCharacter("å", layoutName: "ABC"))
-  }
-
-  @Test func deadKeysAreRejected() {
-    let outputs = [
-      LayoutOutput(layoutName: "ABC", output: .text("¡")),
-      LayoutOutput(layoutName: "ABC – Extended", output: .deadKey),
-    ]
-    #expect(
-      problem(combo(Self.keyA, .option), outputs: outputs)
-        == .deadKey(layoutName: "ABC – Extended"))
-  }
-
-  @Test func optionComboThatTypesASymbolIsAccepted() {
-    let outputs = [LayoutOutput(layoutName: "ABC", output: .text("¡"))]
-    #expect(problem(combo(Self.key1, .option), outputs: outputs) == nil)
-  }
-
-  @Test func layoutOutputIsIgnoredWhenCommandOrControlIsHeld() {
-    let outputs = [LayoutOutput(layoutName: "ABC", output: .text("å"))]
-    #expect(problem(combo(Self.keyA, [.control, .option]), outputs: outputs) == nil)
-    #expect(problem(combo(Self.keyA, [.command, .option]), outputs: outputs) == nil)
+  /// ⌥ with a letter is allowed even though it types a character such as "å", as in
+  /// Raycast and macOS itself.
+  @Test func optionLettersAreAccepted() {
+    #expect(problem(combo(Self.keyA, .option)) == nil)
+    #expect(problem(combo(Self.keyA, [.option, .shift])) == nil)
+    #expect(problem(combo(Self.key1, .option)) == nil)
   }
 
   @Test func displayStringOrdersModifiersLikeMacOSMenus() {

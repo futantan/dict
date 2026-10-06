@@ -5,7 +5,8 @@ import Foundation
 import Observation
 
 /// Owns the "read" and "write" global shortcuts: validation, registration with rollback,
-/// persistence and re-checking when keyboard input sources change (architecture 10.1).
+/// persistence, and redrawing key names when keyboard input sources change (architecture
+/// 10.1).
 ///
 /// Call `start()` once at launch; `onPress` receives the role of each press.
 @MainActor
@@ -13,7 +14,7 @@ import Observation
 final class HotkeyCenter {
   /// The saved combinations, including ones that failed to register.
   private(set) var combos: [HotkeyRole: KeyCombo]
-  /// Saved combinations that are not registered or now clash with an enabled layout.
+  /// Saved combinations that are not registered or now clash with a system shortcut.
   /// The status menu shows these.
   private(set) var problems: [HotkeyRole: HotkeyProblem] = [:]
   /// Bumped when input sources change, so key names are redrawn for the new layout.
@@ -66,17 +67,11 @@ final class HotkeyCenter {
     observers = []
   }
 
-  /// Why `combo` cannot be used for `role`, checked against the enabled layouts and the
-  /// system shortcuts as they are now.
+  /// Why `combo` cannot be used for `role`, checked against the system shortcuts as they
+  /// are now.
   func problem(for combo: KeyCombo, role: HotkeyRole) -> HotkeyProblem? {
-    let outputs = KeyboardLayout.enabled().compactMap { layout in
-      layout.output(keyCode: combo.keyCode, modifiers: combo.modifiers).map {
-        LayoutOutput(layoutName: layout.name, output: $0)
-      }
-    }
-    return HotkeyRules.problem(
-      for: combo, role: role, assigned: combos, reserved: SystemShortcuts.reserved(),
-      outputs: outputs)
+    HotkeyRules.problem(
+      for: combo, role: role, assigned: combos, reserved: SystemShortcuts.reserved())
   }
 
   /// Validates, swaps the registration and saves. On failure the previous combination
@@ -137,7 +132,7 @@ final class HotkeyCenter {
         problems[role] = .registrationFailed(error.status)
       }
     }
-    recheckLayouts()
+    recheckRegistered()
   }
 
   private func unregisterAll() {
@@ -147,12 +142,11 @@ final class HotkeyCenter {
 
   private func inputSourcesChanged() {
     layoutRevision += 1
-    recheckLayouts()
   }
 
-  /// Flags registered combinations that a newly enabled layout would type with; they stay
-  /// registered so the user keeps a working shortcut while they pick another.
-  private func recheckLayouts() {
+  /// Flags registered combinations that macOS has since reserved; they stay registered so
+  /// the user keeps a working shortcut while they pick another.
+  private func recheckRegistered() {
     for (role, combo) in combos where registrations[role] != nil {
       problems[role] = problem(for: combo, role: role)
     }

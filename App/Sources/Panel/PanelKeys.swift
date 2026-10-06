@@ -9,6 +9,8 @@ enum PanelKeyRoute: Equatable {
   case dismiss
   /// Copy the panel's result.
   case copyResult
+  /// Replace the selection with the correction shown (architecture 11.5).
+  case confirm
   /// Send an editing action to the first responder. The app has no Edit menu, so nothing
   /// else turns ⌘C, ⌘V and the like into actions.
   case edit(Selector)
@@ -18,18 +20,24 @@ enum PanelKeyRoute: Equatable {
 
 enum PanelKeys {
   static let escape: UInt16 = 53
+  static let returnKey: UInt16 = 36
+  static let keypadEnter: UInt16 = 76
 
   /// - Parameters:
   ///   - hasMarkedText: The focused text field holds uncommitted input-method text. Return,
   ///     Esc and Tab then belong to the input method.
   ///   - hasSelectedText: The focused text view has a non-empty selection.
+  ///   - canReplace: The panel shows a correction that Return writes into the app.
   static func route(
     keyCode: UInt16, characters: String?, modifiers: NSEvent.ModifierFlags,
-    hasMarkedText: Bool, hasSelectedText: Bool, hasResult: Bool
+    hasMarkedText: Bool, hasSelectedText: Bool, hasResult: Bool, canReplace: Bool = false
   ) -> PanelKeyRoute {
     if hasMarkedText { return .pass }
     let modifiers = modifiers.intersection([.command, .shift, .option, .control])
     if keyCode == escape && modifiers.isEmpty { return .dismiss }
+    if canReplace && modifiers.isEmpty && (keyCode == returnKey || keyCode == keypadEnter) {
+      return .confirm
+    }
     guard modifiers == .command || modifiers == [.command, .shift] else { return .pass }
 
     switch (characters?.lowercased(), modifiers) {

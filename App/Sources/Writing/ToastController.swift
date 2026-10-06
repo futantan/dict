@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import AppKit
+import SwiftUI
+
+/// The small note shown after a replacement (architecture 11.3). It never becomes key and
+/// never activates Dict, so the app just written into keeps its focus. It hides after 3 s,
+/// or later while the pointer is over it.
+@MainActor
+final class ToastController {
+  static let shared = ToastController()
+
+  private lazy var panel = makePanel()
+  private let model = ToastModel()
+  private var hideTask: Task<Void, Never>?
+
+  /// Shows `message` under `bounds` (screen coordinates), or at the top of the screen with
+  /// the pointer.
+  func show(_ message: ToastMessage, near bounds: CGRect?) {
+    model.message = message
+    model.copied = false
+    panel.contentView?.layoutSubtreeIfNeeded()
+    let size = panel.contentView?.fittingSize ?? CGSize(width: 280, height: 40)
+    panel.setFrame(CGRect(origin: origin(for: size, near: bounds), size: size), display: true)
+    panel.orderFrontRegardless()
+    Log.ui.info("toast shown: \(message.logName, privacy: .public)")
+    hideTask?.cancel()
+    hideTask = Task { [weak self] in
+      try? await Task.sleep(for: .seconds(3))
+      while self?.model.isHovering == true {
+        try? await Task.sleep(for: .milliseconds(300))
+      }
+      guard !Task.isCancelled else { return }
+      self?.panel.orderOut(nil)
+    }
+  }
+
+  private func origin(for size: CGSize, near bounds: CGRect?) -> CGPoint {
+    let mouse = NSEvent.mouseLocation
+    let screen =
+      NSScreen.screens.first { $0.frame.contains(bounds?.origin ?? mouse) } ?? NSScreen.main
+    let visible = screen?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
+    var origin =
+      if let bounds {
+        CGPoint(x: bounds.minX, y: bounds.minY - 8 - size.height)
+      } else {
+        CGPoint(x: visible.midX - size.width / 2, y: visible.maxY - visible.height * 0.2)
+      }
+    origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
+    origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
+    return origin
+  }
+
+  private func makePanel() -> NSPanel {
+    let panel = ToastPanel(
+      contentRect: CGRect(x: 0, y: 0, width: 280, height: 40),
+      styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+    panel.isFloatingPanel = true
+    panel.level = .floating
+    panel.hidesOnDeactivate = false
+    panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+    panel.isReleasedWhenClosed = false
+    panel.isOpaque = false
+    panel.backgroundColor = .clear
+    panel.hasShadow = true
+    panel.animationBehavior = .utilityWindow
+    panel.setAccessibilityIdentifier("dict.toast")
+    let hosting = FirstMouseHostingView(rootView: ToastView(model: model))
+    hosting.sizingOptions = [.intrinsicContentSize]
+    panel.contentView = hosting
+    return panel
+  }
+}
+
+@MainActor
+@Observable
+private final class ToastModel {
+  var message = ToastMessage.replaced
+  var isHovering = false
+  var copied = false
+}
+
+private struct ToastView: View {
+  let model: ToastModel
+
+  var body: some View {
+    let message = model.message
+    HStack(spacing: 10) {
+      Image(
+        systemName: message.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+      )
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundStyle(message.isSuccess ? Color.green : Color.orange)
+      .accessibilityHidden(true)
+      Text(message.text)
+        .font(.system(size: 13))
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: 320, alignment: .leading)
+      if let result = message.copyableResult {
+        Button(model.copied ? "✓" : WritingStrings.copyResult) {
+          NSPasteboard.general.clearContents()
+          NSPasteboard.general.setString(result, forType: .string)
+          model.copied = true
+        }
+        .controlSize(.small)
+        .fixedSize()
+      }
+    }
+    .padding(.horizontal, 14)
+    .padding(.vertical, 10)
+    .background(.regularMaterial, in: Capsule())
+    .overlay(Capsule().strokeBorder(.separator, lineWidth: 0.5))
+    .fixedSize()
+    .onHover { model.isHovering = $0 }
+  }
+}
+
+/// Never key: the app just written into keeps focus.
+private final class ToastPanel: NSPanel {
+  override var canBecomeKey: Bool { false }
+  override var canBecomeMain: Bool { false }
+}
+
+/// Lets the copy button work on the first click, without making the panel key.
+private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+extension ToastMessage {
+  /// The case name, for logs; never the text.
+  fileprivate var logName: String {
+    switch self {
+    case .replaced: "replaced"
+    case .notReplaced: "notReplaced"
+    case .unconfirmed: "unconfirmed"
+    case .failed: "failed"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import DictCore
 import Foundation
 
 /// Everything the result panel shows (architecture 11.1). The session coordinator builds
@@ -40,13 +41,42 @@ enum PanelPhase: Sendable, Equatable {
   /// A permission or a model is missing; the content comes from the caller (architecture
   /// 11.1, M1.10).
   case needsSetup(PanelNotice)
+  /// The Write key is proofreading this text.
+  case checking(String)
+  /// The proofread text as a diff of the original; Return replaces the selection with it
+  /// when `canReplace`.
+  case corrected(Correction)
 
   /// The text ⌘C copies when nothing in the panel is selected.
   var copyableText: String? {
     switch self {
     case .generating(let text), .result(let text), .partial(let text): text.isEmpty ? nil : text
-    case .input, .reading, .failure, .needsSetup: nil
+    case .corrected(let correction): correction.text
+    case .input, .reading, .failure, .needsSetup, .checking: nil
     }
+  }
+
+  /// Return replaces the selection.
+  var canReplace: Bool {
+    if case .corrected(let correction) = self { correction.canReplace } else { false }
+  }
+}
+
+/// A finished proofread (architecture 6.7).
+struct Correction: Sendable, Equatable {
+  /// The original text with each change in place.
+  var segments: [DiffSegment]
+  /// The corrected text.
+  var text: String
+  var changeCount: Int
+  /// There are changes and the selection's field can be written (architecture 4.3).
+  var canReplace: Bool
+
+  init(_ applied: AppliedEdits, replaceable: Bool) {
+    segments = applied.segments
+    text = applied.text
+    changeCount = applied.changeCount
+    canReplace = replaceable && applied.changeCount > 0
   }
 }
 

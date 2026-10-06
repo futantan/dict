@@ -14,6 +14,9 @@ final class PanelController {
   var onSubmit: (String) -> Void = { _ in }
   /// The user clicked a notice button; the value is `PanelAction.id`.
   var onAction: (PanelAction.ID) -> Void = { _ in }
+  /// Return, or a click on Replace, while the panel shows a correction that can replace
+  /// the selection.
+  var onConfirm: () -> Void = {}
 
   private let model = PanelModel()
   private lazy var panel = makePanel()
@@ -85,12 +88,15 @@ final class PanelController {
       model: model,
       onSubmit: { [weak self] in self?.onSubmit($0) },
       onAction: { [weak self] in self?.onAction($0) },
+      onConfirm: { [weak self] in self?.onConfirm() },
       onContentHeight: { [weak self] in self?.contentHeightChanged($0) })
     let hosting = NSHostingView(rootView: view)
     hosting.sizingOptions = []
     let panel = ResultPanel(content: hosting)
     panel.onEscape = { [weak self] in self?.dismiss(.escape) }
     panel.copyableText = { [weak self] in self?.model.state.phase.copyableText }
+    panel.canReplace = { [weak self] in self?.model.state.phase.canReplace ?? false }
+    panel.onConfirm = { [weak self] in self?.onConfirm() }
     return panel
   }
 
@@ -178,6 +184,8 @@ extension PanelPhase {
     case .partial: "partial"
     case .failure: "failure"
     case .needsSetup: "needsSetup"
+    case .checking: "checking"
+    case .corrected: "corrected"
     }
   }
 }

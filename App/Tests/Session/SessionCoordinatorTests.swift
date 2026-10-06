@@ -125,21 +125,65 @@ private final class StubTranslator: SessionTranslator {
   }
 }
 
+/// Answers with a scripted proofread, optionally after a gate.
+@MainActor
+private final class StubProofreader: SessionProofreader {
+  var result: Result<AppliedEdits, any Error>
+  var gate: Gate?
+  private(set) var requests: [String] = []
+
+  init(_ result: Result<AppliedEdits, any Error>) { self.result = result }
+
+  func proofread(_ text: String) async throws -> AppliedEdits {
+    requests.append(text)
+    await gate?.wait()
+    return try result.get()
+  }
+}
+
+/// Records replacements and answers with a scripted outcome.
+@MainActor
+private final class StubWriter: ReplaceWriter {
+  var outcome = ReplaceOutcome.replaced(via: .accessibility)
+  private(set) var writes: [(target: ReplaceTarget, result: String)] = []
+
+  func replace(_ target: ReplaceTarget, with result: String) async -> ReplaceOutcome {
+    writes.append((target, result))
+    return outcome
+  }
+}
+
 private let bounds = CGRect(x: 100, y: 500, width: 200, height: 20)
 private let mouse = CGPoint(x: 40, y: 60)
 private let granted = PermissionStatus(accessibility: true, postEvent: true)
 private let app = TargetApp(pid: 42, bundleID: "com.apple.TextEdit", launchDate: nil, kind: .native)
 
-private func selection(_ text: String, bounds: CGRect? = bounds) -> Selection {
+private func selection(
+  _ text: String, bounds: CGRect? = bounds, target: ReplaceTarget? = nil
+) -> Selection {
   Selection(
-    text: text, source: .accessibility, app: app, bounds: bounds, context: nil, target: nil)
+    text: text, source: .accessibility, app: app, bounds: bounds, context: nil, target: target)
 }
+
+private func replaceTarget(_ text: String) -> ReplaceTarget {
+  ReplaceTarget(
+    app: app, element: AXElement(raw: AXUIElementCreateApplication(42)),
+    range: CFRange(location: 0, length: text.utf16.count), selectedText: text, valueBefore: text,
+    axWritable: true)
+}
+
+/// "teh cat" proofread to "the cat".
+private let fixed = AppliedEdits(
+  text: "the cat", segments: [.changed(from: "teh", to: "the"), .unchanged(" cat")])
 
 @MainActor
 private final class Harness {
   let reader: StubReader
   let panel = FakePanel()
   let translator: StubTranslator
+  var proofreader: StubProofreader? = StubProofreader(.success(fixed))
+  let writer = StubWriter()
+  var toasts: [ToastMessage] = []
   var status = granted
   var opened: [String] = []
   var permissionActions: [PanelAction.ID] = []
@@ -157,7 +201,10 @@ private final class Harness {
         return $0.hasPrefix("permissions.")
       },
       openSettings: { [unowned self] in opened.append("settings") },
-      mouseLocation: { mouse }))
+      mouseLocation: { mouse },
+      makeProofreader: { [unowned self] in proofreader },
+      replaceWriter: writer,
+      showToast: { [unowned self] message, _ in toasts.append(message) }))
 
   init(
     _ results: [(Result<Selection, CaptureFailure>, Gate?)],
@@ -293,15 +340,6 @@ struct SessionCoordinatorTests {
     let harness = Harness([(.failure(.ownApp), nil)])
     await harness.press()
 
-    #expect(harness.panel.calls.isEmpty)
-  }
-
-  /// The write shortcut has no action until writing help exists (architecture 15.1).
-  @Test func writeDoesNothing() async {
-    let harness = Harness([(.success(selection("Hello")), nil)])
-    await harness.press(.write)
-
-    #expect(harness.reader.calls == 0)
     #expect(harness.panel.calls.isEmpty)
   }
 
@@ -561,5 +599,94 @@ struct SessionCoordinatorTests {
     harness.coordinator.perform(PermissionGuide.ActionID.openSettings)
 
     #expect(harness.permissionActions == [PermissionGuide.ActionID.openSettings])
+  }
+}
+
+@MainActor
+struct WriteSessionTests {
+  @Test func writeChecksTheSelectionThenShowsTheDiff() async {
+    let target = replaceTarget("teh cat")
+    let harness = Harness([(.success(selection("teh cat", target: target)), nil)])
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls == [
+        .show(PanelState(phase: .checking("teh cat")), .selection(bounds)),
+        .update(PanelState(phase: .corrected(Correction(fixed, replaceable: true)))),
+      ])
+    #expect(harness.proofreader?.requests == ["teh cat"])
+    #expect(harness.translator.requests.isEmpty)
+  }
+
+  @Test func withoutAFieldToWriteTheDiffCanOnlyBeCopied() async {
+    let harness = Harness([(.success(selection("teh cat")), nil)])
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls.last
+        == .update(PanelState(phase: .corrected(Correction(fixed, replaceable: false)))))
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.isEmpty)
+    #expect(harness.panel.isVisible)
+  }
+
+  @Test func returnHidesThePanelThenReplacesAndReports() async {
+    let target = replaceTarget("teh cat")
+    let harness = Harness([(.success(selection("teh cat", target: target)), nil)])
+    await harness.press(.write)
+
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.panel.calls.last == .hide)
+    #expect(harness.writer.writes.map(\.result) == ["the cat"])
+    #expect(harness.writer.writes.first?.target.selectedText == "teh cat")
+    #expect(harness.toasts == [.replaced])
+  }
+
+  @Test func aStaleTargetIsReportedWithTheResultToCopy() async {
+    let harness = Harness([(.success(selection("teh cat", target: replaceTarget("teh cat"))), nil)])
+    harness.writer.outcome = .stale(.valueChanged)
+    await harness.press(.write)
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.toasts == [.notReplaced(result: "the cat")])
+  }
+
+  @Test func withoutAModelTheSettingsAreOffered() async {
+    let harness = Harness([(.success(selection("teh cat")), nil)])
+    harness.proofreader = nil
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls.last == .update(PanelState(phase: .needsSetup(WritingStrings.needsModel)))
+    )
+  }
+
+  @Test func nothingSelectedAsksForASelection() async {
+    let harness = Harness([(.failure(.nothingSelected(fieldText: nil)), nil)])
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls == [
+        .show(PanelState(phase: .failure(WritingStrings.nothingToCheck)), .mouse(mouse))
+      ])
+  }
+
+  @Test func theWriteKeyHidesAVisiblePanel() async {
+    let gate = Gate()
+    let harness = Harness([(.success(selection("teh cat")), nil)])
+    harness.proofreader?.gate = gate
+    harness.coordinator.hotkeyPressed(.write)
+    for _ in 0..<5 { await Task.yield() }
+    #expect(harness.panel.isVisible)
+
+    harness.coordinator.hotkeyPressed(.write)
+    gate.open()
+    await harness.coordinator.settle()
+    #expect(!harness.panel.isVisible)
+    #expect(harness.panel.calls.last == .hide)
   }
 }

@@ -94,7 +94,11 @@ struct OnboardingLiveTests {
         permissionNotice: { _ in PanelNotice(title: "") },
         performPermissionAction: { _ in false },
         openSettings: {},
-        mouseLocation: { NSEvent.mouseLocation }))
+        mouseLocation: { NSEvent.mouseLocation },
+        makeProofreader: { nil },
+        replaceWriter: SystemReplaceWriter(
+          system: LiveReplaceSystem(queue: AXQueue(), clipboard: ClipboardGateway())),
+        showToast: { _, _ in }))
 
     coordinator.translateSample(OnboardingModel.sample, near: .none)
     #expect(panel.isVisible)

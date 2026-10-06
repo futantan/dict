@@ -12,6 +12,9 @@ final class ResultPanel: NSPanel {
   var onEscape: () -> Void = {}
   /// The text ⌘C copies when nothing in the panel is selected.
   var copyableText: () -> String? = { nil }
+  /// Called for Return while the panel shows a correction that can replace the selection.
+  var onConfirm: () -> Void = {}
+  var canReplace: () -> Bool = { false }
 
   /// Corner radius of the panel's background.
   static var cornerRadius: CGFloat {
@@ -49,7 +52,7 @@ final class ResultPanel: NSPanel {
       keyCode: event.keyCode, characters: event.charactersIgnoringModifiers,
       modifiers: event.modifierFlags, hasMarkedText: textView?.hasMarkedText() ?? false,
       hasSelectedText: (textView?.selectedRange().length ?? 0) > 0,
-      hasResult: copyableText() != nil)
+      hasResult: copyableText() != nil, canReplace: canReplace())
   }
 
   override func sendEvent(_ event: NSEvent) {
@@ -57,6 +60,8 @@ final class ResultPanel: NSPanel {
     switch route(for: event) {
     case .dismiss:
       onEscape()
+    case .confirm:
+      onConfirm()
     case .copyResult:
       if let text = copyableText() {
         NSPasteboard.general.clearContents()
@@ -76,6 +81,12 @@ final class ResultPanel: NSPanel {
       let glass = NSGlassEffectView()
       glass.cornerRadius = cornerRadius
       glass.contentView = content
+      // Without this mask the window shadow follows the rectangular frame and draws a
+      // grey outline around the rounded glass (seen on macOS 26).
+      glass.wantsLayer = true
+      glass.layer?.cornerRadius = cornerRadius
+      glass.layer?.cornerCurve = .continuous
+      glass.layer?.masksToBounds = true
       return glass
     }
     let effect = NSVisualEffectView()

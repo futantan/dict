@@ -294,7 +294,11 @@
         permissionNotice: { _ in PanelNotice(title: "permission") },
         performPermissionAction: { _ in false },
         openSettings: {},
-        mouseLocation: { NSEvent.mouseLocation }))
+        mouseLocation: { NSEvent.mouseLocation },
+        makeProofreader: { nil },
+        replaceWriter: SystemReplaceWriter(
+          system: LiveReplaceSystem(queue: reader.queue, clipboard: reader.clipboard)),
+        showToast: { _, _ in }))
 
     init(reader: AccessibilitySelectionReader) {
       self.reader = reader

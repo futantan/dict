@@ -37,9 +37,12 @@ func copyMenuItemState(_ item: AXUIElement) -> MenuCopyState? {
 /// The ANSI C key, used when the current layout has no key that types "c".
 let ansiCKeyCode = UInt16(kVK_ANSI_C)
 
-/// The virtual key code whose key types `character`, searched over all 128 key codes.
-func keyCode(typing character: String, translate: (UInt16) -> String?) -> UInt16 {
-  (0..<128).first { translate(UInt16($0)) == character }.map(UInt16.init) ?? ansiCKeyCode
+/// The virtual key code whose key types `character`, searched over all 128 key codes;
+/// `fallback` when no key does.
+func keyCode(
+  typing character: String, translate: (UInt16) -> String?, fallback: UInt16 = ansiCKeyCode
+) -> UInt16 {
+  (0..<128).first { translate(UInt16($0)) == character }.map(UInt16.init) ?? fallback
 }
 
 /// What a key types with ⌘ held, in the current keyboard layout. Main thread only (TIS).
@@ -73,7 +76,13 @@ func commandKeyTranslator() -> (UInt16) -> String? {
 /// modifiers out; posting to the pid is the only delivery that works while our panel is key.
 @MainActor
 func postCopyKey(to pid: pid_t) {
-  let code = keyCode(typing: "c", translate: commandKeyTranslator())
+  postCommandKey(typing: "c", fallback: ansiCKeyCode, to: pid)
+}
+
+/// Posts ⌘ with the key that types `character` in the current layout to one process.
+@MainActor
+func postCommandKey(typing character: String, fallback: UInt16, to pid: pid_t) {
+  let code = keyCode(typing: character, translate: commandKeyTranslator(), fallback: fallback)
   let source = CGEventSource(stateID: .privateState)
   for down in [true, false] {
     guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: down)

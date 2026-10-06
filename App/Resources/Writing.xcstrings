@@ -1,0 +1,310 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld changes" : {
+      "comment" : "Panel footer: how many corrections the proofread made",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 处修改"
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld change"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld changes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "blocked by the content filter" : {
+      "comment" : "Proofread failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "被内容过滤拦下了"
+          }
+        }
+      }
+    },
+    "Can’t replace text in this app; copy it instead." : {
+      "comment" : "Panel footer when the selection's field cannot be written",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法在这个应用里替换，请复制使用。"
+          }
+        }
+      }
+    },
+    "Checking spelling and grammar…" : {
+      "comment" : "Panel footer while the selected text is being proofread",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在检查拼写和语法…"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "comment" : "Panel footer action that copies the correction",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制"
+          }
+        }
+      }
+    },
+    "Copy Correction" : {
+      "comment" : "Toast button that copies the correction",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制修改结果"
+          }
+        }
+      }
+    },
+    "Couldn’t confirm the replacement. Please check the text." : {
+      "comment" : "Toast when the field changed in an unexpected way",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没能确认替换，请检查文字。"
+          }
+        }
+      }
+    },
+    "Couldn’t confirm the replacement. The correction is on the clipboard." : {
+      "comment" : "Toast when the paste could not be confirmed and the clipboard keeps the result",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没能确认替换，修改后的文字在剪贴板里。"
+          }
+        }
+      }
+    },
+    "Couldn’t paste into this app." : {
+      "comment" : "Toast when the paste did not change the field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没能粘贴到这个应用里。"
+          }
+        }
+      }
+    },
+    "Dict proofreads with a model you choose, using your own API key. Add the key in Settings → Model, or use Ollama on this Mac." : {
+      "comment" : "How to set up a model for proofreading",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 用你选择的模型纠错，使用你自己的 API Key。请在「设置 → 模型」里添加 Key，或者使用本机的 Ollama。"
+          }
+        }
+      }
+    },
+    "No mistakes found" : {
+      "comment" : "Panel footer when the proofread changed nothing",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有发现错误"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "comment" : "Button that opens Settings",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置"
+          }
+        }
+      }
+    },
+    "Proofread" : {
+      "comment" : "Panel footer title of the Write flow",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纠错"
+          }
+        }
+      }
+    },
+    "Reason: %@." : {
+      "comment" : "Why proofreading failed; the argument is a short reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原因：%@。"
+          }
+        }
+      }
+    },
+    "Replace" : {
+      "comment" : "Panel footer action that replaces the selection with the correction",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换"
+          }
+        }
+      }
+    },
+    "Replaced · ⌘Z to undo" : {
+      "comment" : "Toast after the selection was replaced",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已替换 · ⌘Z 撤销"
+          }
+        }
+      }
+    },
+    "Select text to check" : {
+      "comment" : "Title when the Write shortcut found no selected text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先选中要检查的文字"
+          }
+        }
+      }
+    },
+    "Select what you wrote, then press the Write shortcut again." : {
+      "comment" : "How to use the Write shortcut",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选中你写的文字，再按一次「写」快捷键。"
+          }
+        }
+      }
+    },
+    "Set up a model to proofread" : {
+      "comment" : "Title when there is no model to proofread with",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置模型后才能纠错"
+          }
+        }
+      }
+    },
+    "the answer was cut off" : {
+      "comment" : "Proofread failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答被截断了"
+          }
+        }
+      }
+    },
+    "the connection was interrupted" : {
+      "comment" : "Proofread failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接中断了"
+          }
+        }
+      }
+    },
+    "the corrections didn’t match the text" : {
+      "comment" : "Proofread failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改和原文对不上"
+          }
+        }
+      }
+    },
+    "The model couldn’t proofread this" : {
+      "comment" : "Title of the error when proofreading failed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型没能完成纠错"
+          }
+        }
+      }
+    },
+    "The text changed, so it wasn’t replaced." : {
+      "comment" : "Toast when the selection changed before replacing",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原文已改变，没有替换。"
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "comment" : "Retry button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        }
+      }
+    },
+    "unexpected response" : {
+      "comment" : "Proofread failure reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回的内容无法识别"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

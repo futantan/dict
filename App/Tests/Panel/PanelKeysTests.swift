@@ -14,6 +14,7 @@ struct PanelKeysTests {
     var marked = false
     var selected = false
     var result = false
+    var replaceable = false
     let expected: PanelKeyRoute
 
     var testDescription: String { name }
@@ -34,6 +35,18 @@ struct PanelKeysTests {
       name: "Tab while composing goes to the input method", keyCode: 48, characters: "\t",
       marked: true, expected: .pass),
     Case(name: "Return is left to the text field", keyCode: 36, characters: "\r", expected: .pass),
+    Case(
+      name: "Return replaces with a correction", keyCode: 36, characters: "\r", replaceable: true,
+      expected: .confirm),
+    Case(
+      name: "keypad Enter replaces with a correction", keyCode: 76, characters: "\u{3}",
+      replaceable: true, expected: .confirm),
+    Case(
+      name: "Return while composing never replaces", keyCode: 36, characters: "\r", marked: true,
+      replaceable: true, expected: .pass),
+    Case(
+      name: "⌘Return is not Return", keyCode: 36, characters: "\r", modifiers: command,
+      replaceable: true, expected: .pass),
     Case(
       name: "⌘Esc is not Esc", keyCode: 53, characters: "\u{1b}", modifiers: command,
       expected: .pass),
@@ -80,7 +93,7 @@ struct PanelKeysTests {
     let route = PanelKeys.route(
       keyCode: c.keyCode, characters: c.characters,
       modifiers: NSEvent.ModifierFlags(rawValue: c.modifiers), hasMarkedText: c.marked,
-      hasSelectedText: c.selected, hasResult: c.result)
+      hasSelectedText: c.selected, hasResult: c.result, canReplace: c.replaceable)
     #expect(route == c.expected)
   }
 }

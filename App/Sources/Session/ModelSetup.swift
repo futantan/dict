@@ -41,3 +41,15 @@ func makeTranslationEngine(
   }
   return TranslationEngine(model: model)
 }
+
+/// The proofreader for the saved model preferences; nil without a usable model, since
+/// proofreading has no fallback.
+func makeProofreader(
+  _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore
+) -> Proofreader? {
+  configuredModel(preferences, presets: presets, secrets: secrets).map {
+    Proofreader(
+      model: ChatCompletionsModel(
+        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+  }
+}

@@ -83,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     panel.onDismiss = { [weak coordinator] in coordinator?.panelDismissed($0) }
     panel.onSubmit = { [weak coordinator] in coordinator?.submitted($0) }
     panel.onAction = { [weak coordinator] in coordinator?.perform($0) }
+    panel.onConfirm = { [weak coordinator] in coordinator?.confirm() }
     hotkeys.onPress = { [weak coordinator] in coordinator?.hotkeyPressed($0) }
     hotkeys.start()
 
@@ -120,7 +121,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         permissionNotice: { guide.notice(for: $0) },
         performPermissionAction: { guide.perform($0) },
         openSettings: { SettingsWindowController.shared.show(.model) },
-        mouseLocation: { NSEvent.mouseLocation }))
+        mouseLocation: { NSEvent.mouseLocation },
+        makeProofreader: {
+          makeProofreader(
+            PreferencesStore(defaults: .standard).load().model, presets: presets,
+            secrets: CachedSecretStore.app)
+        },
+        replaceWriter: SystemReplaceWriter(
+          system: LiveReplaceSystem(queue: reader.queue, clipboard: reader.clipboard)),
+        showToast: { ToastController.shared.show($0, near: $1) }))
   }
 
   /// Opening Settings or the onboarding window ends the session (architecture 11.4), and

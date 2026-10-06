@@ -23,6 +23,8 @@ struct AccessibilityRead: Sendable {
   let outcome: Result<String, CaptureFailure>
   let bounds: CGRect?
   let context: ContextSentence?
+  /// The field, when the selection may be replaced (architecture 4.3).
+  let target: ReplaceSnapshot?
   let attempts: Int
   let firstStage: Duration
   let secondStage: Duration?
@@ -34,8 +36,9 @@ struct AccessibilityRead: Sendable {
 final class AccessibilitySelectionReader: SelectionReader {
   let warmer: AccessibilityWarmer
   private(set) var lastReport = CaptureReport()
-  private let queue: AXQueue
-  private let clipboard: ClipboardGateway
+  /// The one accessibility queue; replacing uses it too.
+  let queue: AXQueue
+  let clipboard: ClipboardGateway
   private let resolver: TargetAppResolver
   private var copyItems: [TargetApp.InstanceKey: AXElement] = [:]
 
@@ -90,10 +93,15 @@ final class AccessibilitySelectionReader: SelectionReader {
       report.secondStageMs = read.secondStage.map(milliseconds)
       switch read.outcome {
       case .success(let text):
+        let target = read.target.map {
+          ReplaceTarget(
+            app: app, element: $0.element, range: $0.range, selectedText: text,
+            valueBefore: $0.valueBefore, axWritable: $0.axWritable)
+        }
         return .success(
           Selection(
             text: text, source: .accessibility, app: app, bounds: read.bounds,
-            context: read.context, target: nil))
+            context: read.context, target: target))
       case .failure(let failure):
         firstFailure = failure
       }
@@ -220,7 +228,8 @@ final class AccessibilitySelectionReader: SelectionReader {
 
 /// Both stages of the accessibility read (architecture 3.4, 3.5). Accessibility queue only.
 /// The first stage has 150 ms in all; the second, best effort, another 100 ms, and a field it
-/// misses stays nil.
+/// misses stays nil. The replace snapshot is always taken: the Write key cannot work without
+/// it, and it costs a few attribute reads.
 func readSelection(pid: pid_t, kind: AppKind, screens: [CGRect]) -> AccessibilityRead {
   let clock = ContinuousClock()
   let start = clock.now
@@ -239,7 +248,7 @@ func readSelection(pid: pid_t, kind: AppKind, screens: [CGRect]) -> Accessibilit
   switch outcome {
   case .failed(let failure):
     return AccessibilityRead(
-      outcome: .failure(failure), bounds: nil, context: nil, attempts: attempts,
+      outcome: .failure(failure), bounds: nil, context: nil, target: nil, attempts: attempts,
       firstStage: firstStage, secondStage: nil)
   case .found(let found):
     let secondStart = clock.now
@@ -248,8 +257,10 @@ func readSelection(pid: pid_t, kind: AppKind, screens: [CGRect]) -> Accessibilit
     }
     let context =
       clock.now - secondStart < .milliseconds(100) ? readContext(found, kind: kind) : nil
+    let target = replaceSnapshot(found, kind: kind)
     return AccessibilityRead(
-      outcome: .success(found.text), bounds: bounds, context: context, attempts: attempts,
+      outcome: .success(found.text), bounds: bounds, context: context, target: target,
+      attempts: attempts,
       firstStage: firstStage, secondStage: clock.now - secondStart)
   }
 }

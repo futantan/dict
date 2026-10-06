@@ -11,6 +11,8 @@ import SwiftUI
 /// clicked, and `ResultPanel` copies its selection (architecture 11.5).
 struct SelectableText: NSViewRepresentable {
   let text: String
+  /// Shown instead of `text` when set; it carries its own font, colors and spacing.
+  var attributed: NSAttributedString?
   let font: NSFont
   var color: NSColor = .labelColor
   var lineSpacing: CGFloat = 0
@@ -37,9 +39,11 @@ struct SelectableText: NSViewRepresentable {
   func updateNSView(_ view: NSTextView, context: Context) {
     let paragraph = NSMutableParagraphStyle()
     paragraph.lineSpacing = lineSpacing
-    let attributed = NSAttributedString(
-      string: text,
-      attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph])
+    let attributed =
+      self.attributed
+      ?? NSAttributedString(
+        string: text,
+        attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph])
     if view.textStorage?.isEqual(to: attributed) != true {
       view.textStorage?.setAttributedString(attributed)
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import AppKit
+import DictCore
 import SwiftUI
 
 /// The panel's observable state, owned by `PanelController`.
@@ -29,12 +30,13 @@ struct PanelView: View {
   let model: PanelModel
   var onSubmit: (String) -> Void = { _ in }
   var onAction: (PanelAction.ID) -> Void = { _ in }
+  var onConfirm: () -> Void = {}
   /// Reports the height the content wants; the controller sizes the window from it.
   var onContentHeight: (CGFloat) -> Void = { _ in }
 
   var body: some View {
     ScrollView(.vertical) {
-      PanelContent(model: model, onSubmit: onSubmit, onAction: onAction)
+      PanelContent(model: model, onSubmit: onSubmit, onAction: onAction, onConfirm: onConfirm)
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: onContentHeight)
@@ -61,6 +63,32 @@ private enum Metrics {
 }
 
 private struct PanelContent: View {
+  let model: PanelModel
+  let onSubmit: (String) -> Void
+  let onAction: (PanelAction.ID) -> Void
+  let onConfirm: () -> Void
+
+  var body: some View {
+    VStack(spacing: 0) {
+      PanelBody(model: model, onSubmit: onSubmit, onAction: onAction)
+      switch model.state.phase {
+      case .checking:
+        Divider()
+        ActionBar(status: .checking)
+      case .corrected(let correction):
+        Divider()
+        ActionBar(
+          status: .corrected(correction),
+          onReplace: onConfirm,
+          onCopy: { copyToClipboard(correction.text) })
+      default:
+        EmptyView()
+      }
+    }
+  }
+}
+
+private struct PanelBody: View {
   let model: PanelModel
   let onSubmit: (String) -> Void
   let onAction: (PanelAction.ID) -> Void
@@ -96,6 +124,16 @@ private struct PanelContent: View {
       case .needsSetup(let notice):
         NoticeView(
           notice: notice, defaultSymbol: "gearshape.fill", tint: .accentColor, onAction: onAction)
+      case .checking(let text):
+        SelectableText(
+          text: text, font: Metrics.bodyNSFont, color: .secondaryLabelColor,
+          lineSpacing: Metrics.bodyLineSpacing)
+      case .corrected(let correction):
+        SelectableText(
+          text: correction.text,
+          attributed: diffText(correction.segments),
+          font: Metrics.bodyNSFont, lineSpacing: Metrics.bodyLineSpacing,
+          accessibilityLabel: WritingStrings.title)
       }
       if let note = state.note, state.phase.showsNote {
         NoteLine(note: note, onAction: onAction)
@@ -263,7 +301,145 @@ extension PanelPhase {
   fileprivate var showsNote: Bool {
     switch self {
     case .generating, .result, .partial: true
-    case .input, .reading, .failure, .needsSetup: false
+    case .input, .reading, .failure, .needsSetup, .checking, .corrected: false
+    }
+  }
+}
+
+// MARK: - Write flow
+
+/// The proofread text with each change in place: the removed words struck through in red,
+/// the inserted ones in green, a plain space between the two so they do not run together.
+@MainActor
+func diffText(_ segments: [DiffSegment]) -> NSAttributedString {
+  let paragraph = NSMutableParagraphStyle()
+  paragraph.lineSpacing = Metrics.bodyLineSpacing
+  let base: [NSAttributedString.Key: Any] = [
+    .font: Metrics.bodyNSFont, .foregroundColor: NSColor.labelColor, .paragraphStyle: paragraph,
+  ]
+  let text = NSMutableAttributedString()
+  for segment in segments {
+    switch segment {
+    case .unchanged(let run):
+      text.append(NSAttributedString(string: run, attributes: base))
+    case .changed(let from, let to):
+      if !from.isEmpty {
+        var removed = base
+        removed[.foregroundColor] = NSColor.systemRed
+        removed[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+        removed[.strikethroughColor] = NSColor.systemRed
+        text.append(NSAttributedString(string: from, attributes: removed))
+      }
+      if !from.isEmpty && !to.isEmpty {
+        text.append(NSAttributedString(string: " ", attributes: base))
+      }
+      if !to.isEmpty {
+        var inserted = base
+        inserted[.foregroundColor] = NSColor.systemGreen
+        inserted[.backgroundColor] = NSColor.systemGreen.withAlphaComponent(0.14)
+        text.append(NSAttributedString(string: to, attributes: inserted))
+      }
+    }
+  }
+  return text
+}
+
+private func copyToClipboard(_ text: String) {
+  NSPasteboard.general.clearContents()
+  NSPasteboard.general.setString(text, forType: .string)
+}
+
+/// The bar along the bottom of the Write panel, in the manner of a launcher's action bar:
+/// what happened on the left, the actions and their keys on the right.
+private struct ActionBar: View {
+  enum Status {
+    case checking
+    case corrected(Correction)
+  }
+
+  let status: Status
+  var onReplace: () -> Void = {}
+  var onCopy: () -> Void = {}
+
+  var body: some View {
+    HStack(spacing: 10) {
+      summary
+        .font(.system(size: 12))
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      if case .corrected(let correction) = status {
+        if correction.canReplace {
+          KeyedAction(
+            title: WritingStrings.replaceAction, keys: ["↩"], isPrimary: true, perform: onReplace)
+          Divider().frame(height: 14)
+        }
+        KeyedAction(
+          title: WritingStrings.copyAction, keys: ["⌘", "C"], isPrimary: false, perform: onCopy)
+      }
+    }
+    .padding(.horizontal, 12)
+    .frame(height: 38)
+  }
+
+  @ViewBuilder private var summary: some View {
+    switch status {
+    case .checking:
+      HStack(spacing: 6) {
+        ProgressView().controlSize(.mini)
+        Text(WritingStrings.checking)
+      }
+    case .corrected(let correction):
+      if correction.changeCount == 0 {
+        Label(WritingStrings.noMistakes, systemImage: "checkmark.circle.fill")
+          .labelStyle(TintedIconLabelStyle(tint: .green))
+      } else if !correction.canReplace {
+        Label(WritingStrings.cannotReplace, systemImage: "info.circle")
+      } else {
+        Label(
+          "\(WritingStrings.title) · \(WritingStrings.changes(correction.changeCount))",
+          systemImage: "text.badge.checkmark")
+      }
+    }
+  }
+
+  private struct KeyedAction: View {
+    let title: String
+    let keys: [String]
+    let isPrimary: Bool
+    let perform: () -> Void
+
+    var body: some View {
+      Button(action: perform) {
+        HStack(spacing: 6) {
+          Text(title)
+            .font(.system(size: 12, weight: isPrimary ? .semibold : .regular))
+            .foregroundStyle(isPrimary ? .primary : .secondary)
+          HStack(spacing: 3) {
+            ForEach(keys, id: \.self) { key in
+              Text(key)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 18, minHeight: 18)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+            }
+          }
+        }
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(title)
+    }
+  }
+}
+
+private struct TintedIconLabelStyle: LabelStyle {
+  let tint: Color
+
+  func makeBody(configuration: Configuration) -> some View {
+    HStack(spacing: 6) {
+      configuration.icon.foregroundStyle(tint)
+      configuration.title
     }
   }
 }

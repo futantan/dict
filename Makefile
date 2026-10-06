@@ -8,7 +8,7 @@ SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/
 	Packages/DictCore/Tests scripts tools/build-dict/Package.swift tools/build-dict/Sources \
 	tools/build-dict/Tests
 
-.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update dict-cloud-export dict-cloud-verify smoke window-test e2e e2e-live matrix eval import-key run package lint format clean
+.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update dict-cloud-export dict-cloud-verify smoke window-test e2e e2e-live matrix eval import-key run run-mock stop-mock test-mock package lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -16,7 +16,7 @@ generate:
 build: generate
 	$(XCODEBUILD) build
 
-test: test-core test-dict test-app smoke
+test: test-core test-dict test-mock test-app smoke
 
 test-core:
 	cd Packages/DictCore && swift test
@@ -59,6 +59,10 @@ tools/cloud-dict/node_modules: tools/cloud-dict/package-lock.json
 	npm ci --prefix tools/cloud-dict
 	touch $@
 
+# The mock model's answering mode (scripts/fake-model.py) on a free port; no network.
+test-mock:
+	python3 scripts/fake-model-test.py
+
 test-app: generate
 	$(XCODEBUILD) test
 
@@ -91,6 +95,13 @@ eval:
 
 run: build
 	open "$$(scripts/app-path.sh $(CONFIG))"
+
+# The Debug app against the local mock model on 127.0.0.1:8767: no key, no tokens.
+run-mock: build
+	scripts/mock-model.sh start
+
+stop-mock:
+	scripts/mock-model.sh stop
 
 package: generate
 	scripts/package.sh

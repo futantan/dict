@@ -28,7 +28,8 @@ Install XcodeGen once with `brew install xcodegen`.
 make generate   # create DictApp.xcodeproj from project.yml
 make build      # Debug build: "Dict Dev", bundle id au.ibra.dict.dev
 make run        # build and launch the Debug app
-make test       # DictCore and dictionary-builder tests, app unit tests, end-to-end smoke test
+make run-mock   # the Debug app against a local mock model: no key, no tokens (make stop-mock)
+make test       # DictCore, dictionary-builder and mock-model tests, app unit tests, smoke test
 make lint       # swift format lint (Xcode's bundled swift-format)
 make format     # apply swift format in place
 make package    # Release build zipped into build/dist/
@@ -48,6 +49,18 @@ It never takes focus or sends key events, but the terminal running it needs Acce
 The window test launches the app through Launch Services as `open` does and checks that the first-run window, and Settings and About opened from the menu bar item, come up as the frontmost, key window.
 It forces the first-run window with the launch argument `-onboarding.completed NO`, so the user's preferences are never written.
 It takes focus, so it is not part of `make test` and holds `/private/tmp/dict-ui.lock` while it runs.
+
+### Running without spending tokens
+
+`make test` and `make e2e` never call a real model; `make e2e-live`, `make eval` and the Dev app with a saved key do.
+To try the Dev app by hand without a key, run `make run-mock`, and `make stop-mock` when done.
+It starts `scripts/fake-model.py` on `127.0.0.1:8767` and relaunches the Dev app with `DICT_MOCK_MODEL=http://127.0.0.1:8767/v1`.
+The variable works only in Debug builds and replaces the saved model and Keychain key for that process, so a later `make run` uses the real model again.
+The mock streams replies from `Fixtures/MockModel/replies.json`, matched by a substring of the selected text.
+Proofreading text not in the table finds no mistakes, and translations echo the source; every translation starts with `[mock]`.
+For example, proofreading "Their going to the park tomorow, I think it will be fun." shows two changes.
+Its request log is `build/mock-model.log`, one line per request without the text.
+`make test-mock` checks the mock's stream format, and a DictCore test checks that every proofreading reply in the table applies to its text.
 
 ## Dictionary data
 

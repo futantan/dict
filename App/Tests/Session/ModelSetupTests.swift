@@ -42,3 +42,50 @@ struct ModelSetupTests {
     #expect(configuredModel(openAI, presets: presets, secrets: BrokenStore()) == nil)
   }
 }
+
+/// Fails the test on any read: the mock model must never touch the Keychain.
+private struct UntouchableStore: SecretStore {
+  func secret(for account: String) throws(KeychainError) -> String? {
+    Issue.record("read the key for \(account)")
+    return nil
+  }
+  func setSecret(_ secret: String?, for account: String) throws(KeychainError) {
+    Issue.record("wrote the key for \(account)")
+  }
+}
+
+struct MockModelSetupTests {
+  private let presets = (try? ProviderPreset.all()) ?? []
+  private let mock = ["DICT_MOCK_MODEL": "http://127.0.0.1:8767/v1"]
+
+  @Test func theVariableOverridesThePreferencesWithoutTheKeychain() throws {
+    let model = try #require(
+      configuredModel(
+        ModelPreferences(providerID: "openai"), presets: presets, secrets: UntouchableStore(),
+        environment: mock))
+    #expect(model.configuration.endpoint.baseURL.absoluteString == "http://127.0.0.1:8767/v1")
+    #expect(model.configuration.endpoint.providerID == ProviderPreset.customID)
+    #expect(model.configuration.endpoint.model == "mock")
+    #expect(model.apiKey == "mock")
+  }
+
+  @Test func itWorksWithNoModelSaved() {
+    #expect(
+      configuredModel(
+        ModelPreferences(), presets: presets, secrets: UntouchableStore(), environment: mock)
+        != nil)
+  }
+
+  @Test func aURLOffThisMacIsRefusedRatherThanFallingBackToTheRealModel() {
+    #expect(
+      configuredModel(
+        ModelPreferences(providerID: "openai"), presets: presets, secrets: UntouchableStore(),
+        environment: ["DICT_MOCK_MODEL": "http://example.com/v1"]) == nil)
+  }
+
+  @Test func anEmptyVariableIsIgnored() {
+    #expect(mockModelBaseURL(["DICT_MOCK_MODEL": " "]) == nil)
+    #expect(mockModelBaseURL([:]) == nil)
+    #expect(mockModelBaseURL(mock) == "http://127.0.0.1:8767/v1")
+  }
+}

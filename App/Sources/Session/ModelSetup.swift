@@ -5,10 +5,15 @@ import Foundation
 
 /// The model to translate with, from the saved preferences and the provider's key in the
 /// Keychain; nil when no usable model is set up, so Apple Translation is used (architecture
-/// 6.5). The key itself is never logged.
+/// 6.5). The key itself is never logged. In a Debug build, `DICT_MOCK_MODEL` in
+/// `environment` replaces all of that with the local mock model (`mockModelBaseURL`).
 func configuredModel(
-  _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore
+  _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore,
+  environment: [String: String] = ProcessInfo.processInfo.environment
 ) -> (configuration: ModelConfiguration, apiKey: String?)? {
+  if let baseURL = mockModelBaseURL(environment) {
+    return mockModel(baseURL: baseURL, presets: presets)
+  }
   guard let providerID = preferences.providerID else { return nil }
   var key: String?
   do {
@@ -24,6 +29,37 @@ func configuredModel(
   } catch {
     Log.model.info(
       "model not usable (\(String(describing: error), privacy: .public)); using Apple Translation")
+    return nil
+  }
+}
+
+/// The base URL of the local mock model (`scripts/fake-model.py`, started by `make run-mock`)
+/// from the `DICT_MOCK_MODEL` environment variable; nil when unset, and always nil in a
+/// Release build. With it, the saved preferences and the Keychain go unused, so nothing
+/// is sent to a real provider.
+func mockModelBaseURL(
+  _ environment: [String: String] = ProcessInfo.processInfo.environment
+) -> String? {
+  #if DEBUG
+    let value = environment["DICT_MOCK_MODEL"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return value?.isEmpty == false ? value : nil
+  #else
+    return nil
+  #endif
+}
+
+/// The custom provider at the mock's base URL with placeholder model and key. A URL that is
+/// not usable (plain http off this Mac, say) means no model, never the real one.
+private func mockModel(
+  baseURL: String, presets: [ProviderPreset]
+) -> (configuration: ModelConfiguration, apiKey: String?)? {
+  let preferences = ModelPreferences(
+    providerID: ProviderPreset.customID, model: "mock", baseURL: baseURL)
+  do {
+    return (try preferences.configuration(presets: presets, hasKey: true), "mock")
+  } catch {
+    Log.model.error(
+      "DICT_MOCK_MODEL not usable (\(String(describing: error), privacy: .public)); no model")
     return nil
   }
 }

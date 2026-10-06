@@ -1,0 +1,18 @@
+{
+  "translations": {
+    "The quick brown fox jumps over the lazy dog.": "敏捷的棕色狐狸跳过了那只懒狗。",
+    "five dozen liquor jugs": "五打酒壶",
+    "我们明天下午三点开会。": "We have a meeting at three tomorrow afternoon."
+  },
+  "proofreads": {
+    "Their going to the park tomorow, I think it will be fun.": {
+      "edits": [
+        { "kind": "grammar", "wrong": "Their", "right": "They're" },
+        { "kind": "punctuation", "wrong": "tomorow,", "right": "tomorrow." }
+      ]
+    },
+    "She dont like apples.": {
+      "edits": [{ "kind": "grammar", "wrong": "dont", "right": "doesn't" }]
+    }
+  }
+}

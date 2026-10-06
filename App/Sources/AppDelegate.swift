@@ -100,6 +100,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     if showingOnboarding && !onboardingCompleted {
       showOnboarding()
     }
+    if let mock = mockModelBaseURL() {
+      Log.model.notice("mock model at \(mock, privacy: .public)")
+    }
     Log.ui.info(
       "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.combos.count, privacy: .public)"
     )

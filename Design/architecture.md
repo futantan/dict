@@ -1425,6 +1425,12 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - 逐词高亮：范围会带上尾随标点和前导空格【实测，评审】，绘制前裁掉。
 - 测试一律用渲染模式，不出声。
 
+现状：M2.7 已实现 `DictCore` 的 `resolveVoice`（`Speech/`）和应用的 `Speaker`（`App/Sources/Speech/`），但还没接到界面；⌘P、卡片喇叭、设置页的音色提示和「管理语音」按钮的跳转、启动后调用预热都随 M2.8 做。
+与上面的接口有三处不同。
+`resolveVoice` 返回 `VoiceChoice`：选中的 `VoiceInfo`（没有可用音色时为 nil）加至多一条提示，`noVoice`、`accentMissing`（没有这个口音，暂用同语言的其他地区）或 `higherQuality`（只有 compact 档；enhanced 及以上不提示）。
+`Speaker` 是一个 `@MainActor` 的具体类而不是协议，另有 `accent`、`isSpeaking`、`voiceChoice(for:)` 和 `prewarm(language:)`；构造时选输出到扬声器或渲染进缓冲，测试只用后者。
+选音色时同档里老的 MacinTalk 音色（`com.apple.speech.synthesis.voice.*`，例如 Fred、Kathy）排在最后，否则按名字排序会选到它们而不是 Samantha；口音没有对应音色时先回退到语言的默认地区（英语为美音），再按档位和地区代码选其他地区。
+
 ## 10. 触发
 
 ### 10.1 全局快捷键

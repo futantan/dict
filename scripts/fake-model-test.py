@@ -171,6 +171,7 @@ class AnsweringModeTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as caught:
             self.get("/v1/chat/completions")
         self.assertEqual(caught.exception.code, 404)
+        self.assertIn("message", json.loads(caught.exception.read())["error"])
 
 
 if __name__ == "__main__":

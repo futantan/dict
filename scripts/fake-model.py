@@ -23,6 +23,7 @@
 # Two GETs list the one model, `mock`, for the Settings model list:
 #   /v1/models  in the OpenAI shape, as a custom provider's base URL plus /models;
 #   /api/tags   in the Ollama shape.
+# Any other GET is a 404 with an OpenAI-shaped error body, {"error": {"message": …}}.
 #
 # Logs one line per request to stderr: the path, the reply kind and whether the table had
 # it; never the text.
@@ -140,13 +141,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/")
-        if path not in MODEL_LISTS:
-            self.log("404")
-            self.send_error(404)
-            return
-        payload = json.dumps(MODEL_LISTS[path]).encode()
-        self.log("200 models")
-        self.send_response(200)
+        found = path in MODEL_LISTS
+        status = 200 if found else 404
+        # Errors in the OpenAI shape, which the model list reads its message from.
+        body = MODEL_LISTS[path] if found else {"error": {"message": f"no route {path}"}}
+        payload = json.dumps(body).encode()
+        self.log(f"{status} models" if found else "404")
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()

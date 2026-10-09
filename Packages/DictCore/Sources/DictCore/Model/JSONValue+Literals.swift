@@ -12,7 +12,7 @@ extension JSONValue: ExpressibleByNilLiteral, ExpressibleByBooleanLiteral,
   public init(arrayLiteral elements: JSONValue...) { self = .array(elements) }
 
   public init(dictionaryLiteral elements: (String, JSONValue)...) {
-    self = .object(Dictionary(elements, uniquingKeysWith: { _, last in last }))
+    self = .object(JSONObject(elements))
   }
 }
 

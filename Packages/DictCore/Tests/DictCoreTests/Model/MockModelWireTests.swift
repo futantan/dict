@@ -75,6 +75,43 @@ struct MockModelWireTests {
     #expect(dropped.names(for: model.endpoint).isEmpty)
   }
 
+  /// The card streams in many deltas; the scanner has the definition while the arrays are
+  /// still to come, and the whole answer decodes to the fixture card.
+  @Test func cardStreamsItsDefinitionBeforeTheArrays() async throws {
+    let fake = try FakeModel()
+    let model = try model(fake, dropped: DroppedParameters())
+    let request = PromptBuilder.card(
+      term: "ran", context: "She ran a small bakery for ten years.", pair: LanguagePair(),
+      accent: .american, nonce: "0a1b2c3d")
+    var text = ""
+    var scanner = TopLevelFieldScanner()
+    var deltas = 0
+    var textWhenDefinitionArrived: String?
+    var finish: FinishReason?
+    for try await event in model.stream(request) {
+      switch event {
+      case .text(let delta):
+        text += delta
+        deltas += 1
+        scanner.feed(delta)
+        if textWhenDefinitionArrived == nil, scanner.values["definition"] != nil {
+          textWhenDefinitionArrived = text
+        }
+      case .finished(let reason, _): finish = reason
+      case .thinking, .discardText: break
+      }
+    }
+    #expect(finish == .complete)
+    #expect(deltas > 4)
+    #expect(scanner.values["definition"] == "[mock] 经营；管理")
+    let early = try #require(textWhenDefinitionArrived)
+    #expect(!early.contains("examples"))
+    let card = try decodeCard(text)
+    #expect(card.lemma == "run")
+    #expect(card.definition == "[mock] 经营；管理")
+    #expect(card.examples.count == 2)
+  }
+
   @Test func proofreadingAppliesTheFixtureEdits() async throws {
     let fake = try FakeModel()
     let dropped = DroppedParameters()

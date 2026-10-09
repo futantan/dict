@@ -5,6 +5,9 @@ import Testing
 
 @testable import DictCore
 
+/// The snapshots are the bytes sent on the wire (`JSONValue.jsonData`), so they also pin the
+/// order of every object: providers with strict structured output write the answer's keys in
+/// the order of the schema's `properties`.
 struct RequestBodyTests {
   private let translate = ModelRequest(
     system: "SYS", user: "USER", output: .text, maxOutputTokens: 256)
@@ -24,60 +27,89 @@ struct RequestBodyTests {
     var endpoint = preset.endpoint(model: model, thinking: thinking)
     if let jsonMode { endpoint.jsonMode = jsonMode }
     let body = requestBody(request, endpoint: endpoint, rules: preset.thinkingRules)
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    return String(decoding: try encoder.encode(body), as: UTF8.self)
+    return String(decoding: body.jsonData(), as: UTF8.self)
   }
 
   private let messages =
-    #""messages":[{"content":"SYS","role":"system"},{"content":"USER","role":"user"}]"#
+    #""messages":[{"role":"system","content":"SYS"},{"role":"user","content":"USER"}]"#
+  private let streaming = #""stream":true,"stream_options":{"include_usage":true}"#
+  private let strictCard =
+    #""response_format":{"type":"json_schema","json_schema":{"name":"card","strict":true,"#
+    + #""schema":{"type":"object"}}}"#
 
   @Test func openAITranslation() throws {
     #expect(
       try snapshot(translate, "openai")
-        == #"{"max_completion_tokens":256,\#(messages),"model":"gpt-6-luna","#
-        + #""reasoning_effort":"none","stream":true,"stream_options":{"include_usage":true}}"#)
+        == #"{"model":"gpt-6-luna",\#(messages),\#(streaming),"#
+        + #""max_completion_tokens":256,"reasoning_effort":"none"}"#)
   }
 
   @Test func openAICardUsesStrictSchema() throws {
     #expect(
       try snapshot(card, "openai")
-        == #"{"max_completion_tokens":800,\#(messages),"model":"gpt-6-luna","#
-        + #""reasoning_effort":"none","response_format":{"json_schema":{"name":"card","#
-        + #""schema":{"type":"object"},"strict":true},"type":"json_schema"},"#
-        + #""stream":true,"stream_options":{"include_usage":true}}"#)
+        == #"{"model":"gpt-6-luna",\#(messages),\#(streaming),"#
+        + #""max_completion_tokens":800,"reasoning_effort":"none",\#(strictCard)}"#)
   }
 
   @Test func gpt5NanoFallsBackToMinimal() throws {
     #expect(
       try snapshot(translate, "openai", model: "gpt-5-nano")
-        == #"{"max_completion_tokens":256,\#(messages),"model":"gpt-5-nano","#
-        + #""reasoning_effort":"minimal","stream":true,"stream_options":{"include_usage":true}}"#)
+        == #"{"model":"gpt-5-nano",\#(messages),\#(streaming),"#
+        + #""max_completion_tokens":256,"reasoning_effort":"minimal"}"#)
   }
 
   @Test func ollamaUsesMaxTokensAndNone() throws {
     #expect(
       try snapshot(card, "ollama", model: "qwen3:4b", thinking: .lowest)
-        == #"{"max_tokens":800,\#(messages),"model":"qwen3:4b","reasoning_effort":"none","#
-        + #""response_format":{"json_schema":{"name":"card","schema":{"type":"object"},"#
-        + #""strict":true},"type":"json_schema"},"stream":true,"#
-        + #""stream_options":{"include_usage":true}}"#)
+        == #"{"model":"qwen3:4b",\#(messages),\#(streaming),"#
+        + #""max_tokens":800,"reasoning_effort":"none",\#(strictCard)}"#)
   }
 
   @Test func customJSONObjectModeAndProviderDefaultThinking() throws {
     #expect(
       try snapshot(
         card, "custom", model: "deepseek-chat", thinking: .providerDefault, jsonMode: .object)
-        == #"{"max_tokens":800,\#(messages),"model":"deepseek-chat","#
-        + #""response_format":{"type":"json_object"},"stream":true,"#
-        + #""stream_options":{"include_usage":true}}"#)
+        == #"{"model":"deepseek-chat",\#(messages),\#(streaming),"#
+        + #""max_tokens":800,"response_format":{"type":"json_object"}}"#)
   }
 
   @Test func customLowestAndNoJSONMode() throws {
     #expect(
       try snapshot(card, "custom", model: "m", thinking: .lowest, jsonMode: JSONMode.none)
-        == #"{"max_tokens":800,\#(messages),"model":"m","reasoning_effort":"minimal","#
-        + #""stream":true,"stream_options":{"include_usage":true}}"#)
+        == #"{"model":"m",\#(messages),\#(streaming),"#
+        + #""max_tokens":800,"reasoning_effort":"minimal"}"#)
+  }
+
+  /// Where each of `keys` first occurs in `text` as an object key, after `start`.
+  private func offsets(of keys: [String], in text: String, after start: String) throws -> [Int] {
+    let from = try #require(text.range(of: start)).upperBound
+    return try keys.map { key in
+      let found = try #require(text.range(of: "\"\(key)\":", range: from..<text.endIndex))
+      return text.distance(from: text.startIndex, to: found.lowerBound)
+    }
+  }
+
+  @Test func cardSchemaKeysGoOutInDeclarationOrder() throws {
+    let request = PromptBuilder.card(
+      term: "ran", context: "She ran a bakery.", pair: LanguagePair(), accent: .american,
+      nonce: "0a1b2c3d")
+    let text = try snapshot(request, "openai")
+    let fields = [
+      "status", "lemma", "phonetic", "partOfSpeech", "definition", "contextTranslation",
+      "otherSenses", "examples", "collocations", "level",
+    ]
+    let top = try offsets(of: fields, in: text, after: #""schema":{"#)
+    #expect(top == top.sorted())
+    let example = try offsets(of: ["sentence", "translation"], in: text, after: #""examples":"#)
+    #expect(example == example.sorted())
+    #expect(text.contains(#""required":["\#(fields.joined(separator: #"",""#))"]"#))
+    #expect(try snapshot(request, "openai") == text)
+  }
+
+  @Test func proofreadSchemaKeysGoOutInDeclarationOrder() throws {
+    let text = try snapshot(PromptBuilder.proofread("Hi", nonce: "0a1b2c3d"), "openai")
+    let edit = try offsets(of: ["kind", "wrong", "right"], in: text, after: #""items":{"#)
+    #expect(edit == edit.sorted())
   }
 
   @Test func emptySystemIsOmitted() throws {

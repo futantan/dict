@@ -16,7 +16,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 env_file="${ENV_FILE:-$root/.env}"
 
 if [[ -z "${SUITE:-}" ]]; then
-  echo "make eval: SUITE is required (direction, injection, fallback or all)" >&2
+  echo "make eval: SUITE is required (direction, injection, fallback, card or all)" >&2
   exit 2
 fi
 runs="${RUNS:-}"

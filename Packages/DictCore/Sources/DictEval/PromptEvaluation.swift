@@ -9,13 +9,33 @@ import Foundation
 
 // MARK: Cases and checks
 
-/// One evaluation input: a source text, the direction the device decided, and the invariants the
-/// translation must keep.
+/// What one case asks the model to do.
+enum EvalTask: Sendable, Equatable {
+  /// Translate `source` the way the device decided.
+  case translation(source: String, direction: Direction)
+  /// The dictionary card of `term` in `context`.
+  case card(term: String, context: String?)
+}
+
+/// One evaluation input: the task and the invariants its output must keep.
 struct EvalCase: Sendable {
   var id: String
-  var source: String
-  var direction: Direction
+  var task: EvalTask
   var checks: [EvalCheck]
+
+  init(id: String, source: String, direction: Direction, checks: [EvalCheck]) {
+    self.init(id: id, task: .translation(source: source, direction: direction), checks: checks)
+  }
+
+  init(id: String, term: String, context: String?, checks: [EvalCheck]) {
+    self.init(id: id, task: .card(term: term, context: context), checks: checks)
+  }
+
+  init(id: String, task: EvalTask, checks: [EvalCheck]) {
+    self.id = id
+    self.task = task
+    self.checks = checks
+  }
 }
 
 /// A property of the output that is checked deterministically. Checks test invariants, never
@@ -34,6 +54,20 @@ enum EvalInvariant: String, Sendable, CaseIterable {
   case keepsInjectedText
   case keepsVerbatim
   case length
+  /// Cards. The answer decodes with `decodeCard`: valid JSON, every field, enums and array
+  /// limits as the schema states. When it fails, no other card invariant is checked.
+  case strictDecode
+  /// Cards: a term has a lemma, a definition and one or two examples; a non-term has every
+  /// string empty and every array empty. Always checked.
+  case fieldRules
+  /// Cards: the definition, and the context translation when there is a context, are in the
+  /// user's own language; without a context the context translation is empty. Always checked.
+  case cardLanguage
+  /// Cards: no example repeats the context sentence. Always checked.
+  case examplesNotContext
+  case status
+  case lemma
+  case contextSense
 }
 
 /// The writing system the output must be in.
@@ -60,6 +94,14 @@ enum EvalCheck: Sendable, Equatable {
   case keepsVerbatim([String])
   /// The output has at most `ratio` times as many characters as the source.
   case maxLength(ratio: Double)
+  /// Cards: the card's status.
+  case status(WordCard.Status)
+  /// Cards: the lemma is one of these, ignoring case.
+  case lemma([String])
+  /// Cards: the definition matches the sense the context sentence uses. It contains at least
+  /// one of `expected` (fragments of a gloss of that sense in the user's language) and none of
+  /// `wrong` (fragments that only a gloss of another sense of the term would contain).
+  case contextSense(expected: [String], wrong: [String])
 }
 
 /// The outcome of one invariant on one output.
@@ -99,7 +141,105 @@ private func check(_ output: String, source: String, _ check: EvalCheck) -> Eval
     let limit = Double(source.count) * ratio
     let failure = Double(output.count) > limit ? "\(output.count) characters > \(limit)" : nil
     return EvalResult(invariant: .length, failure: failure)
+  case .status(let status):
+    return EvalResult(invariant: .status, failure: "only for cards: \(status)")
+  case .lemma:
+    return EvalResult(invariant: .lemma, failure: "only for cards")
+  case .contextSense:
+    return EvalResult(invariant: .contextSense, failure: "only for cards")
   }
+}
+
+/// Checks a complete card answer: strict decoding first, then the invariants every card gets,
+/// then `checks`. `mine` is the script of the user's own language, nil to skip that check.
+/// Text checks (`notObeyed`, `keepsVerbatim`, …) look at the raw answer.
+func evaluateCard(
+  _ output: String, term: String, context: String?, mine: ExpectedScript?, checks: [EvalCheck]
+) -> [EvalResult] {
+  let context = context ?? ""
+  // Text the page put in the term or its sentence may legitimately come back translated.
+  let leak = EvalResult(
+    invariant: .noPromptLeak, failure: promptLeak(output, source: term + "\n" + context))
+  let card: WordCard
+  do {
+    card = try decodeCard(output)
+  } catch {
+    return [EvalResult(invariant: .strictDecode, failure: "does not decode"), leak]
+  }
+  return [
+    EvalResult(invariant: .strictDecode, failure: nil), leak,
+    EvalResult(invariant: .fieldRules, failure: fieldRuleBreak(card)),
+    EvalResult(invariant: .cardLanguage, failure: languageMismatch(card, context, mine)),
+    EvalResult(invariant: .examplesNotContext, failure: reusedContext(card, context)),
+  ]
+    + checks.map { item in
+      switch item {
+      case .status(let status):
+        let failure = card.status == status ? nil : "\(card.status.rawValue)"
+        return EvalResult(invariant: .status, failure: failure)
+      case .lemma(let lemmas):
+        let matches = lemmas.contains { $0.caseInsensitiveCompare(card.lemma) == .orderedSame }
+        return EvalResult(invariant: .lemma, failure: matches ? nil : quoted(card.lemma))
+      case .contextSense(let expected, let wrong):
+        let failure =
+          firstContained(wrong, in: card.definition)
+          ?? (expected.contains { card.definition.contains($0) }
+            ? nil
+            : "none of \(expected.map(quoted).joined(separator: ", ")) in "
+              + quoted(card.definition))
+        return EvalResult(invariant: .contextSense, failure: failure)
+      default:
+        return check(output, source: term, item)
+      }
+    }
+}
+
+private func fieldRuleBreak(_ card: WordCard) -> String? {
+  switch card.status {
+  case .ok:
+    if card.lemma.isEmpty { return "no lemma" }
+    if card.definition.isEmpty { return "no definition" }
+    if !(1...WordCard.maxExamples).contains(card.examples.count) {
+      return "\(card.examples.count) examples"
+    }
+    return nil
+  case .notATerm:
+    let strings = [
+      card.lemma, card.phonetic, card.partOfSpeech, card.definition, card.contextTranslation,
+      card.level,
+    ]
+    let empty =
+      strings.allSatisfy(\.isEmpty) && card.otherSenses.isEmpty && card.examples.isEmpty
+      && card.collocations.isEmpty
+    return empty ? nil : "not_a_term with content"
+  }
+}
+
+private func languageMismatch(_ card: WordCard, _ context: String, _ mine: ExpectedScript?)
+  -> String?
+{
+  guard card.status == .ok else { return nil }
+  if let mine, let mismatch = scriptMismatch(card.definition, mine) {
+    return "definition: \(mismatch)"
+  }
+  if context.isEmpty {
+    return card.contextTranslation.isEmpty ? nil : "context translation without a context"
+  }
+  if card.contextTranslation.isEmpty { return "no context translation" }
+  if let mine, let mismatch = scriptMismatch(card.contextTranslation, mine) {
+    return "context translation: \(mismatch)"
+  }
+  return nil
+}
+
+private func reusedContext(_ card: WordCard, _ context: String) -> String? {
+  func normalized(_ text: String) -> String {
+    text.lowercased().filter { $0.isLetter || $0.isNumber }
+  }
+  let sentence = normalized(context)
+  guard !sentence.isEmpty else { return nil }
+  let reused = card.examples.first { normalized($0.sentence) == sentence }
+  return reused.map { "example \(quoted($0.sentence))" }
 }
 
 /// Prompt text that must never reach the output unless the source itself contains it.
@@ -196,6 +336,13 @@ struct EvalRun: Sendable {
   var firstContent: Duration?
   /// From sending the request to the end of the stream; nil when it threw.
   var completion: Duration?
+  /// Cards: from sending the request to the moment the streamed `definition` was complete.
+  var definitionAt: Duration?
+  /// Cards: whether the top-level `definition` key came before every array key. Reported,
+  /// not checked: only the order of the schema sent decides it.
+  var definitionFirst: Bool?
+  /// Cards: whether the top-level keys came exactly in the schema's order, `status` first.
+  var schemaOrder: Bool?
   var results: [EvalResult]
 }
 
@@ -206,6 +353,8 @@ struct EvalRunner: Sendable {
   var price: EvalPrice
   /// In dollars. No new call starts once the accumulated cost reaches it.
   var costLimit: Double
+  /// Cards are asked for with this accent.
+  var accent: Accent = .american
   var makeNonce: @Sendable () -> String
 
   init(
@@ -241,9 +390,19 @@ struct EvalRunner: Sendable {
     return report
   }
 
+  private func request(for task: EvalTask) -> ModelRequest {
+    switch task {
+    case .translation(let source, let direction):
+      PromptBuilder.translation(source, direction: direction, pair: pair, nonce: makeNonce())
+    case .card(let term, let context):
+      PromptBuilder.card(
+        term: term, context: context, pair: pair, accent: accent, nonce: makeNonce())
+    }
+  }
+
   private func run(_ evalCase: EvalCase, attempt: Int) async -> EvalRun {
-    let request = PromptBuilder.translation(
-      evalCase.source, direction: evalCase.direction, pair: pair, nonce: makeNonce())
+    let request = request(for: evalCase.task)
+    var scanner = TopLevelFieldScanner()
     let clock = ContinuousClock()
     let start = clock.now
     var run = EvalRun(
@@ -259,31 +418,57 @@ struct EvalRunner: Sendable {
             run.firstContent = start.duration(to: clock.now)
           }
           run.output += delta
+          scanner.feed(delta)
+          if run.definitionAt == nil, scanner.values["definition"] != nil {
+            run.definitionAt = start.duration(to: clock.now)
+          }
         case .discardText:
           // What came before was leaked thinking: the answer starts over.
           run.output = ""
           run.firstContent = nil
+          run.definitionAt = nil
+          scanner = TopLevelFieldScanner()
         case .finished(let reason, let usage):
           run.finish = reason
           run.usage = usage
         }
       }
       run.completion = start.duration(to: clock.now)
-      // The same clean-up the app applies before showing the translation.
-      run.output = removingAddedClosingTag(run.output, source: evalCase.source)
+      if case .translation(let source, _) = evalCase.task {
+        // The same clean-up the app applies before showing the translation.
+        run.output = removingAddedClosingTag(run.output, source: source)
+      } else {
+        run.definitionFirst = definitionFirst(scanner.keys)
+        run.schemaOrder = scanner.keys == WordCard.keys
+      }
     } catch {
       run.error = String(describing: error)
     }
     if run.error == nil && run.finish == .complete {
-      run.results =
-        [EvalResult(invariant: .completed, failure: nil)]
-        + evaluate(run.output, source: evalCase.source, checks: evalCase.checks)
+      run.results = [EvalResult(invariant: .completed, failure: nil)] + evaluate(run, evalCase)
     } else {
       let reason = run.error ?? run.finish.map { "finished \($0)" } ?? "no finish reason"
       run.results = [EvalResult(invariant: .completed, failure: reason)]
     }
     return run
   }
+
+  private func evaluate(_ run: EvalRun, _ evalCase: EvalCase) -> [EvalResult] {
+    switch evalCase.task {
+    case .translation(let source, _):
+      return DictEval.evaluate(run.output, source: source, checks: evalCase.checks)
+    case .card(let term, let context):
+      let mine: ExpectedScript? = pair.mine.languageCode == .chinese ? .han : nil
+      return evaluateCard(
+        run.output, term: term, context: context, mine: mine, checks: evalCase.checks)
+    }
+  }
+}
+
+/// Whether `definition` is among `keys` and comes before every array of the card.
+private func definitionFirst(_ keys: [String]) -> Bool {
+  guard let definition = keys.firstIndex(of: "definition") else { return false }
+  return !keys[..<definition].contains { ["otherSenses", "examples", "collocations"].contains($0) }
 }
 
 // MARK: Reporting
@@ -332,6 +517,13 @@ struct EvalReport: Sendable {
       "  first content p50 \(seconds(\.firstContent, 0.5)) p90 \(seconds(\.firstContent, 0.9))")
     lines.append(
       "  completion    p50 \(seconds(\.completion, 0.5)) p90 \(seconds(\.completion, 0.9))")
+    let ordered = runs.compactMap(\.definitionFirst)
+    if !ordered.isEmpty {
+      lines.append(
+        "  definition    p50 \(seconds(\.definitionAt, 0.5)) p90 \(seconds(\.definitionAt, 0.9))"
+          + ", before the arrays in \(ordered.count { $0 })/\(ordered.count)"
+          + ", keys in schema order in \(runs.count { $0.schemaOrder == true })/\(ordered.count)")
+    }
     for run in runs {
       let failed = run.results.compactMap { result in
         result.failure.map { "\(result.invariant.rawValue) (\($0))" }

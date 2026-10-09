@@ -14,5 +14,113 @@
     "She dont like apples.": {
       "edits": [{ "kind": "grammar", "wrong": "dont", "right": "doesn't" }]
     }
+  },
+  "cards": {
+    "run": {
+      "context": "I run along the river every morning.",
+      "card": {
+        "status": "ok",
+        "lemma": "run",
+        "phonetic": "/rʌn/",
+        "partOfSpeech": "verb",
+        "definition": "跑步",
+        "contextTranslation": "我每天早上沿着河边跑步。",
+        "otherSenses": [
+          { "partOfSpeech": "verb", "definition": "经营；管理" },
+          { "partOfSpeech": "verb", "definition": "运行；运转" },
+          { "partOfSpeech": "noun", "definition": "跑步；一段路程" }
+        ],
+        "examples": [
+          { "sentence": "She runs five kilometres before work.", "translation": "她上班前跑五公里。" }
+        ],
+        "collocations": [
+          { "phrase": "run fast", "meaning": "跑得快" },
+          { "phrase": "go for a run", "meaning": "去跑步" }
+        ],
+        "level": "A1"
+      }
+    },
+    "ran": {
+      "context": "She ran a small bakery for ten years.",
+      "card": {
+        "status": "ok",
+        "lemma": "run",
+        "phonetic": "/rʌn/",
+        "partOfSpeech": "verb",
+        "definition": "经营；管理",
+        "contextTranslation": "她经营一家小面包店十年了。",
+        "otherSenses": [
+          { "partOfSpeech": "verb", "definition": "跑；奔跑" },
+          { "partOfSpeech": "verb", "definition": "运行；运转" },
+          { "partOfSpeech": "verb", "definition": "（液体）流" }
+        ],
+        "examples": [
+          { "sentence": "He runs the family business now.", "translation": "现在由他经营家族生意。" },
+          { "sentence": "Who runs this shop?", "translation": "这家店是谁在经营？" }
+        ],
+        "collocations": [
+          { "phrase": "run a business", "meaning": "经营生意" },
+          { "phrase": "run a company", "meaning": "经营公司" },
+          { "phrase": "run a meeting", "meaning": "主持会议" }
+        ],
+        "level": "B1"
+      }
+    },
+    "fine": {
+      "context": "He had to pay a fine for parking in the wrong place.",
+      "card": {
+        "status": "ok",
+        "lemma": "fine",
+        "phonetic": "/faɪn/",
+        "partOfSpeech": "noun",
+        "definition": "罚款",
+        "contextTranslation": "他因为乱停车不得不交罚款。",
+        "otherSenses": [
+          { "partOfSpeech": "adjective", "definition": "好的；健康的" },
+          { "partOfSpeech": "adjective", "definition": "细的；纤细的" },
+          { "partOfSpeech": "verb", "definition": "处以罚款" }
+        ],
+        "examples": [
+          {
+            "sentence": "The fine for speeding is two hundred dollars.",
+            "translation": "超速的罚款是两百美元。"
+          }
+        ],
+        "collocations": [
+          { "phrase": "pay a fine", "meaning": "交罚款" },
+          { "phrase": "a heavy fine", "meaning": "一笔重罚" }
+        ],
+        "level": "B1"
+      }
+    },
+    "asdfgh": {
+      "context": "",
+      "card": {
+        "status": "not_a_term",
+        "lemma": "",
+        "phonetic": "",
+        "partOfSpeech": "",
+        "definition": "",
+        "contextTranslation": "",
+        "otherSenses": [],
+        "examples": [],
+        "collocations": [],
+        "level": ""
+      }
+    }
+  },
+  "cardFallback": {
+    "status": "ok",
+    "lemma": "{term}",
+    "phonetic": "",
+    "partOfSpeech": "",
+    "definition": "“{term}”的模拟释义",
+    "contextTranslation": "上下文句的模拟翻译",
+    "otherSenses": [],
+    "examples": [
+      { "sentence": "A mock example for {term}.", "translation": "“{term}”的模拟例句。" }
+    ],
+    "collocations": [],
+    "level": ""
   }
 }

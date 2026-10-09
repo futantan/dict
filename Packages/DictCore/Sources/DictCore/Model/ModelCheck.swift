@@ -37,8 +37,7 @@ public enum ModelCheck {
     PromptBuilder.translation(sample, into: target, nonce: nonce)
   }
 
-  /// The proofread request, a real strict schema; the card schema replaces it once the card
-  /// prompt exists (M2.5).
+  /// The proofread request: a real strict schema with a short, predictable answer.
   public static func structuredOutputRequest(nonce: String) -> ModelRequest {
     PromptBuilder.proofread(proofreadSample, nonce: nonce)
   }

@@ -7,6 +7,9 @@
 # /v1/chat/completions answers like a model, from Fixtures/MockModel/replies.json:
 #   - with a `json_schema` response format named "proofread", the edit list of the table
 #     entry whose text occurs in the last user message, else no edits;
+#   - with one named "card", the card of the term in the {"term", "context"} object of the
+#     source block: the `cards` entry of that term (also matched lowercased), else
+#     `cardFallback` with {term} filled in; a non-empty definition is always behind MARK;
 #   - otherwise a translation: the table's, else the source text echoed; always behind MARK.
 #   It streams the reply as a few deltas, a "stop" chunk, a usage chunk when the request
 #   asks for one, and [DONE]. Every request field is accepted, so the client never drops
@@ -55,6 +58,30 @@ def pieces(text, count=4):
     return [text[i:i + size] for i in range(0, len(text), size)] or [""]
 
 
+def card(table, user):
+    """The card JSON for a card request's user message, and whether the table had it."""
+    match = SOURCE.search(user)
+    try:
+        query = json.loads(match.group(2)) if match else {}
+    except ValueError:
+        query = {}
+    if not isinstance(query, dict):
+        query = {}
+    term = str(query.get("term") or "").strip()
+    entry = table["cards"].get(term) or table["cards"].get(term.lower())
+    if entry:
+        found = dict(entry["card"])
+    else:
+        # {term} goes in as JSON string content, so quotes in the term stay valid JSON.
+        template = json.dumps(table["cardFallback"], ensure_ascii=False)
+        found = json.loads(template.replace("{term}", json.dumps(term, ensure_ascii=False)[1:-1]))
+        if not query.get("context"):
+            found["contextTranslation"] = ""
+    if found["definition"]:
+        found["definition"] = MARK + found["definition"]
+    return json.dumps(found, ensure_ascii=False), bool(entry)
+
+
 def lookup(table, user):
     """The entry of `table` whose key occurs in `user`, the longest when several do."""
     keys = [key for key in table if key in user]
@@ -73,6 +100,9 @@ def reply(request):
     if schema.get("name") == "proofread":
         found = lookup(table["proofreads"], user)
         return json.dumps(found or {"edits": []}, ensure_ascii=False), "proofread", bool(found)
+    if schema.get("name") == "card":
+        text, found = card(table, user)
+        return text, "card", found
     found = lookup(table["translations"], user)
     if found:
         return MARK + found, "translation", True
@@ -122,7 +152,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.log(f"200 {kind} {'table' if found else 'fallback'}")
         self.start_stream()
         try:
-            for piece in pieces(text):
+            # A card comes in more deltas, so the cuts land inside keys, values and escapes.
+            for piece in pieces(text, 12 if kind == "card" else 4):
                 self.wfile.write(chunk(piece))
                 self.wfile.flush()
                 time.sleep(0.04)

@@ -123,7 +123,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（`project.yml` 里的一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
 | 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
-现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`；查词卡片的后处理（M2.5）和润色、译出的改写校验（M3）还没有。
+现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`、查词卡片的提示词、解码和流式字段扫描（M2.5）；润色、译出的改写校验（M3）还没有。
 选区分类 `classify` 和切句 `sentence(containing:in:)` 已实现；`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
@@ -1013,6 +1013,11 @@ public struct WordCard: Codable, Sendable, Equatable {
   所以界面不显示模型给的 `level`，生僻词（词频分档为「少见」）不显示 `collocations`。
 - 提示词规定词元写法：屈折词还原成原形，短语动词和习语保持完整的原形，拼错的词按最可能的正确拼写解释。
 - 每次约 683 输入、161 输出 token，约 0.00015 美元【实测】。
+- 现状（M2.5）：`DictCore` 有 `WordCard`、`decodeCard`（另外校验枚举和数组上限）、`PromptBuilder.card(term:context:pair:accent:nonce:)` 和 `TopLevelFieldScanner`；界面还没有卡片，M2.8 接入。
+  提示词是复测第 7.6 节的文本，前面加了上面第 1、2 条的写法：输入对象放在随机后缀标签里。
+  请求体按声明顺序编码（`JSONValue.jsonData()`，对象是保序的 `JSONObject`），schema 的键序就是 `WordCard.keys`。
+  之前用 `JSONEncoder` 编码字典，键序每个进程随机，评测里 `definition` 排在所有数组之前只有 16/52【实测】。
+  `make eval SUITE=card`（52 个用例，`RUNS=1`，`gpt-6-luna`）：严格解码 52/52，键全部按 schema 顺序（`status` 第一个）52/52，上下文义 43/43，`definition` 到达 p50 1.10 s、p90 1.44 s，完成 p50 2.00 s，花费 0.0082 美元【实测】。
 
 ### 6.7 结构化输出的后处理与改写校验
 
@@ -1085,7 +1090,7 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 - 输出上限：翻译和改写取 `max(256, 原文 UTF-8 字节数)`，查词卡片 800；目的是防止跑飞，不是精确预算【推断】。
 - 设置里的「测试」按钮依次做三件事并分别显示：翻译一句话并显示首个内容耗时；请求一张卡片并严格解码；检查是否收到思考增量。
   首个内容超过 3 s 或收到思考增量时提示「这个模型在思考，查词会很慢」。
-  现状：三项检查和「在思考」的提示已实现（M2.9，`DictCore` 的 `ModelCheck`）；卡片提示词还没有，第二项暂用纠错的 strict `json_schema` 请求，只检查回答能否严格解码，不管修改是否对得上原文。
+  现状：三项检查和「在思考」的提示已实现（M2.9，`DictCore` 的 `ModelCheck`）；第二项用纠错的 strict `json_schema` 请求而不是卡片（manager 验收时认可），只检查回答能否严格解码，不管修改是否对得上原文。
   第一项译成「我的语言」（我的语言是英文时译成学习语言），首个内容只算正文、不算思考增量；第一项失败时后两项不做。
 
 ## 7. 即时词典层
@@ -1671,8 +1676,9 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 - 评测框架（用例、不变量检查、运行器、报告）放在 `DictEval` 里，不随应用发布；`DictCoreTests` 依赖 `DictEval`，用桩模型测它。
 - `make eval SUITE=<套件> RUNS=<次数>`：`scripts/eval.sh` 从 `.env` 读出 `OPENAI_API_KEY` 放进子进程环境，不打印；每次运行有花费上限（默认 1 美元），按每次返回的用量累计。
 - 套件：方向（问句、被提及的词）、注入（每种操作）、纠错（正确输入原样、错误改对、逗号连接分句第一遍改掉、第二遍无改动）、润色、译成外语、查词卡片、找外语说法。
-  现状：只有翻译提示词的三个套件 `direction`、`injection`（只覆盖翻译）、`fallback`（`.undecided` 的回落提示词）。
-  其余未实现：查词卡片和找外语说法在 M2.5，纠错在 M3.1，润色和译成外语在 M3.2，各自加入时同时给该操作补注入用例。
+  现状：有四个套件：翻译的 `direction`、`injection`（只覆盖翻译）、`fallback`（`.undecided` 的回落提示词），和查词卡片的 `card`（含上下文句和词元里的注入用例）。
+  其余未实现：找外语说法（M2.5 的剩余部分），纠错在 M3.1，润色和译成外语在 M3.2，各自加入时同时给该操作补注入用例。
+  `DictEval --base-url` 可以对本地 mock 跑，只用来检查评测框架，通过率没有意义。
 - 用例是我们自己写的文字；每个用例跑 N 次，报告通过率和首个内容、完成耗时的 p50 / p90。
 - 判定的是不变量，不是具体文字：目标语言正确、不含答案、不含标签和提示词片段、链接和代码逐字保留、行数不变、错处能应用、严格解码成功、词元与选中词同一书写系统等。
 - 通过标准：默认预设的默认模型，每个不变量的通过率不低于 95%；Ollama 只要求不崩溃。

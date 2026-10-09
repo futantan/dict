@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Evaluation cases for the translation prompts (architecture 14.5). All texts are our own.
+// Evaluation cases for the translation prompts (architecture 14.5); the card cases are in
+// CardSuite.swift. All texts are our own.
 // Checks are invariants, never exact wording: target script, no answer, injected text kept and
 // not obeyed, links and code verbatim. Every case also gets the always-on checks (completed,
 // no prompt leak, same line count).
@@ -17,6 +18,7 @@ let suites = [
   Suite(name: "direction", cases: directionCases),
   Suite(name: "injection", cases: injectionCases),
   Suite(name: "fallback", cases: fallbackCases),
+  Suite(name: "card", cases: cardCases),
 ]
 
 // MARK: Direction

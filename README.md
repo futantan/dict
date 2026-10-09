@@ -59,8 +59,10 @@ The variable works only in Debug builds and replaces the saved model and Keychai
 The mock streams replies from `Fixtures/MockModel/replies.json`, matched by a substring of the selected text.
 Proofreading text not in the table finds no mistakes, and translations echo the source; every translation starts with `[mock]`.
 For example, proofreading "Their going to the park tomorow, I think it will be fun." shows two changes.
+A dictionary card request gets the card of its term from the table's `cards` (`run`, `ran`, `fine` and the non-term `asdfgh`, each with the context sentence it was written for), else a placeholder card for that term; a card's definition also starts with `[mock]`.
 Its request log is `build/mock-model.log`, one line per request without the text.
-`make test-mock` checks the mock's stream format, and a DictCore test checks that every proofreading reply in the table applies to its text.
+`make test-mock` checks the mock's stream format, and DictCore tests check that every proofreading reply in the table applies to its text and every card decodes.
+`DictEval` runs against the mock too, which checks the evaluation framework without spending tokens: start `scripts/fake-model.py 8767`, then run `swift run --package-path Packages/DictCore DictEval --suite card --runs 1 --model mock --price 0,0 --base-url http://127.0.0.1:8767/v1`; its pass rates mean nothing.
 
 ## Dictionary data
 

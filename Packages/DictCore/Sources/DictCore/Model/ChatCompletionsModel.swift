@@ -128,7 +128,8 @@ public struct ChatCompletionsModel: TextModel {
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
     endpoint.authorize(&request, apiKey: apiKey)
-    request.httpBody = try JSONEncoder().encode(body)
+    // In declaration order: strict schemas fix the order of the answer's keys.
+    request.httpBody = body.jsonData()
     let (bytes, response) = try await session.bytes(for: request)
     guard let http = response as? HTTPURLResponse else { throw ModelError.malformedResponse }
     return (bytes, http)

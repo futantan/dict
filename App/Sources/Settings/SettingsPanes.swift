@@ -158,7 +158,9 @@ struct ModelSections: View {
         Section {
           testRow
           if case .checked(let report) = model.connection {
-            ConnectionChecks(report: report, isCustom: preset.id == ProviderPreset.customID)
+            ConnectionChecks(
+              report: report, isCustom: preset.id == ProviderPreset.customID,
+              hasListedModels: hasListedModels)
           }
         } footer: {
           footnote(privacyNote(preset))
@@ -220,6 +222,11 @@ struct ModelSections: View {
     } label: {
       Text(String(localized: "Model", table: "Settings", comment: "Settings field label"))
     }
+  }
+
+  private var hasListedModels: Bool {
+    guard case .loaded(let names) = model.modelList else { return false }
+    return !names.isEmpty
   }
 
   /// "List Available Models" and what it found.
@@ -472,12 +479,14 @@ private struct CustomOptionsSection: View {
 private struct ConnectionChecks: View {
   let report: ConnectionReport
   let isCustom: Bool
+  /// Whether the model menu has names to choose from.
+  let hasListedModels: Bool
 
   var body: some View {
     row(
       String(localized: "Translation", table: "Settings", comment: "Name of a test check"),
       state: report.translation, passed: firstContentText,
-      failureHint: report.suggestsModelList
+      failureHint: report.suggestsModelList && hasListedModels
         ? String(
           localized: "Choose one of the models listed above.", table: "Settings",
           comment: "Hint after the service did not know the model name; its list is shown")

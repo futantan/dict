@@ -13,6 +13,13 @@
 import AppKit
 import ApplicationServices
 
+/// What a control's capture must return: the selected text and the context sentence around it
+/// (architecture 3.5), both fixed by the fixture text the driver selects in.
+struct MatrixExpect: Sendable {
+  var text: String
+  var context: String
+}
+
 struct MatrixRow {
   var app: String
   var control: String
@@ -22,6 +29,10 @@ struct MatrixRow {
   var failure: String?
   var ms: Double?
   var textMatches = false
+  /// The context sentence the capture read, and its check: "PASS", "FAIL" or "—" (see
+  /// `contextCell`).
+  var context: String?
+  var contextCheck = "—"
   var clipboardIntact = false
   /// Rows from `read` steps: "reading panel key" when the reading panel showed before the
   /// fallback and stayed key, "no reading panel", or the problems found.
@@ -34,16 +45,17 @@ struct MatrixRow {
   var comparable: [String: String] {
     [
       "ok": String(ok), "source": source ?? "-", "failure": failure ?? "-",
-      "textMatches": String(textMatches), "clipboardIntact": String(clipboardIntact),
-      "panel": panel ?? "-",
+      "textMatches": String(textMatches), "context": contextCheck,
+      "clipboardIntact": String(clipboardIntact), "panel": panel ?? "-",
     ]
   }
 
   var json: [String: Any] {
     var object: [String: Any] = [
       "app": app, "control": control, "state": state, "ok": ok, "textMatches": textMatches,
-      "clipboardIntact": clipboardIntact,
+      "clipboardIntact": clipboardIntact, "contextCheck": contextCheck,
     ]
+    object["context"] = context ?? NSNull()
     object["source"] = source ?? NSNull()
     object["failure"] = failure ?? NSNull()
     object["ms"] = ms.map { (($0 * 10).rounded() / 10) as Any } ?? NSNull()
@@ -67,15 +79,28 @@ struct MatrixRow {
     failure = object["failure"] as? String
     ms = (object["ms"] as? NSNumber)?.doubleValue
     textMatches = object["textMatches"] as? Bool ?? false
+    context = object["context"] as? String
+    contextCheck = object["contextCheck"] as? String ?? "-"
     clipboardIntact = object["clipboardIntact"] as? Bool ?? false
     panel = object["panel"] as? String
     note = object["note"] as? String
   }
 
+  /// The context column: "—" when the control has no expected sentence, the capture failed,
+  /// or the text came through the copy fallback, which never has one (architecture 3.5);
+  /// otherwise "PASS" when the capture read exactly `expect`. A fallback row that does carry a
+  /// context sentence is a "FAIL".
+  static func contextCell(expect: String?, ok: Bool, source: String?, got: String?) -> String {
+    guard ok, let expect else { return "—" }
+    if source == "menuCopy" || source == "keyCopy" { return got == nil ? "—" : "FAIL" }
+    return got == expect ? "PASS" : "FAIL"
+  }
+
   var line: String {
     let result =
       ok
-      ? "\(source ?? "?") \(textMatches ? "text ok" : "TEXT DIFFERS")" : "failure \(failure ?? "?")"
+      ? "\(source ?? "?") \(textMatches ? "text ok" : "TEXT DIFFERS"), context \(contextCheck)"
+      : "failure \(failure ?? "?")"
     let timing = ms.map { String(format: "%.1f ms", $0) } ?? "-"
     let clipboard = clipboardIntact ? "clipboard ok" : "CLIPBOARD CHANGED"
     return "\(key): \(result), \(timing), \(clipboard)" + (panel.map { ", \($0)" } ?? "")
@@ -87,12 +112,20 @@ struct MatrixRow {
 struct Matrix {
   static let sections = ["textedit", "safari", "chrome", "chrome-cold", "vscode"]
   static let webControls = ["web.paragraph", "web.textarea", "web.contenteditable"]
-  static let webText = [
-    "web.paragraph": "a bright cold day",
-    "web.textarea": "five dozen liquor jugs",
-    "web.contenteditable": "daft zebras jump",
+  /// Each web control's selected text and its sentence in
+  /// Fixtures/CaptureFixture/Resources/page.html.
+  static let webExpect = [
+    "web.paragraph": MatrixExpect(
+      text: "a bright cold day", context: "It was a bright cold day in April."),
+    "web.textarea": MatrixExpect(
+      text: "five dozen liquor jugs", context: "Pack my box with five dozen liquor jugs."),
+    "web.contenteditable": MatrixExpect(
+      text: "daft zebras jump", context: "How vexingly quick daft zebras jump."),
   ]
   static let sentence = "The quick brown fox jumps over the lazy dog."
+  static let textEditExpect = MatrixExpect(text: "quick brown fox", context: sentence)
+  /// VS Code selects the whole sentence, which is its own context sentence.
+  static let vsCodeExpect = MatrixExpect(text: sentence, context: sentence)
 
   let app: URL
   let pages: URL
@@ -149,7 +182,9 @@ struct Matrix {
 
   // MARK: Capturing
 
-  private mutating func capture(_ app: String, _ control: String, _ state: String, expect: String) {
+  private mutating func capture(
+    _ app: String, _ control: String, _ state: String, expect: MatrixExpect
+  ) {
     captures(app, control, [state], steps: [Self.captureStep], expect: expect)
   }
 
@@ -164,7 +199,7 @@ struct Matrix {
   /// `states` in order. `during` runs on the driver while Dict runs the steps.
   private mutating func captures(
     _ app: String, _ control: String, _ states: [String], steps: [[String: Any]],
-    expect: String, during: () -> Void = {}
+    expect: MatrixExpect, during: () -> Void = {}
   ) {
     let before = Clipboard.hash()
     let outcome = runner.run(
@@ -193,7 +228,10 @@ struct Matrix {
         row.source = step.source
         row.failure = step.failure
         row.ms = step.ms
-        row.textMatches = step.ok && step.text == expect
+        row.textMatches = step.ok && step.text == expect.text
+        row.context = step.context
+        row.contextCheck = MatrixRow.contextCell(
+          expect: expect.context, ok: step.ok, source: step.source, got: step.context)
         if step.step == "read" {
           row.panel = Self.panelSummary(step)
           row.ms = step.captureEndedMs
@@ -207,6 +245,10 @@ struct Matrix {
           row.note = details.isEmpty ? nil : details.joined(separator: ", ")
         }
         if step.ok && !row.textMatches { row.note = "got \(E2E.quote(step.text))" }
+        if row.contextCheck == "FAIL" {
+          row.note = [row.note, "got context \(E2E.quote(step.context))"].compactMap { $0 }
+            .joined(separator: ", ")
+        }
       }
       say("  " + row.line)
       rows.append(row)
@@ -223,7 +265,7 @@ struct Matrix {
   /// menu bar Copy item and as many through ⌘C, in one Dict process. Each path gives one row:
   /// ok only if every sample captured the text with the panel key; `ms` is the median time
   /// from triggering the copy to the clipboard change, and the note lists every sample.
-  private mutating func copyProbe(_ app: String, _ control: String, expect: String) {
+  private mutating func copyProbe(_ app: String, _ control: String, expect: MatrixExpect) {
     let paths = ["menu", "key"]
     let steps = paths.flatMap { path in
       Array(repeating: Self.forcedRead(path), count: Self.probeSamples)
@@ -246,7 +288,14 @@ struct Matrix {
       row.ok = samples.count == Self.probeSamples && samples.allSatisfy(\.ok)
       row.source = samples.first?.source
       row.failure = samples.first { !$0.ok }?.failure
-      row.textMatches = row.ok && samples.allSatisfy { $0.text == expect }
+      row.textMatches = row.ok && samples.allSatisfy { $0.text == expect.text }
+      let cells = Set(
+        samples.map {
+          MatrixRow.contextCell(
+            expect: expect.context, ok: $0.ok, source: $0.source, got: $0.context)
+        })
+      row.contextCheck = cells.contains("FAIL") ? "FAIL" : cells.contains("PASS") ? "PASS" : "—"
+      row.context = samples.first { $0.context != nil }?.context
       let problems = Set(samples.map(Self.panelSummary)).sorted()
       row.panel = problems.joined(separator: "; ")
       row.ms = waits.sorted().dropFirst(waits.count / 2).first
@@ -282,12 +331,12 @@ struct Matrix {
       if !wasRunning { quit(pid) }
     }
     pause(0.5)
-    let target = "quick brown fox"
+    let expect = Self.textEditExpect
     guard let text = AX.focusedElement(pid),
-      selectRange(text, of: target, in: Self.sentence)
+      selectRange(text, of: expect.text, in: Self.sentence)
     else { return skip("TextEdit", "could not select text through accessibility") }
-    capture("TextEdit", "textView", "warm", expect: target)
-    copyProbe("TextEdit", "textView", expect: target)
+    capture("TextEdit", "textView", "warm", expect: expect)
+    copyProbe("TextEdit", "textView", expect: expect)
   }
 
   private mutating func safari() throws {
@@ -298,7 +347,7 @@ struct Matrix {
         skip("Safari", "the page for \(control) did not load")
         continue
       }
-      let text = Self.webText[control] ?? ""
+      let text = Self.webExpect[control] ?? MatrixExpect(text: "", context: "")
       capture("Safari", control, wasRunning ? "warm" : "first", expect: text)
       if control == "web.paragraph" { copyProbe("Safari", control, expect: text) }
       closeTab(pid, control: control)
@@ -327,7 +376,7 @@ struct Matrix {
         skip("Chrome", "the page for \(control) did not load")
         continue
       }
-      let text = Self.webText[control] ?? ""
+      let text = Self.webExpect[control] ?? MatrixExpect(text: "", context: "")
       capture("Chrome", control, "first", expect: text)
       pause(2.5)
       capture("Chrome", control, "warm", expect: text)
@@ -359,7 +408,7 @@ struct Matrix {
       poll(timeout: 15, { pageIsFront(pid, control: control) ? true : nil }) != nil
     else { return skip("Chrome (isolated)", "the isolated instance did not show the page") }
     pause(0.3)
-    let text = Self.webText[control] ?? ""
+    let text = Self.webExpect[control] ?? MatrixExpect(text: "", context: "")
     // Both cold: the forced ⌘C skips the accessibility read, so it does not switch the tree
     // on; the shortcut press then finds the tree off, shows the reading panel and copies.
     // The warm row runs in the same Dict process: Dict switches the tree off again when it
@@ -426,7 +475,7 @@ struct Matrix {
         + (1...Self.probeSamples).map { "panel key, menu copy #\($0)" }
         + (1...Self.probeSamples).map { "panel key, key copy #\($0)" },
       steps: [Self.readStep, ["wait": ["ms": 6000]], Self.captureStep] + probes,
-      expect: Self.sentence
+      expect: Self.vsCodeExpect
     ) {
       // Electron loads the text only after Dict's second write (~2.5 s after the first), and
       // that rebuild drops the selection. A ⌘A posted after it did not select (measured), so
@@ -447,7 +496,7 @@ struct Matrix {
   // MARK: Helpers
 
   private func pageURL(_ control: String) -> String {
-    fixturePageURL(control, text: Self.webText[control] ?? "")
+    fixturePageURL(control, text: Self.webExpect[control]?.text ?? "")
   }
 
   private func pageIsFront(_ pid: pid_t, control: String) -> Bool {

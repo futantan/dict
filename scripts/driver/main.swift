@@ -7,7 +7,7 @@
 //   dict-driver matrix   --app <Dict.app> --pages <dir> --out <json> --work <dir> [--only a,b]
 //   dict-driver live     --app <Dict.app> --fixture <CaptureFixture.app> --pages <dir> --work <dir> [--only a,b] [--runs n]
 //   dict-driver selftest --fixture <CaptureFixture.app> --fakes <dir> --work <dir>
-//   dict-driver check    --scenarios <json>   (decodes the scenario file only)
+//   dict-driver check    --scenarios <json>   (decodes the scenario file, checks matrix rows)
 //
 // Exit status: 0 all passed, 1 failures, 2 skipped because the app has no `--e2e` entry point
 // yet, 3 usage or environment errors.
@@ -59,7 +59,9 @@ func main() -> Int32 {
       // Decodes a scenario file without launching anything.
       let scenarios = try E2E.loadScenarios(try required("scenarios"))
       say("check: \(scenarios.count) scenarios decode")
-      return 0
+      let problems = matrixRowProblems()
+      problems.forEach { say("check: matrix row: \($0)") }
+      return problems.isEmpty ? 0 : 1
 
     case "matrix":
       try requireAccessibility()

@@ -79,3 +79,60 @@ struct ContextLocatorTests {
         == NSRange(location: 500, length: 700))
   }
 }
+
+/// Electron's paragraph markers run past the editor (VS Code: the tab title, U+FFFC and the
+/// Chat panel title), so the paragraph is clipped to the focused element's value.
+struct ElementClipTests {
+  struct Case: Sendable, CustomTestStringConvertible {
+    let paragraph: String
+    let term: String
+    /// The focused element's value, or nil when it has none.
+    let value: String?
+    /// The selection's range in `value`, when the element reports one.
+    var valueRange: NSRange?
+    let sentence: String
+
+    var testDescription: String { "\(term) in \(paragraph.debugDescription)" }
+  }
+
+  static let sentence = "The quick brown fox jumps over the lazy dog."
+  /// The paragraph VS Code's markers returned in `make matrix`.
+  static let vsCodeParagraph = "sample.txt\u{FFFC}\u{FFFC}\(sentence)Chat"
+
+  static let cases: [Case] = [
+    Case(paragraph: vsCodeParagraph, term: "quick brown fox", value: sentence, sentence: sentence),
+    Case(
+      paragraph: vsCodeParagraph, term: sentence, value: sentence,
+      valueRange: NSRange(location: 0, length: sentence.utf16.count), sentence: sentence),
+    Case(
+      paragraph: vsCodeParagraph, term: "quick brown fox", value: sentence,
+      valueRange: NSRange(location: 4, length: 15), sentence: sentence),
+    // A stale range falls back to finding the text in the value.
+    Case(
+      paragraph: vsCodeParagraph, term: "quick brown fox", value: sentence,
+      valueRange: NSRange(location: 0, length: 15), sentence: sentence),
+    // The value holds more lines than the paragraph: the clip stops where they differ.
+    Case(
+      paragraph: "Tab\u{FFFC}\(sentence)Panel", term: "lazy dog",
+      value: "First line.\n\(sentence)\nLast line.", sentence: sentence),
+    // No value, or a value without the selection: the paragraph is kept as it is.
+    Case(paragraph: "One two. Three four.", term: "Three", value: nil, sentence: "Three four."),
+    Case(
+      paragraph: "One two. Three four.", term: "Three", value: "Unrelated text.",
+      sentence: "Three four."),
+    // The text twice in the value and no range: no guessing, the paragraph is kept.
+    Case(paragraph: "A cat sat. It ran.", term: "cat", value: "cat cat", sentence: "A cat sat."),
+  ]
+
+  @Test(arguments: cases)
+  func clipsTheParagraphToTheElement(_ testCase: Case) throws {
+    let paragraph = testCase.paragraph
+    let selection = NSRange(try #require(paragraph.range(of: testCase.term)), in: paragraph)
+    let (clipped, local) = clip(
+      paragraph: paragraph, selection: selection, to: testCase.value,
+      valueRange: testCase.valueRange)
+    let context = try #require(contextSentence(in: clipped, selection: local))
+    #expect(context.sentence == testCase.sentence)
+    #expect(context.sentence[context.termRange] == testCase.term)
+  }
+}

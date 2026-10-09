@@ -54,6 +54,55 @@ func contextSentence(in text: String, selection: NSRange) -> ContextSentence? {
   return sentence(containing: term, in: text)
 }
 
+/// `paragraph` cut down to the part that is also in `value`, the focused element's text, and
+/// `selection` moved into it. Electron's paragraph markers can run past the element into the
+/// surrounding UI (VS Code: the tab title, U+FFFC and the Chat panel title), and the element's
+/// value cannot. The selection is anchored in `value` at `valueRange` when that holds the same
+/// text, else at its only occurrence; without an anchor the paragraph is returned unchanged.
+/// From there the clip keeps the text before and after the selection that both strings share.
+func clip(
+  paragraph: String, selection: NSRange, to value: String?, valueRange: NSRange?
+) -> (String, NSRange) {
+  let unchanged = (paragraph, selection)
+  let text = paragraph as NSString
+  guard let value, NSMaxRange(selection) <= text.length else { return unchanged }
+  let valueText = value as NSString
+  let selected = text.substring(with: selection)
+  let anchor: NSRange
+  if let valueRange, NSMaxRange(valueRange) <= valueText.length,
+    valueText.substring(with: valueRange) == selected
+  {
+    anchor = valueRange
+  } else {
+    let first = valueText.range(of: selected)
+    guard first.location != NSNotFound else { return unchanged }
+    let rest = NSRange(location: first.location + 1, length: valueText.length - first.location - 1)
+    guard valueText.range(of: selected, range: rest).location == NSNotFound else {
+      return unchanged
+    }
+    anchor = first
+  }
+
+  var before = 0
+  while before < min(selection.location, anchor.location),
+    text.character(at: selection.location - before - 1)
+      == valueText.character(at: anchor.location - before - 1)
+  {
+    before += 1
+  }
+  var after = 0
+  while NSMaxRange(selection) + after < text.length,
+    NSMaxRange(anchor) + after < valueText.length,
+    text.character(at: NSMaxRange(selection) + after)
+      == valueText.character(at: NSMaxRange(anchor) + after)
+  {
+    after += 1
+  }
+  let kept = NSRange(
+    location: selection.location - before, length: before + selection.length + after)
+  return (text.substring(with: kept), NSRange(location: before, length: selection.length))
+}
+
 /// Reads the context sentence of a found selection. Accessibility queue only.
 func readContext(_ found: FoundSelection, kind: AppKind) -> ContextSentence? {
   // Chromium's values and ranges disagree about paragraph breaks: markers only there.
@@ -65,8 +114,18 @@ func readContext(_ found: FoundSelection, kind: AppKind) -> ContextSentence? {
     found.markerRange.map { _ in found }
     ?? selectedMarkerText(found.element)
     ?? webAreaAncestor(of: found.element).flatMap(selectedMarkerText)
-  guard let marker, let markerRange = marker.markerRange else { return nil }
-  return markerContext(marker.element, markerRange, length: found.text.utf16.count)
+  guard let marker, let markerRange = marker.markerRange,
+    let read = markerParagraph(
+      marker.element, markerRange, length: found.text.utf16.count)
+  else { return nil }
+  let (paragraph, selection) = read
+  // An editable element with a range (VS Code's editor, a web text field) bounds the
+  // paragraph; read-only web text has no such element.
+  let (clipped, local) = clip(
+    paragraph: paragraph, selection: selection,
+    to: found.range.flatMap { _ in fieldText(found.element) },
+    valueRange: found.range.map { NSRange(location: $0.location, length: $0.length) })
+  return contextSentence(in: clipped, selection: local)
 }
 
 /// Native text controls: a window around the range through `AXStringForRange`.
@@ -84,11 +143,11 @@ private func nativeContext(_ element: AXUIElement, _ range: CFRange) -> ContextS
 }
 
 /// Web content: the paragraph from the start marker's paragraph start to the end marker's
-/// paragraph end, then the selection's offset in it. The only method that was right in both
+/// paragraph end, and the selection's range in it. The only method that was right in both
 /// Chrome and Safari, inline markup included.
-private func markerContext(
+private func markerParagraph(
   _ element: AXUIElement, _ markerRange: AXTextMarkerRange, length: Int
-) -> ContextSentence? {
+) -> (String, NSRange)? {
   let start = AXTextMarkerRangeCopyStartMarker(markerRange)
   let end = AXTextMarkerRangeCopyEndMarker(markerRange)
   guard
@@ -101,8 +160,7 @@ private func markerContext(
     let paragraph = markerString(element, from: paragraphStart, to: paragraphEnd)
   else { return nil }
   let before = markerString(element, from: paragraphStart, to: start) ?? ""
-  return contextSentence(
-    in: paragraph, selection: NSRange(location: before.utf16.count, length: length))
+  return (paragraph, NSRange(location: before.utf16.count, length: length))
 }
 
 private func markerString(_ element: AXUIElement, from: CFTypeRef, to: CFTypeRef) -> String? {

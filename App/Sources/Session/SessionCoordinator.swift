@@ -515,7 +515,8 @@ final class SessionCoordinator {
       in \(last?.name ?? "-", privacy: .public) after \
       \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms
       """)
-    if case .result(let result) = last, let origin {
+    // A word or phrase translated is no sentence; its lookups are what the log keeps.
+    if case .result(let result) = last, let origin, classify(text) == .passage {
       let intoLearning = direction == .intoLearning
       await recordSentence(
         .translated, source: text, result: result, app: origin.app,

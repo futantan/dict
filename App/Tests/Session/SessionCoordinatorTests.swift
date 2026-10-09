@@ -1003,7 +1003,48 @@ struct SessionLookupTests {
     #expect(harness.panel.lastCard?.encounters == 1)
     let log = try #require(try await harness.vocab?.day(today))
     #expect(log.lookups.count == 1)
-    #expect(log.sentences.map(\.kind) == [.translated])
+    // A word translated is not a sentence event; only a passage is (architecture 8.1).
+    #expect(log.sentences.isEmpty)
+  }
+
+  /// The on-screen sequence of the M2 check: a second lookup, ⌘S twice, then Translate and
+  /// Look Up. Neither switch is a new lookup.
+  @Test func switchingAfterASecondLookupKeepsTheCount() async throws {
+    let harness = Harness([(.success(ran()), nil), (.success(ran()), nil)])
+    harness.entries = [runEntry]
+    harness.card = ranStream
+    await harness.press()
+    harness.coordinator.end()
+    await harness.press()
+    #expect(harness.panel.lastCard?.shownEncounters == 2)
+
+    harness.coordinator.perform(CardStrings.learnAction)
+    await harness.coordinator.settle()
+    harness.coordinator.perform(CardStrings.learnAction)
+    await harness.coordinator.settle()
+    harness.coordinator.perform(CardStrings.translateAction)
+    await harness.coordinator.settle()
+    harness.coordinator.perform(CardStrings.lookUpAction)
+    await harness.coordinator.settle()
+    harness.coordinator.perform(CardStrings.translateAction)
+    await harness.coordinator.settle()
+    harness.coordinator.perform(CardStrings.lookUpAction)
+    await harness.coordinator.settle()
+
+    #expect(harness.panel.lastCard?.shownEncounters == 2)
+    let log = try #require(try await harness.vocab?.day(today))
+    #expect(log.lookups.count == 2)
+    #expect(log.sentences.isEmpty)
+    let term = try await harness.vocab?.term(language: "en", lemmaKey: "run")
+    #expect(term?.tier == .seen)
+  }
+
+  @Test func aTranslatedPhraseIsNotASentenceEvent() async throws {
+    let harness = Harness([(.success(selection("take off")), nil)])
+    await harness.press()
+
+    #expect(harness.panel.lastState?.phase == .result("你好"))
+    #expect(try await harness.vocab?.day(today).sentences.isEmpty == true)
   }
 
   @Test func aPassageOffersNoLookUp() async {

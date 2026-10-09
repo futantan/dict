@@ -2,6 +2,8 @@
 //
 // Prompt evaluation against real models (architecture 14.5). Not run in CI.
 // Run through `make eval SUITE=<suite> RUNS=<n>`, which puts OPENAI_API_KEY in the environment.
+// `--base-url` points it at another Chat Completions server instead, for example the local
+// mock (`scripts/fake-model.py`), which checks the framework without spending tokens.
 
 import DictCore
 import Foundation
@@ -9,13 +11,15 @@ import Foundation
 let usage = """
   usage: DictEval --suite <\(suites.map(\.name).joined(separator: "|"))|all> [--runs <n>]
                   [--model <name>] [--price <input>,<output>] [--max-cost <dollars>]
-                  [--threshold <0...1>]
+                  [--threshold <0...1>] [--base-url <url>]
 
     --runs       calls per case (default 10)
     --model      model id (default gpt-6-luna)
     --price      dollars per million input and output tokens, for models without a known price
     --max-cost   stop starting calls once this much has been spent (default 1)
     --threshold  minimum pass rate of every invariant (default 0.95)
+    --base-url   another Chat Completions server, for example http://127.0.0.1:8767/v1 for
+                 the local mock; OPENAI_API_KEY is then optional
   """
 
 /// Dollars per million input and output tokens (architecture 6.8, OpenAI's price list).
@@ -32,6 +36,7 @@ struct Options {
   var price: EvalPrice?
   var maxCost = 1.0
   var threshold = 0.95
+  var baseURL: URL?
 }
 
 struct UsageError: Error {
@@ -78,6 +83,12 @@ func parseOptions(_ arguments: [String]) throws(UsageError) -> Options {
       options.maxCost = try number(for: flag)
     case "--threshold":
       options.threshold = try number(for: flag)
+    case "--base-url":
+      let text = try value(for: flag)
+      guard let url = URL(string: text), url.scheme != nil else {
+        throw UsageError(message: "--base-url: not a URL: \(text)")
+      }
+      options.baseURL = url
     case "--help", "-h":
       throw UsageError(message: "")
     default:
@@ -89,7 +100,7 @@ func parseOptions(_ arguments: [String]) throws(UsageError) -> Options {
 }
 
 /// The OpenAI client the app uses, with thinking off (`reasoning_effort: none` on gpt-6).
-func makeModel(model: String, apiKey: String) throws(UsageError) -> any TextModel {
+func makeModel(model: String, apiKey: String, baseURL: URL?) throws(UsageError) -> any TextModel {
   let preset: ProviderPreset
   do {
     guard let openAI = try ProviderPreset.all().first(where: { $0.id == "openai" }) else {
@@ -101,9 +112,9 @@ func makeModel(model: String, apiKey: String) throws(UsageError) -> any TextMode
   } catch {
     throw UsageError(message: "cannot read the preset table: \(error)")
   }
-  return ChatCompletionsModel(
-    endpoint: preset.endpoint(model: model, thinking: .off), rules: preset.thinkingRules,
-    apiKey: apiKey)
+  var endpoint = preset.endpoint(model: model, thinking: .off)
+  if let baseURL { endpoint.baseURL = baseURL }
+  return ChatCompletionsModel(endpoint: endpoint, rules: preset.thinkingRules, apiKey: apiKey)
 }
 
 func fail(_ message: String) -> Never {
@@ -121,13 +132,15 @@ do {
 guard let price = options.price ?? knownPrices[options.model] else {
   fail("no known price for \(options.model); pass --price <input>,<output>")
 }
-guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty else {
+let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
+if apiKey.isEmpty && options.baseURL == nil {
   fail("OPENAI_API_KEY is not set; run through `make eval`, which reads it from .env")
 }
 
 let model: any TextModel
 do {
-  model = try makeModel(model: options.model, apiKey: apiKey)
+  model = try makeModel(
+    model: options.model, apiKey: apiKey.isEmpty ? "unused" : apiKey, baseURL: options.baseURL)
 } catch {
   fail(error.message)
 }

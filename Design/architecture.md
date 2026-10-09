@@ -1008,6 +1008,11 @@ public struct WordCard: Codable, Sendable, Equatable {
   所以界面不显示模型给的 `level`，生僻词（词频分档为「少见」）不显示 `collocations`。
 - 提示词规定词元写法：屈折词还原成原形，短语动词和习语保持完整的原形，拼错的词按最可能的正确拼写解释。
 - 每次约 683 输入、161 输出 token，约 0.00015 美元【实测】。
+- 现状（M2.5）：`DictCore` 有 `WordCard`、`decodeCard`（另外校验枚举和数组上限）、`PromptBuilder.card(term:context:pair:accent:nonce:)` 和 `TopLevelFieldScanner`；界面还没有卡片，M2.8 接入。
+  提示词是复测第 7.6 节的文本，前面加了上面第 1、2 条的写法：输入对象放在随机后缀标签里。
+  `make eval SUITE=card`（52 个用例，`RUNS=1`，`gpt-6-luna`）严格解码 52/52，上下文义 42/43，花费 0.0082 美元【实测】。
+  同一次评测里 `definition` 排在所有数组之前只有 16/52，`definition` 到达 p50 1.80 s【实测】：请求体用 `JSONEncoder` 编码 `JSONValue` 的字典，schema 的 `properties` 键序每个进程随机，模型照着这个乱序输出。
+  要让上面的流式显示生效，需要请求体保留 schema 的键序，这个改动还没有做。
 
 ### 6.7 结构化输出的后处理与改写校验
 

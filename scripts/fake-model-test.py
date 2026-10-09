@@ -27,6 +27,19 @@ PROOFREAD_SCHEMA = {
 }
 
 
+CARD_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {"name": "card", "strict": True, "schema": {"type": "object"}},
+}
+CARD_KEYS = ["status", "lemma", "phonetic", "partOfSpeech", "definition", "contextTranslation",
+             "otherSenses", "examples", "collocations", "level"]
+
+
+def card_body(term, context=""):
+    """A card request as PromptBuilder.card sends it: the JSON object in the source block."""
+    return body(json.dumps({"term": term, "context": context}, ensure_ascii=False), CARD_SCHEMA)
+
+
 def body(text, response_format=None):
     user = f"<source_text_0a1b2c3d>\n{text}\n</source_text_0a1b2c3d>\n\nDo the task."
     request = {
@@ -92,6 +105,32 @@ class AnsweringModeTests(unittest.TestCase):
     def test_proofreading_unknown_text_answers_no_edits(self):
         self.assertEqual(json.loads(self.stream(body("Fine as is.", PROOFREAD_SCHEMA))),
                          {"edits": []})
+
+    def test_card_from_the_table_comes_in_schema_order(self):
+        text = self.stream(card_body("ran", "She ran a small bakery for ten years."))
+        card = json.loads(text)
+        self.assertEqual(list(card), CARD_KEYS)
+        self.assertEqual(card["lemma"], "run")
+        self.assertEqual(card["definition"], fake_model.MARK + "经营；管理")
+
+    def test_card_term_matches_lowercased(self):
+        self.assertEqual(json.loads(self.stream(card_body("Fine")))["lemma"], "fine")
+
+    def test_card_not_a_term_has_no_definition(self):
+        card = json.loads(self.stream(card_body("asdfgh")))
+        self.assertEqual(card["status"], "not_a_term")
+        self.assertEqual(card["definition"], "")
+
+    def test_card_fallback_fills_in_the_term(self):
+        card = json.loads(self.stream(card_body('say "cheese"', "Everyone, say \"cheese\"!")))
+        self.assertEqual(list(card), CARD_KEYS)
+        self.assertEqual(card["lemma"], 'say "cheese"')
+        self.assertTrue(card["definition"].startswith(fake_model.MARK))
+        self.assertIn('say "cheese"', card["examples"][0]["sentence"])
+        self.assertNotEqual(card["contextTranslation"], "")
+
+    def test_card_fallback_without_context_has_no_context_translation(self):
+        self.assertEqual(json.loads(self.stream(card_body("petrichor")))["contextTranslation"], "")
 
     def test_translation_from_the_table_is_marked(self):
         text = self.stream(body("five dozen liquor jugs"))

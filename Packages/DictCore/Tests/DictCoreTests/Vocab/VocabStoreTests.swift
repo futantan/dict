@@ -455,6 +455,28 @@ struct VocabStoreDayTests {
     #expect(try await store.term(language: "en", lemmaKey: "run")?.encounterCount == 1)
     #expect(try count(url, "sentence_event") == 1)
   }
+
+  @Test func deletingADayKeepsTermsBeingLearnt() async throws {
+    let url = try temporaryDirectory().appending(path: "vocab.sqlite")
+    let store = try VocabStore(url: url)
+    let star = try await store.recordLookup(lookup("star", on: monday))
+    _ = try await store.recordLookup(lookup("walk", on: monday, minute: 1))
+    try await store.setTier(.learning, termID: star.id, on: monday)
+    try await store.recordReview(
+      termID: star.id, encounterID: nil, rating: .good, on: tuesday, at: start)
+
+    try await store.deleteDay(monday)
+    let kept = try #require(try await store.term(language: "en", lemmaKey: "star"))
+    #expect(kept.tier == .learning)
+    #expect(kept.encounterCount == 0)
+    #expect(kept.createdAt == star.createdAt)
+    #expect(try await store.term(language: "en", lemmaKey: "walk") == nil)
+    #expect(try count(url, "encounter") == 0)
+    #expect(try query(url, "SELECT step, due_day FROM review_state") == [["1", "2026-10-08"]])
+    #expect(try count(url, "review_log") == 1)
+    let due = try await store.dueReviews(on: day("2026-10-08"), limit: 10)
+    #expect(due.map(\.term.id) == [star.id])
+  }
 }
 
 struct VocabStoreReviewTests {

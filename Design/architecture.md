@@ -1382,6 +1382,7 @@ public actor VocabStore {
 现状：`VocabStore` 已在 M2.6 实现（`Packages/DictCore/Sources/DictCore/Vocab/`），五张表与索引照第 8.2 节，`user_version` 为 1，坏文件改名为 `<原名>.bad-<UTC 时间>`（连同 `-wal`、`-shm`）后新建。
 与上面代码块的差别：`init` 多一个 `autoPromotion: AutoPromotion? = .standard`（传 nil 关闭自动升档）；`setTier` 多一个 `on day: LocalDay`，因为升档要写「次日到期」而存储层不算日期；`recordReview` 多一个 `at date: Date = .now`，写 `review_log.reviewed_at`。
 自动升档只在跨过门槛的那一次查词时发生，用户撤回到「查过」后不会被再次自动升上去。
+删除某一天只删那天的 `encounter` 和 `sentence_event`，之后没有任何 `encounter` 的词条只删「查过」的，「要学」的连同 `review_state`、`review_log` 保留。
 应用层还没有打开这个文件，也没有记录、⌘S 和星标，计划在 M2.8 接入；每日回顾、复习和导出的界面在 M5。
 
 ## 9. 发音

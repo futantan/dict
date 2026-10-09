@@ -220,18 +220,21 @@ public actor VocabStore {
     try db.rows("DELETE FROM term WHERE id = ?", [.integer(termID)])
   }
 
-  /// Deletes every lookup and sentence event of `day`, then the terms left without encounters;
-  /// the remaining terms' first and last seen times are recomputed from what is left.
+  /// Deletes every lookup and sentence event of `day`, then the 查过 terms left without
+  /// encounters. 要学 terms stay with their review state and log; the first and last seen times
+  /// of terms that still have encounters are recomputed from what is left.
   public func deleteDay(_ day: LocalDay) throws {
     try db.transaction { () throws(VocabError) in
       try db.rows("DELETE FROM encounter WHERE day = ?", [.text(day.description)])
       try db.rows("DELETE FROM sentence_event WHERE day = ?", [.text(day.description)])
       try db.execute(
         """
-        DELETE FROM term WHERE NOT EXISTS (SELECT 1 FROM encounter e WHERE e.term_id = term.id);
+        DELETE FROM term WHERE tier = 'seen'
+          AND NOT EXISTS (SELECT 1 FROM encounter e WHERE e.term_id = term.id);
         UPDATE term SET
           created_at   = (SELECT min(seen_at) FROM encounter e WHERE e.term_id = term.id),
-          last_seen_at = (SELECT max(seen_at) FROM encounter e WHERE e.term_id = term.id);
+          last_seen_at = (SELECT max(seen_at) FROM encounter e WHERE e.term_id = term.id)
+        WHERE EXISTS (SELECT 1 FROM encounter e WHERE e.term_id = term.id);
         """)
     }
   }

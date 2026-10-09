@@ -20,6 +20,10 @@
 #   /cut/v1    streams two pieces of text, then closes the connection without finishing.
 #   /slow/v1   streams one word every 100 ms for about 6 s, then finishes normally.
 #
+# Two GETs list the one model, `mock`, for the Settings model list:
+#   /v1/models  in the OpenAI shape, as a custom provider's base URL plus /models;
+#   /api/tags   in the Ollama shape.
+#
 # Logs one line per request to stderr: the path, the reply kind and whether the table had
 # it; never the text.
 #
@@ -38,6 +42,20 @@ MARK = "[mock] "
 REPLIES = pathlib.Path(__file__).resolve().parent.parent / "Fixtures/MockModel/replies.json"
 SOURCE = re.compile(r"<(source_text_\w+)>\n(.*)\n</\1>", re.DOTALL)
 FAILURES = ("hang", "cut", "slow")
+MODEL_LISTS = {
+    "/v1/models": {
+        "object": "list",
+        "data": [{"id": "mock", "object": "model", "created": 0, "owned_by": "dict-mock"}],
+    },
+    "/api/tags": {
+        "models": [{
+            "name": "mock", "model": "mock", "modified_at": "2026-01-01T00:00:00Z", "size": 0,
+            "digest": "0" * 64,
+            "details": {"format": "gguf", "family": "mock", "parameter_size": "0B",
+                        "quantization_level": "none"},
+        }],
+    },
+}
 
 
 def chunk(text=None, finish=None):
@@ -117,7 +135,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def log(self, line):
-        print(time.strftime("%H:%M:%S"), "POST", self.path, line, file=sys.stderr, flush=True)
+        print(time.strftime("%H:%M:%S"), self.command, self.path, line, file=sys.stderr,
+              flush=True)
+
+    def do_GET(self):
+        path = self.path.split("?")[0].rstrip("/")
+        if path not in MODEL_LISTS:
+            self.log("404")
+            self.send_error(404)
+            return
+        payload = json.dumps(MODEL_LISTS[path]).encode()
+        self.log("200 models")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)

@@ -35,7 +35,7 @@ struct LookupServicesTests {
 
   @Test(arguments: [
     ("Learn", "要学"),
-    ("Translate as Sentence", "作为句子翻译"),
+    ("Translate", "作为句子翻译"),
     ("Look Up", "查这个词"),
     ("Looked up %lld times", "第 %lld 次"),
     ("Nothing to look up", "没有可查的内容"),

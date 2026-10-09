@@ -23,7 +23,7 @@ enum CardStrings {
     localized: "Pronounce", table: "Card", comment: "Card action: say the word")
 
   static let translateAsSentence = String(
-    localized: "Translate as Sentence", table: "Card",
+    localized: "Translate", table: "Card",
     comment: "Card action: translate the selection instead of looking it up")
 
   static let lookUp = String(

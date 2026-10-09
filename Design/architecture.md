@@ -1011,11 +1011,19 @@ public struct WordCard: Codable, Sendable, Equatable {
   所以界面不显示模型给的 `level`，生僻词（词频分档为「少见」）不显示 `collocations`。
 - 提示词规定词元写法：屈折词还原成原形，短语动词和习语保持完整的原形，拼错的词按最可能的正确拼写解释。
 - 每次约 683 输入、161 输出 token，约 0.00015 美元【实测】。
-- 现状（M2.5）：`DictCore` 有 `WordCard`、`decodeCard`（另外校验枚举和数组上限）、`PromptBuilder.card(term:context:pair:accent:nonce:)` 和 `TopLevelFieldScanner`；界面还没有卡片，M2.8 接入。
+- 现状（M2.5）：`DictCore` 有 `WordCard`、`decodeCard`（另外校验枚举和数组上限）、`PromptBuilder.card(term:context:pair:accent:nonce:)` 和 `TopLevelFieldScanner`。
   提示词是复测第 7.6 节的文本，前面加了上面第 1、2 条的写法：输入对象放在随机后缀标签里。
   请求体按声明顺序编码（`JSONValue.jsonData()`，对象是保序的 `JSONObject`），schema 的键序就是 `WordCard.keys`。
   之前用 `JSONEncoder` 编码字典，键序每个进程随机，评测里 `definition` 排在所有数组之前只有 16/52【实测】。
   `make eval SUITE=card`（52 个用例，`RUNS=1`，`gpt-6-luna`）：严格解码 52/52，键全部按 schema 顺序（`status` 第一个）52/52，上下文义 43/43，`definition` 到达 p50 1.10 s、p90 1.44 s，完成 p50 2.00 s，花费 0.0082 美元【实测】。
+- 现状（M2.8）：面板有卡片（`PanelPhase.card(CardState)`，`App/Sources/Panel/CardView.swift`）。
+  `DictCore` 的 `CardMaker` 发请求并读流：扫描器读到 `definition` 或 `contextTranslation` 就报 `.fields`，`status` 为 `not_a_term` 时报 `.notATerm` 并结束，流完整结束后严格解码报 `.card`；截断、过滤、中断各有 `CardStreamError`。
+  读键按 `readRoute`（`classify` 加 `resolveDirection`）分流：词和短语查卡片，段落翻译，没有字的显示「没有可查的内容」；我的语言的词和短语暂时走翻译，因为找外语说法还没有实现。
+  卡片先显示词典层（词元、按口音选的音标、前 3 条释义、词频档），再按到达顺序补上本句意思、上下文句译文，完整后补其他义项、例句和搭配；「少见」档不显示搭配，模型的 `level` 不显示，音标和标题以词典层为准，词典里没有这个词时才用模型的。
+  标题行右侧从第 2 次起显示「第 N 次」。
+  操作栏是「要学 ⌘S」「发音 ⌘P」和「作为句子翻译」；词或短语的译文下方有「查这个词」，两者互转时沿用同一次记录，不算新的查询。
+  没有模型时卡片只有词典层，下方提示配置模型；词典和模型都没有时改走翻译（可能用 Apple 翻译）；模型说不是词条时也改走翻译。
+  模型失败时保留词典层，下方说明原因并给「重试」。
 
 ### 6.7 结构化输出的后处理与改写校验
 
@@ -1148,6 +1156,10 @@ Britfone（MIT）和 CMUdict（BSD-2）补音标评估过，没有接入：两�
 - 打包时把数据库复制进应用的 `Resources`，同时作为发布附件单独提供下载，「关于 → 致谢」页列出全部署名和下载链接。
 - 仓库根目录的 `LICENSE` 只覆盖代码，README 说明词典数据另行许可。
 - 应用在没有这个文件时完全可用，只是没有即时层；单元测试用一个几十行的测试库。
+- 现状（M2.8）：`project.yml` 的构建脚本在 `build/dict` 里三个文件都在时，把它们拷进应用的 `Resources`（`dict-en-zh.sqlite`、`dict-en-zh-LICENSE`、`dict-en-zh-ATTRIBUTION`），不在时跳过并删掉上次拷进去的；`make build` 和 `scripts/package.sh` 都经过这一步，打包时会说明带没带词典。
+  应用启动时用 `Bundle.main.url(forResource: "dict-en-zh", withExtension: "sqlite")` 打开 `Lexicon`，找不到或打不开时记一行日志，卡片只有模型的部分。
+  每次查词在日志里记词典层耗时。
+  单独下载词典和「关于 → 致谢」页还没有做。
 
 ### 7.3 表结构
 
@@ -1254,6 +1266,14 @@ public actor Lexicon {
 
 词条的主键用本机得到的词元（词典层 → `NLTagger` → 规范化后的原词形），不用模型返回的 `lemma`：模型的词元要等请求回来才知道，而且会摇摆（`better` 在同一句话里有时给 `well`、有时给 `better`【实测】）。
 这样「这是你第 N 次查这个词」可以零延迟显示，已记录的词立即显示上次的卡片，只为新句子请求上下文义。
+
+现状（M2.8）：词库在 `~/Library/Application Support/<bundle id>/vocab.sqlite`，目录不存在时创建，打不开时记日志、不记录，面板照常。
+查词在卡片显示时记录：词典里有这个词就在词典层显示后立即记，没有时等模型的第一个字段到达（说明它是词条）再记；词条键是词典的词元，词典里没有时是选中的原文；与上文不同，这时没有再用 `NLTagger` 还原。
+记录带原词形、上下文句、词在句中的 UTF-16 位置、取词来源和来源应用的 bundle id；本句意思、上下文句译文和卡片 JSON 还没有存（`VocabStore` 没有更新已记 `encounter` 的接口），网页地址取词时拿不到。
+「再试」和卡片与译文互转沿用同一次记录。
+句子翻译在结果完整时记 `translated`；纠错在替换完成后记 `corrected`，`applied` 只在读回确认替换时为真，错处列表是 `[{"right": …, "wrong": …}]`；没有替换就关掉面板的纠错不记。
+引导里的示例翻译不记。
+暂停记录、按应用排除和删除还没有界面。
 
 ### 8.2 表结构
 
@@ -1439,7 +1459,10 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - 逐词高亮：范围会带上尾随标点和前导空格【实测，评审】，绘制前裁掉。
 - 测试一律用渲染模式，不出声。
 
-现状：M2.7 已实现 `DictCore` 的 `resolveVoice`（`Speech/`）和应用的 `Speaker`（`App/Sources/Speech/`），但还没接到界面；⌘P、卡片喇叭、设置页的音色提示和「管理语音」按钮的跳转、启动后调用预热都随 M2.8 做。
+现状：M2.7 已实现 `DictCore` 的 `resolveVoice`（`Speech/`）和应用的 `Speaker`（`App/Sources/Speech/`）。
+M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读卡片标题（词元），3 秒内紧接着再按用慢速，再按回到正常（`PronunciationPace`）；`Speaker.say` 自己消费事件流，读完为止。
+启动后按设置的口音和学习语言预热一次。
+设置页的音色提示和「管理语音」按钮的跳转还没有做，卡片上也还不显示音色提示。
 与上面的接口有三处不同。
 `resolveVoice` 返回 `VoiceChoice`：选中的 `VoiceInfo`（没有可用音色时为 nil）加至多一条提示，`noVoice`、`accentMissing`（没有这个口音，暂用同语言的其他地区）或 `higherQuality`（只有 compact 档；enhanced 及以上不提示）。
 `Speaker` 是一个 `@MainActor` 的具体类而不是协议，另有 `accent`、`isSpeaking`、`voiceChoice(for:)` 和 `prewarm(language:)`；构造时选输出到扬声器或渲染进缓冲，测试只用后者。

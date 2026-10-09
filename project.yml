@@ -31,9 +31,40 @@ targets:
       - App/Resources
     dependencies:
       - package: DictCore
+    # The dictionary is built by `make dict` and never tracked (architecture 7.2). When it is
+    # there it ships in Resources with its licence and attribution; without it the app
+    # builds and runs with no instant layer.
+    postCompileScripts:
+      - name: Copy the dictionary
+        basedOnDependencyAnalysis: false
+        # Declared so that signing runs again whenever the script changes them.
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/dict-en-zh.sqlite
+          - $(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/dict-en-zh-LICENSE
+          - $(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/dict-en-zh-ATTRIBUTION
+        script: |
+          source="$SRCROOT/build/dict"
+          resources="$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
+          if [ -f "$source/dict-en-zh.sqlite" ] && [ -f "$source/LICENSE" ] \
+            && [ -f "$source/ATTRIBUTION" ]; then
+            mkdir -p "$resources"
+            # Copies only what changed: an untouched bundle keeps its signature.
+            for pair in dict-en-zh.sqlite:dict-en-zh.sqlite LICENSE:dict-en-zh-LICENSE \
+              ATTRIBUTION:dict-en-zh-ATTRIBUTION; do
+              from="$source/${pair%%:*}" to="$resources/${pair#*:}"
+              cmp -s "$from" "$to" || cp "$from" "$to"
+            done
+          else
+            echo "note: no dictionary in build/dict (run make dict): building without it"
+            rm -f "$resources/dict-en-zh.sqlite" "$resources/dict-en-zh-LICENSE" \
+              "$resources/dict-en-zh-ATTRIBUTION"
+          fi
     settings:
       base:
         PRODUCT_NAME: $(DICT_APP_NAME)
+        # The dictionary script reads build/dict, which may not exist, so it cannot declare
+        # its inputs to the script sandbox.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         PRODUCT_MODULE_NAME: DictApp
         PRODUCT_BUNDLE_IDENTIFIER: $(DICT_APP_BUNDLE_ID)
         GENERATE_INFOPLIST_FILE: YES

@@ -152,6 +152,26 @@ class AnsweringModeTests(unittest.TestCase):
             self.post("/unknown", {})
         self.assertEqual(caught.exception.code, 404)
 
+    def get(self, path):
+        url = f"http://127.0.0.1:{self.port}{path}"
+        with urllib.request.urlopen(url, timeout=10) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.headers["Content-Type"], "application/json")
+            return json.loads(response.read())
+
+    def test_models_lists_the_mock_in_the_openai_shape(self):
+        listing = self.get("/v1/models")
+        self.assertEqual(listing["object"], "list")
+        self.assertEqual([model["id"] for model in listing["data"]], ["mock"])
+
+    def test_tags_lists_the_mock_in_the_ollama_shape(self):
+        self.assertEqual([model["name"] for model in self.get("/api/tags")["models"]], ["mock"])
+
+    def test_unknown_get_is_not_found(self):
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            self.get("/v1/chat/completions")
+        self.assertEqual(caught.exception.code, 404)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

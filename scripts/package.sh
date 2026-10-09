@@ -43,6 +43,12 @@ notarize() {
 
 build_release
 app="$(scripts/app-path.sh Release)"
+# The build copies build/dict into the app when it is there (project.yml); say which it was.
+if [ -f "$app/Contents/Resources/dict-en-zh.sqlite" ]; then
+  echo "package: the dictionary is included"
+else
+  echo "package: no dictionary in build/dict (run make dict): the app ships without it" >&2
+fi
 version="$(defaults read "$app/Contents/Info.plist" CFBundleShortVersionString)"
 name="$(basename "$app" .app)"
 mkdir -p "$dist"

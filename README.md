@@ -60,6 +60,7 @@ The mock streams replies from `Fixtures/MockModel/replies.json`, matched by a su
 Proofreading text not in the table finds no mistakes, and translations echo the source; every translation starts with `[mock]`.
 For example, proofreading "Their going to the park tomorow, I think it will be fun." shows two changes.
 A dictionary card request gets the card of its term from the table's `cards` (`run`, `ran`, `fine` and the non-term `asdfgh`, each with the context sentence it was written for), else a placeholder card for that term; a card's definition also starts with `[mock]`.
+`GET /v1/models` (OpenAI shape) and `GET /api/tags` (Ollama shape) list one model, `mock`.
 Its request log is `build/mock-model.log`, one line per request without the text.
 `make test-mock` checks the mock's stream format, and DictCore tests check that every proofreading reply in the table applies to its text and every card decodes.
 `DictEval` runs against the mock too, which checks the evaluation framework without spending tokens: start `scripts/fake-model.py 8767`, then run `swift run --package-path Packages/DictCore DictEval --suite card --runs 1 --model mock --price 0,0 --base-url http://127.0.0.1:8767/v1`; its pass rates mean nothing.
@@ -84,6 +85,7 @@ A build from an old manifest still works as long as its files are in the cache.
 The same inputs always produce a byte-identical database.
 Keys listed in `tools/build-dict/blocklist.txt` are left out, for example after a takedown notice; a key, a tab and a gloss removes a single wrong gloss.
 `tools/build-dict/.build/release/build-dict lookup WORD...` shows what the app's lookup returns for a word.
+`make build` and `make package` copy `build/dict/dict-en-zh.sqlite` with its `LICENSE` and `ATTRIBUTION` into the app's resources when all three are there; without them the app builds and works with model cards only, and logs that it has no dictionary.
 
 ## Distribution
 

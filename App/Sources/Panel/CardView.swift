@@ -19,7 +19,7 @@ struct CardView: View {
         }
       }
       if card.model == .loading || card.definition != nil {
-        Divider()
+        if !card.senses.isEmpty { Divider() }
         inThisSentence
       }
       if !card.otherSenses.isEmpty {

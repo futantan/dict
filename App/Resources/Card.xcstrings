@@ -188,7 +188,7 @@
         }
       }
     },
-    "Translate as Sentence" : {
+    "Translate" : {
       "comment" : "Card action: translate the selection instead of looking it up",
       "localizations" : {
         "zh-Hans" : {

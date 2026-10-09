@@ -425,7 +425,8 @@ private struct ActionBar: View {
         Text(WritingStrings.checking)
       }
     case .card, .translation:
-      EmptyView()
+      // Keeps the actions at the trailing edge, as in the Write panel.
+      Color.clear.frame(height: 1)
     case .corrected(let correction):
       if correction.changeCount == 0 {
         Label(WritingStrings.noMistakes, systemImage: "checkmark.circle.fill")
@@ -468,6 +469,7 @@ private struct ActionBar: View {
             }
           }
         }
+        .fixedSize()
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)

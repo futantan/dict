@@ -81,6 +81,14 @@ private struct PanelContent: View {
           status: .corrected(correction),
           onReplace: onConfirm,
           onCopy: { copyToClipboard(correction.text) })
+      case .card(let card):
+        Divider()
+        ActionBar(status: .card(card), onAction: onAction)
+      case .result, .partial:
+        if model.state.offersLookUp {
+          Divider()
+          ActionBar(status: .translation, onAction: onAction)
+        }
       default:
         EmptyView()
       }
@@ -134,6 +142,8 @@ private struct PanelBody: View {
           attributed: diffText(correction.segments),
           font: Metrics.bodyNSFont, lineSpacing: Metrics.bodyLineSpacing,
           accessibilityLabel: WritingStrings.title)
+      case .card(let card):
+        CardView(card: card)
       }
       if let note = state.note, state.phase.showsNote {
         NoteLine(note: note, onAction: onAction)
@@ -300,7 +310,7 @@ extension PanelPhase {
   /// Only a result, streaming, finished or partial, carries a note.
   fileprivate var showsNote: Bool {
     switch self {
-    case .generating, .result, .partial: true
+    case .generating, .result, .partial, .card: true
     case .input, .reading, .failure, .needsSetup, .checking, .corrected: false
     }
   }
@@ -349,17 +359,21 @@ private func copyToClipboard(_ text: String) {
   NSPasteboard.general.setString(text, forType: .string)
 }
 
-/// The bar along the bottom of the Write panel, in the manner of a launcher's action bar:
-/// what happened on the left, the actions and their keys on the right.
+/// The bar along the bottom of the Write panel and the word card, in the manner of a
+/// launcher's action bar: what happened on the left, the actions and their keys on the right.
 private struct ActionBar: View {
   enum Status {
     case checking
     case corrected(Correction)
+    case card(CardState)
+    /// A translation of a word or phrase, which can be looked up instead.
+    case translation
   }
 
   let status: Status
   var onReplace: () -> Void = {}
   var onCopy: () -> Void = {}
+  var onAction: (PanelAction.ID) -> Void = { _ in }
 
   var body: some View {
     HStack(spacing: 10) {
@@ -377,6 +391,27 @@ private struct ActionBar: View {
         KeyedAction(
           title: WritingStrings.copyAction, keys: ["⌘", "C"], isPrimary: false, perform: onCopy)
       }
+      if case .card(let card) = status {
+        KeyedAction(
+          title: card.isLearning ? CardStrings.learning : CardStrings.learn,
+          symbol: card.isLearning ? "star.fill" : "star", keys: ["⌘", "S"],
+          isPrimary: card.isLearning
+        ) { onAction(CardStrings.learnAction) }
+        Divider().frame(height: 14)
+        KeyedAction(
+          title: CardStrings.pronounce, symbol: "speaker.wave.2", keys: ["⌘", "P"],
+          isPrimary: false
+        ) { onAction(CardStrings.pronounceAction) }
+        Divider().frame(height: 14)
+        KeyedAction(title: CardStrings.translateAsSentence, keys: [], isPrimary: false) {
+          onAction(CardStrings.translateAction)
+        }
+      }
+      if case .translation = status {
+        KeyedAction(title: CardStrings.lookUp, symbol: "character.book.closed", keys: []) {
+          onAction(CardStrings.lookUpAction)
+        }
+      }
     }
     .padding(.horizontal, 12)
     .frame(height: 38)
@@ -389,6 +424,8 @@ private struct ActionBar: View {
         ProgressView().controlSize(.mini)
         Text(WritingStrings.checking)
       }
+    case .card, .translation:
+      EmptyView()
     case .corrected(let correction):
       if correction.changeCount == 0 {
         Label(WritingStrings.noMistakes, systemImage: "checkmark.circle.fill")
@@ -405,13 +442,19 @@ private struct ActionBar: View {
 
   private struct KeyedAction: View {
     let title: String
+    var symbol: String?
     let keys: [String]
-    let isPrimary: Bool
+    var isPrimary = false
     let perform: () -> Void
 
     var body: some View {
       Button(action: perform) {
         HStack(spacing: 6) {
+          if let symbol {
+            Image(systemName: symbol)
+              .font(.system(size: 11))
+              .foregroundStyle(isPrimary ? Color.yellow : Color.secondary)
+          }
           Text(title)
             .font(.system(size: 12, weight: isPrimary ? .semibold : .regular))
             .foregroundStyle(isPrimary ? .primary : .secondary)

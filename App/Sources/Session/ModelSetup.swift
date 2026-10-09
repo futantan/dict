@@ -89,3 +89,15 @@ func makeProofreader(
         endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
   }
 }
+
+/// The card maker for the saved model preferences; nil without a usable model, and then the
+/// card shows the dictionary layer alone.
+func makeCardMaker(
+  _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore
+) -> CardMaker? {
+  configuredModel(preferences, presets: presets, secrets: secrets).map {
+    CardMaker(
+      model: ChatCompletionsModel(
+        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+  }
+}

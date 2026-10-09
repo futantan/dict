@@ -12,11 +12,17 @@ struct PanelState: Sendable, Equatable {
   /// A remark under a generating, finished or partial result, for example that Apple
   /// Translation stood in for a failed model, or why a result is partial.
   var note: PanelNote?
+  /// A translation of a word or phrase offers 「查这个词」, for text `classify` sent to the
+  /// wrong place (architecture 5.1).
+  var offersLookUp: Bool
 
-  init(source: String? = nil, phase: PanelPhase, note: PanelNote? = nil) {
+  init(
+    source: String? = nil, phase: PanelPhase, note: PanelNote? = nil, offersLookUp: Bool = false
+  ) {
     self.source = source
     self.phase = phase
     self.note = note
+    self.offersLookUp = offersLookUp
   }
 
   /// The empty panel with a text field (architecture 10.4).
@@ -46,12 +52,16 @@ enum PanelPhase: Sendable, Equatable {
   /// The proofread text as a diff of the original; Return replaces the selection with it
   /// when `canReplace`.
   case corrected(Correction)
+  /// The word card of a looked-up word or phrase: the dictionary layer, then the model's
+  /// card as it streams in (architecture 6.6).
+  case card(CardState)
 
   /// The text ⌘C copies when nothing in the panel is selected.
   var copyableText: String? {
     switch self {
     case .generating(let text), .result(let text), .partial(let text): text.isEmpty ? nil : text
     case .corrected(let correction): correction.text
+    case .card(let card): card.copyableText
     case .input, .reading, .failure, .needsSetup, .checking: nil
     }
   }

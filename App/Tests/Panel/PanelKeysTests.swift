@@ -15,6 +15,7 @@ struct PanelKeysTests {
     var selected = false
     var result = false
     var replaceable = false
+    var card = false
     let expected: PanelKeyRoute
 
     var testDescription: String { name }
@@ -86,6 +87,18 @@ struct PanelKeysTests {
       name: "⌘V while composing goes to the input method", keyCode: 9, characters: "v",
       modifiers: command, marked: true, expected: .pass),
     Case(name: "plain letters are typed", keyCode: 0, characters: "a", expected: .pass),
+    Case(
+      name: "⌘S on a card marks the word to learn", keyCode: 1, characters: "s",
+      modifiers: command, card: true, expected: .perform(CardStrings.learnAction)),
+    Case(
+      name: "⌘P on a card pronounces the word", keyCode: 35, characters: "p",
+      modifiers: command, card: true, expected: .perform(CardStrings.pronounceAction)),
+    Case(
+      name: "⌘S without a card does nothing", keyCode: 1, characters: "s", modifiers: command,
+      result: true, expected: .pass),
+    Case(
+      name: "⌘P while composing goes to the input method", keyCode: 35, characters: "p",
+      modifiers: command, marked: true, card: true, expected: .pass),
   ]
 
   @Test(arguments: cases)
@@ -93,7 +106,8 @@ struct PanelKeysTests {
     let route = PanelKeys.route(
       keyCode: c.keyCode, characters: c.characters,
       modifiers: NSEvent.ModifierFlags(rawValue: c.modifiers), hasMarkedText: c.marked,
-      hasSelectedText: c.selected, hasResult: c.result, canReplace: c.replaceable)
+      hasSelectedText: c.selected, hasResult: c.result, canReplace: c.replaceable,
+      showsCard: c.card)
     #expect(route == c.expected)
   }
 }

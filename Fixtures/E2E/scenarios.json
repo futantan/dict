@@ -203,6 +203,15 @@
       "content": "The first paragraph ends here.\n\nDr. Smith opened the second one, e.g. with a joke. It has two sentences.",
       "policy": "allowed",
       "expect": { "source": "accessibility", "text": "Smith", "copyEvents": 0, "context": "Dr. Smith opened the second one, e.g. with a joke." }
+    },
+    {
+      "name": "read shortcut, text view: a word shows the card",
+      "control": "textView.plain",
+      "text": "fox",
+      "content": "The quick brown fox jumps over the lazy dog.",
+      "policy": "allowed",
+      "step": "read",
+      "expect": { "source": "accessibility", "text": "fox", "copyEvents": 0, "readingPanel": false, "context": "The quick brown fox jumps over the lazy dog.", "kind": "card", "lemma": "fox" }
     }
   ]
 }

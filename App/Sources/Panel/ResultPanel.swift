@@ -15,6 +15,10 @@ final class ResultPanel: NSPanel {
   /// Called for Return while the panel shows a correction that can replace the selection.
   var onConfirm: () -> Void = {}
   var canReplace: () -> Bool = { false }
+  /// Whether the panel shows a word card, whose actions answer ⌘S and ⌘P.
+  var showsCard: () -> Bool = { false }
+  /// Called for a key that stands for a panel action.
+  var onPerform: (PanelAction.ID) -> Void = { _ in }
 
   /// Corner radius of the panel's background.
   static var cornerRadius: CGFloat {
@@ -52,7 +56,7 @@ final class ResultPanel: NSPanel {
       keyCode: event.keyCode, characters: event.charactersIgnoringModifiers,
       modifiers: event.modifierFlags, hasMarkedText: textView?.hasMarkedText() ?? false,
       hasSelectedText: (textView?.selectedRange().length ?? 0) > 0,
-      hasResult: copyableText() != nil, canReplace: canReplace())
+      hasResult: copyableText() != nil, canReplace: canReplace(), showsCard: showsCard())
   }
 
   override func sendEvent(_ event: NSEvent) {
@@ -62,6 +66,8 @@ final class ResultPanel: NSPanel {
       onEscape()
     case .confirm:
       onConfirm()
+    case .perform(let action):
+      onPerform(action)
     case .copyResult:
       if let text = copyableText() {
         NSPasteboard.general.clearContents()

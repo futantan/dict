@@ -19,6 +19,10 @@ struct E2EScenario: Decodable {
     var readingPanel: Bool?
     /// The context sentence the capture must read around the selection.
     var context: String?
+    /// `read` scenarios: what the panel ended on, "card" (complete) or "translation".
+    var kind: String?
+    /// `read` scenarios with `kind` "card": the card's title.
+    var lemma: String?
   }
 
   var name: String
@@ -201,6 +205,33 @@ struct E2E {
     if let context = expect.context, capture.context != context {
       notes.append(
         "expected context \(Self.quote(context)), got \(Self.quote(capture.context))")
+    }
+    notes += Self.panelProblems(capture.translation, against: expect)
+    return notes
+  }
+
+  /// What a `read` step's panel ended on, against `kind` and `lemma`.
+  static func panelProblems(_ panel: [String: Any], against expect: E2EScenario.Expectation)
+    -> [String]
+  {
+    let phase = panel["phase"] as? String
+    var notes: [String] = []
+    switch expect.kind {
+    case "card"?:
+      let model = panel["cardModel"] as? String
+      if phase != "card" || model != "complete" {
+        notes.append("expected a complete card, got \(phase ?? "nil") \(model ?? "")")
+      }
+    case "translation"?:
+      if phase != "result" { notes.append("expected a translation, got \(phase ?? "nil")") }
+    case let kind?:
+      notes.append("unknown kind \(kind)")
+    case nil:
+      break
+    }
+    if let lemma = expect.lemma, panel["lemma"] as? String != lemma {
+      notes.append(
+        "expected lemma \(quote(lemma)), got \(quote(panel["lemma"] as? String))")
     }
     return notes
   }

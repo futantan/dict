@@ -153,18 +153,18 @@ enum TranslationStrings {
       String(localized: "network error", table: "Translation", comment: "Model failure reason")
     case ModelError.timedOut:
       String(localized: "timed out", table: "Translation", comment: "Model failure reason")
-    case ModelError.emptyResponse, ModelError.malformedResponse:
+    case ModelError.emptyResponse, ModelError.malformedResponse, CardError.malformed:
       String(
         localized: "unexpected response", table: "Translation", comment: "Model failure reason")
-    case ModelTranslationError.refused:
+    case ModelTranslationError.refused, CardStreamError.refused:
       String(
         localized: "blocked by the content filter", table: "Translation",
         comment: "Model failure reason")
-    case ModelTranslationError.interrupted:
+    case ModelTranslationError.interrupted, CardStreamError.interrupted:
       String(
         localized: "the connection was interrupted", table: "Translation",
         comment: "Model failure reason")
-    case ModelTranslationError.truncated:
+    case ModelTranslationError.truncated, CardStreamError.truncated:
       String(
         localized: "the answer was cut off", table: "Translation",
         comment: "Model failure reason")

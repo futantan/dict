@@ -40,7 +40,99 @@
             source: text.source, phase: .partial(text.partial),
             note: TranslationStrings.incompleteNote(ModelTranslationError.interrupted))
         ),
+      ] + cardStates
+    }
+
+    /// The word card in each of its states (architecture 6.6). The dictionary is English to
+    /// Simplified Chinese, so the card's content is a Chinese speaker's in either UI language;
+    /// only the card's own wording follows the UI.
+    static var cardStates: [(name: String, state: PanelState)] {
+      func card(
+        entry: LexiconEntry? = Card.run, _ change: (inout CardState) -> Void = { _ in }
+      ) -> PanelState {
+        var state = CardState(
+          term: "ran", context: Card.context, entry: entry, accent: .american, model: .loading)
+        change(&state)
+        return PanelState(phase: .card(state))
+      }
+      var rare = Card.run
+      rare.band = .rare
+      return [
+        ("card-dictionary", card()),
+        (
+          "card-streaming",
+          card {
+            $0.show(
+              definition: Card.word.definition, contextTranslation: Card.word.contextTranslation)
+          }
+        ),
+        ("card-complete", card { $0.show(Card.word) }),
+        ("card-no-dictionary", card(entry: nil) { $0.show(Card.word) }),
+        ("card-rare", card(entry: rare) { $0.show(Card.word) }),
+        (
+          "card-learning",
+          card {
+            $0.show(Card.word)
+            $0.encounters = 1
+            $0.isLearning = true
+          }
+        ),
+        (
+          "card-encounters",
+          card {
+            $0.show(Card.word)
+            $0.encounters = 2
+          }
+        ),
+        (
+          "card-no-model",
+          {
+            var state = card { $0.model = .unavailable }
+            state.note = CardStrings.needsModelNote
+            return state
+          }()
+        ),
+        (
+          "card-failed",
+          {
+            var state = card { $0.model = .unavailable }
+            state.note = CardStrings.failureNote(ModelError.network(code: -1009))
+            return state
+          }()
+        ),
+        (
+          "translation-look-up",
+          PanelState(source: "ran", phase: .result("跑；经营"), offersLookUp: true)
+        ),
+        ("nothing-to-look-up", PanelState(phase: .failure(CardStrings.nothingToLookUp))),
       ]
+    }
+
+    private enum Card {
+      static let context = "She ran a small bakery for ten years."
+      static let run = LexiconEntry(
+        lemma: "run", ipaUS: "/ɹʌn/", ipaUK: "/rʌn/", band: .common,
+        senses: [
+          LexiconSense(pos: "verb", gloss: "跑、奔跑、走", source: "en"),
+          LexiconSense(pos: "verb", gloss: "流", source: "en"),
+          LexiconSense(pos: "verb", gloss: "经营、管理", source: "en"),
+        ])
+      static let word = WordCard(
+        status: .ok, lemma: "run", phonetic: "/rʌn/", partOfSpeech: "verb",
+        definition: "经营；管理", contextTranslation: "她经营一家小面包店十年了。",
+        otherSenses: [
+          WordCard.Sense(partOfSpeech: "verb", definition: "跑；奔跑"),
+          WordCard.Sense(partOfSpeech: "verb", definition: "运行；运转"),
+        ],
+        examples: [
+          WordCard.Example(
+            sentence: "He runs the family business now.", translation: "现在由他经营家族生意。")
+        ],
+        collocations: [
+          WordCard.Collocation(phrase: "run a business", meaning: "经营生意"),
+          WordCard.Collocation(phrase: "run a meeting", meaning: "主持会议"),
+        ],
+        level: "B1")
     }
 
     static var isChineseUI: Bool {

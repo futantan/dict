@@ -13,6 +13,9 @@
 // instead, as the app does; `"baseURL"` and `"apiKey"` override those two for failure tests.
 // `"pressAgainAfterMs"` presses the shortcut once more and `"escapeAfterMs"` sends Esc to
 // the panel, both counted from the first press.
+// A word or phrase goes to the card as in the app, with a stub dictionary that knows every
+// term and a stub card model, or the configured model with `"translator": "model"`; nothing
+// is written to the vocabulary log.
 
 #if DEBUG
   import AppKit
@@ -298,7 +301,9 @@
         makeProofreader: { nil },
         replaceWriter: SystemReplaceWriter(
           system: LiveReplaceSystem(queue: reader.queue, clipboard: reader.clipboard)),
-        showToast: { _, _ in }))
+        showToast: { _, _ in },
+        lookUpTerm: { term, _ in [E2EStub.entry(term)] },
+        makeCardMaker: { [unowned self] in self.cardMaker() }))
 
     init(reader: AccessibilitySelectionReader) {
       self.reader = reader
@@ -367,6 +372,18 @@
         preferences, presets: (try? ProviderPreset.all()) ?? [], secrets: secrets)
     }
 
+    private func cardMaker() -> CardMaker? {
+      guard options.usesModel else { return CardMaker(model: E2EStub.CardModel()) }
+      var preferences = PreferencesStore(defaults: .standard).load().model
+      if let baseURL = options.baseURL { preferences.baseURL = baseURL }
+      var secrets: any SecretStore = CachedSecretStore.app
+      if let key = options.apiKey, let provider = preferences.providerID {
+        secrets = InMemorySecretStore([provider: key])
+      }
+      return makeCardMaker(
+        preferences, presets: (try? ProviderPreset.all()) ?? [], secrets: secrets)
+    }
+
     func capture(
       policy: ClipboardPolicy, beforeFallback: () -> Void
     ) async -> Result<Selection, CaptureFailure> {
@@ -425,6 +442,32 @@
     }
   }
 
+  /// The dictionary and card model of `read` steps: every term is in the dictionary as
+  /// itself, and the card explains it in a fixed way, so a scenario checks the routing and
+  /// the panel, not the data.
+  enum E2EStub {
+    static func entry(_ term: String) -> LexiconEntry {
+      LexiconEntry(
+        lemma: term, ipaUS: "/e2e/", ipaUK: "/e2e/", band: .common,
+        senses: [LexiconSense(pos: "noun", gloss: "存根释义", source: "en")])
+    }
+
+    struct CardModel: TextModel {
+      func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+        let card = """
+          {"status":"ok","lemma":"stub","phonetic":"","partOfSpeech":"noun",\
+          "definition":"存根卡片","contextTranslation":"存根译文","otherSenses":[],\
+          "examples":[],"collocations":[],"level":""}
+          """
+        return AsyncThrowingStream { continuation in
+          continuation.yield(.text(card))
+          continuation.yield(.finished(.complete, nil))
+          continuation.finish()
+        }
+      }
+    }
+  }
+
   extension E2ESession.Record {
     /// The translation's part of a `read` row.
     var translation: [String: Any] {
@@ -439,6 +482,11 @@
       object["escapeSentMs"] = escapeSentMs.map(rounded) ?? NSNull()
       object["secondPress"] = secondPress ?? NSNull()
       object["phase"] = lastState?.phase.name ?? NSNull()
+      if case .card(let card) = lastState?.phase {
+        object["lemma"] = card.lemma
+        object["cardModel"] = String(describing: card.model)
+        object["definition"] = card.definition ?? NSNull()
+      }
       object["result"] = lastState?.phase.copyableText ?? NSNull()
       object["note"] = lastState?.note?.text ?? NSNull()
       object["noteAction"] = lastState?.note?.action?.id ?? NSNull()

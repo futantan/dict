@@ -1,0 +1,204 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Collocations" : {
+      "comment" : "Card heading over common word combinations",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搭配"
+          }
+        }
+      }
+    },
+    "Common" : {
+      "comment" : "Word frequency band",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常用"
+          }
+        }
+      }
+    },
+    "Examples" : {
+      "comment" : "Card heading over example sentences",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例句"
+          }
+        }
+      }
+    },
+    "In this sentence" : {
+      "comment" : "Card heading over the meaning the word has in the sentence it was read in",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本句"
+          }
+        }
+      }
+    },
+    "Learn" : {
+      "comment" : "Card action: mark the word as one to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要学"
+          }
+        }
+      }
+    },
+    "Learning" : {
+      "comment" : "Card action when the word is already marked to learn; pressing it unmarks it",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已标要学"
+          }
+        }
+      }
+    },
+    "Less common" : {
+      "comment" : "Word frequency band",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "较常用"
+          }
+        }
+      }
+    },
+    "Look Up" : {
+      "comment" : "Action under a translation: look the selection up as a word instead",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查这个词"
+          }
+        }
+      }
+    },
+    "Looked up %lld times" : {
+      "comment" : "On the card: how many times this word has been looked up, this time included",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 次"
+          }
+        }
+      }
+    },
+    "Looking up…" : {
+      "comment" : "Shown on the card while the model's explanation is on its way",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在查询…"
+          }
+        }
+      }
+    },
+    "Nothing to look up" : {
+      "comment" : "Title when the selection is a number, a link or symbols",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有可查的内容"
+          }
+        }
+      }
+    },
+    "Other meanings" : {
+      "comment" : "Card heading over other senses",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他义项"
+          }
+        }
+      }
+    },
+    "Pronounce" : {
+      "comment" : "Card action: say the word",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发音"
+          }
+        }
+      }
+    },
+    "Rare" : {
+      "comment" : "Word frequency band",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "少见"
+          }
+        }
+      }
+    },
+    "Set up a model to see what the word means in this sentence." : {
+      "comment" : "Under a dictionary-only card when no model is set up",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置模型后，可以看到这个词在本句里的意思。"
+          }
+        }
+      }
+    },
+    "The model couldn’t explain this word (%@)." : {
+      "comment" : "Under a card whose model explanation failed; %@ is the reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型没能解释这个词（%@）。"
+          }
+        }
+      }
+    },
+    "The selection is a number, a link or symbols, with no word to look up or translate." : {
+      "comment" : "Why nothing was looked up",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选中的是数字、链接或符号，没有可以查或翻译的词。"
+          }
+        }
+      }
+    },
+    "Translate as Sentence" : {
+      "comment" : "Card action: translate the selection instead of looking it up",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作为句子翻译"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

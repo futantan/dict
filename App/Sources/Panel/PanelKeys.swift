@@ -11,6 +11,8 @@ enum PanelKeyRoute: Equatable {
   case copyResult
   /// Replace the selection with the correction shown (architecture 11.5).
   case confirm
+  /// Perform a panel action, as its button would: ⌘S and ⌘P on a word card.
+  case perform(PanelAction.ID)
   /// Send an editing action to the first responder. The app has no Edit menu, so nothing
   /// else turns ⌘C, ⌘V and the like into actions.
   case edit(Selector)
@@ -28,9 +30,11 @@ enum PanelKeys {
   ///     Esc and Tab then belong to the input method.
   ///   - hasSelectedText: The focused text view has a non-empty selection.
   ///   - canReplace: The panel shows a correction that Return writes into the app.
+  ///   - showsCard: The panel shows a word card, which takes ⌘S and ⌘P.
   static func route(
     keyCode: UInt16, characters: String?, modifiers: NSEvent.ModifierFlags,
-    hasMarkedText: Bool, hasSelectedText: Bool, hasResult: Bool, canReplace: Bool = false
+    hasMarkedText: Bool, hasSelectedText: Bool, hasResult: Bool, canReplace: Bool = false,
+    showsCard: Bool = false
   ) -> PanelKeyRoute {
     if hasMarkedText { return .pass }
     let modifiers = modifiers.intersection([.command, .shift, .option, .control])
@@ -48,6 +52,8 @@ enum PanelKeys {
     case ("a", .command): return .edit(#selector(NSText.selectAll(_:)))
     case ("z", .command): return .edit(Selector(("undo:")))
     case ("z", [.command, .shift]): return .edit(Selector(("redo:")))
+    case ("s", .command) where showsCard: return .perform(CardStrings.learnAction)
+    case ("p", .command) where showsCard: return .perform(CardStrings.pronounceAction)
     default: return .pass
     }
   }

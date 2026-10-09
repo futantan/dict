@@ -97,6 +97,10 @@ final class PanelController {
     panel.copyableText = { [weak self] in self?.model.state.phase.copyableText }
     panel.canReplace = { [weak self] in self?.model.state.phase.canReplace ?? false }
     panel.onConfirm = { [weak self] in self?.onConfirm() }
+    panel.showsCard = { [weak self] in
+      if case .card = self?.model.state.phase { true } else { false }
+    }
+    panel.onPerform = { [weak self] in self?.onAction($0) }
     return panel
   }
 
@@ -186,6 +190,7 @@ extension PanelPhase {
     case .needsSetup: "needsSetup"
     case .checking: "checking"
     case .corrected: "corrected"
+    case .card: "card"
     }
   }
 }

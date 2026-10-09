@@ -159,10 +159,12 @@ private let granted = PermissionStatus(accessibility: true, postEvent: true)
 private let app = TargetApp(pid: 42, bundleID: "com.apple.TextEdit", launchDate: nil, kind: .native)
 
 private func selection(
-  _ text: String, bounds: CGRect? = bounds, target: ReplaceTarget? = nil
+  _ text: String, bounds: CGRect? = bounds, target: ReplaceTarget? = nil,
+  context: ContextSentence? = nil
 ) -> Selection {
   Selection(
-    text: text, source: .accessibility, app: app, bounds: bounds, context: nil, target: target)
+    text: text, source: .accessibility, app: app, bounds: bounds, context: context,
+    target: target)
 }
 
 private func replaceTarget(_ text: String) -> ReplaceTarget {
@@ -187,6 +189,18 @@ private final class Harness {
   var status = granted
   var opened: [String] = []
   var permissionActions: [PanelAction.ID] = []
+  /// What the dictionary layer finds for every term.
+  var entries: [LexiconEntry] = []
+  /// The card model's answer; nil means no model is set up.
+  var card: [StreamEvent]?
+  /// A fresh log in a temporary folder, never the user's Application Support.
+  let vocab: VocabStore? = {
+    let folder = FileManager.default.temporaryDirectory
+      .appendingPathComponent("dict-session-\(UUID().uuidString)")
+    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    return try? VocabStore(url: folder.appendingPathComponent("vocab.sqlite"))
+  }()
+  var spoken: [String] = []
   lazy var coordinator = SessionCoordinator(
     reader: reader, panel: panel,
     environment: SessionCoordinator.Environment(
@@ -204,7 +218,17 @@ private final class Harness {
       mouseLocation: { mouse },
       makeProofreader: { [unowned self] in proofreader },
       replaceWriter: writer,
-      showToast: { [unowned self] message, _ in toasts.append(message) }))
+      showToast: { [unowned self] message, _ in toasts.append(message) },
+      lookUpTerm: { [unowned self] _, _ in entries },
+      makeCardMaker: { [unowned self] in
+        card.map { events in CardMaker(model: ScriptedModel(events: events), makeNonce: { "n" }) }
+      },
+      vocab: vocab,
+      accent: { .american },
+      pronounce: { [unowned self] text, language, rate in
+        spoken.append("\(text) \(language.minimalIdentifier) \(rate)")
+      },
+      today: { today }))
 
   init(
     _ results: [(Result<Selection, CaptureFailure>, Gate?)],
@@ -220,6 +244,20 @@ private final class Harness {
   }
 }
 
+/// Streams the same scripted events for every request.
+private struct ScriptedModel: TextModel {
+  let events: [StreamEvent]
+
+  func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+    AsyncThrowingStream { continuation in
+      for event in events { continuation.yield(event) }
+      continuation.finish()
+    }
+  }
+}
+
+private let today = LocalDay(Date(timeIntervalSince1970: 1_791_000_000), in: .gmt)
+
 private func notice(_ issue: PermissionIssue) -> PanelNotice {
   PermissionGuide.notice(for: issue, app: .init(name: "Dict", bundleID: "x"))
 }
@@ -227,26 +265,26 @@ private func notice(_ issue: PermissionIssue) -> PanelNotice {
 @MainActor
 struct SessionCoordinatorTests {
   @Test func readShowsTheSelectionThenTheTranslation() async {
-    let harness = Harness([(.success(selection("Hello")), nil)])
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
     await harness.press()
 
     #expect(
       harness.panel.calls == [
-        .show(PanelState(source: "Hello", phase: .generating("")), .selection(bounds)),
-        .update(PanelState(source: "Hello", phase: .generating("你"))),
-        .update(PanelState(source: "Hello", phase: .result("你好"))),
+        .show(PanelState(source: "Hello there.", phase: .generating("")), .selection(bounds)),
+        .update(PanelState(source: "Hello there.", phase: .generating("你"))),
+        .update(PanelState(source: "Hello there.", phase: .result("你好"))),
       ])
-    #expect(harness.translator.requests.map(\.text) == ["Hello"])
+    #expect(harness.translator.requests.map(\.text) == ["Hello there."])
     #expect(harness.translator.requests.map(\.direction) == [.intoMine])
   }
 
   @Test func withoutBoundsThePanelGoesToTheMouse() async {
-    let harness = Harness([(.success(selection("你好", bounds: nil)), nil)])
+    let harness = Harness([(.success(selection("你好吗？", bounds: nil)), nil)])
     await harness.press()
 
     #expect(
       harness.panel.calls.first
-        == .show(PanelState(source: "你好", phase: .generating("")), .mouse(mouse)))
+        == .show(PanelState(source: "你好吗？", phase: .generating("")), .mouse(mouse)))
     #expect(harness.translator.requests.map(\.direction) == [.intoLearning])
   }
 
@@ -255,15 +293,16 @@ struct SessionCoordinatorTests {
     await harness.press()
     #expect(harness.panel.calls == [.show(.input, .mouse(mouse))])
 
-    harness.coordinator.submitted("Bonjour")
+    harness.coordinator.submitted("Bonjour à tous.")
     await harness.coordinator.settle()
 
-    #expect(harness.translator.requests.map(\.text) == ["Bonjour"])
+    #expect(harness.translator.requests.map(\.text) == ["Bonjour à tous."])
     #expect(
       harness.panel.calls.dropFirst().first
-        == .update(PanelState(source: "Bonjour", phase: .generating(""))))
+        == .update(PanelState(source: "Bonjour à tous.", phase: .generating(""))))
     #expect(
-      harness.panel.calls.last == .update(PanelState(source: "Bonjour", phase: .result("你好"))))
+      harness.panel.calls.last
+        == .update(PanelState(source: "Bonjour à tous.", phase: .result("你好"))))
   }
 
   @Test func blankSelectionCountsAsNothingSelected() async {
@@ -299,7 +338,7 @@ struct SessionCoordinatorTests {
 
   @Test func grantWhileTheGuideIsShownReadsAgain() async {
     let harness = Harness([
-      (.failure(.noAccessibilityPermission), nil), (.success(selection("Hello")), nil),
+      (.failure(.noAccessibilityPermission), nil), (.success(selection("Hello there.")), nil),
     ])
     harness.status = PermissionStatus(accessibility: false, postEvent: true)
     await harness.press()
@@ -310,11 +349,12 @@ struct SessionCoordinatorTests {
 
     #expect(harness.reader.calls == 2)
     #expect(harness.panel.calls[1] == .hide)
-    #expect(harness.panel.calls.last == .update(PanelState(source: "Hello", phase: .result("你好"))))
+    #expect(
+      harness.panel.calls.last == .update(PanelState(source: "Hello there.", phase: .result("你好"))))
   }
 
   @Test func grantWithoutAWaitingSessionDoesNothing() async {
-    let harness = Harness([(.success(selection("Hello")), nil)])
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
     await harness.press()
     let calls = harness.panel.calls
 
@@ -370,32 +410,32 @@ struct SessionCoordinatorTests {
 
   /// Once the capture is over, presses work again.
   @Test func aPressAfterTheCaptureEndedIsHandled() async {
-    let harness = Harness([(.failure(.ownApp), nil), (.success(selection("Hello")), nil)])
+    let harness = Harness([(.failure(.ownApp), nil), (.success(selection("Hello there.")), nil)])
     await harness.press()
     await harness.press()
 
     #expect(harness.reader.calls == 2)
-    #expect(harness.translator.requests.map(\.text) == ["Hello"])
+    #expect(harness.translator.requests.map(\.text) == ["Hello there."])
   }
 
   // MARK: The reading panel before the clipboard fallback (architecture 11.1)
 
   /// The first stage read the text: no reading panel, straight to the selection.
   @Test func firstStageSuccessShowsNoReadingPanel() async {
-    let harness = Harness([(.success(selection("Hello")), nil)])
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
     await harness.press()
 
     #expect(!harness.panel.calls.contains(.show(PanelState(phase: .reading), .mouse(mouse))))
     #expect(
       harness.panel.calls.first
-        == .show(PanelState(source: "Hello", phase: .generating("")), .selection(bounds)))
+        == .show(PanelState(source: "Hello there.", phase: .generating("")), .selection(bounds)))
   }
 
   /// The panel shows "reading" at the mouse before the fallback copies anything, and the
   /// result then replaces it in place instead of showing the panel again.
   @Test func fallbackShowsReadingFirstThenUpdatesInPlace() async {
     let copied = Gate()
-    let harness = Harness([(.success(selection("Hello", bounds: nil)), copied)])
+    let harness = Harness([(.success(selection("Hello there.", bounds: nil)), copied)])
     harness.reader.fallsBack = true
 
     harness.coordinator.hotkeyPressed(.read)
@@ -408,11 +448,11 @@ struct SessionCoordinatorTests {
     #expect(
       harness.panel.calls == [
         .show(PanelState(phase: .reading), .mouse(mouse)),
-        .update(PanelState(source: "Hello", phase: .generating(""))),
-        .update(PanelState(source: "Hello", phase: .generating("你"))),
-        .update(PanelState(source: "Hello", phase: .result("你好"))),
+        .update(PanelState(source: "Hello there.", phase: .generating(""))),
+        .update(PanelState(source: "Hello there.", phase: .generating("你"))),
+        .update(PanelState(source: "Hello there.", phase: .result("你好"))),
       ])
-    #expect(harness.translator.requests.map(\.text) == ["Hello"])
+    #expect(harness.translator.requests.map(\.text) == ["Hello there."])
   }
 
   @Test func fallbackFailureReplacesTheReadingPanel() async {
@@ -443,7 +483,8 @@ struct SessionCoordinatorTests {
   @Test func theShortcutDuringTheFallbackHidesAndCancels() async {
     let copied = Gate()
     let harness = Harness([
-      (.success(selection("Hello", bounds: nil)), copied), (.success(selection("Next")), nil),
+      (.success(selection("Hello there.", bounds: nil)), copied),
+      (.success(selection("Next")), nil),
     ])
     harness.reader.fallsBack = true
     let clipboard = FakeClipboard("the user's clipboard")
@@ -473,7 +514,7 @@ struct SessionCoordinatorTests {
   /// Esc on the reading panel ends the session the same way.
   @Test func dismissingTheReadingPanelCancelsTheCapture() async {
     let copied = Gate()
-    let harness = Harness([(.success(selection("Hello", bounds: nil)), copied)])
+    let harness = Harness([(.success(selection("Hello there.", bounds: nil)), copied)])
     harness.reader.fallsBack = true
     let clipboard = FakeClipboard("the user's clipboard")
     harness.reader.clipboard = clipboard
@@ -493,7 +534,7 @@ struct SessionCoordinatorTests {
   @Test func theSameKeyWhileShownHidesAndCancels() async {
     let gate = Gate()
     let translator = StubTranslator([.generating("你"), .result("你好")], gate: gate)
-    let harness = Harness([(.success(selection("Hello")), nil)], translator: translator)
+    let harness = Harness([(.success(selection("Hello there.")), nil)], translator: translator)
     harness.coordinator.hotkeyPressed(.read)
     for _ in 0..<5 { await Task.yield() }
     #expect(harness.panel.isVisible)
@@ -506,13 +547,14 @@ struct SessionCoordinatorTests {
     #expect(harness.panel.calls.last == .hide)
     #expect(translator.sawCancellation)
     #expect(
-      !harness.panel.calls.contains(.update(PanelState(source: "Hello", phase: .result("你好")))))
+      !harness.panel.calls.contains(
+        .update(PanelState(source: "Hello there.", phase: .result("你好")))))
   }
 
   @Test func dismissingThePanelCancelsTheTranslation() async {
     let gate = Gate()
     let translator = StubTranslator([.generating("你"), .result("你好")], gate: gate)
-    let harness = Harness([(.success(selection("Hello")), nil)], translator: translator)
+    let harness = Harness([(.success(selection("Hello there.")), nil)], translator: translator)
     harness.coordinator.hotkeyPressed(.read)
     for _ in 0..<5 { await Task.yield() }
 
@@ -523,50 +565,64 @@ struct SessionCoordinatorTests {
 
     #expect(translator.sawCancellation)
     #expect(
-      !harness.panel.calls.contains(.update(PanelState(source: "Hello", phase: .result("你好")))))
+      !harness.panel.calls.contains(
+        .update(PanelState(source: "Hello there.", phase: .result("你好")))))
+  }
+
+  @Test func aFinishedTranslationIsRecorded() async throws {
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
+    await harness.press()
+
+    let sentences = try await harness.vocab?.day(today).sentences
+    #expect(sentences?.map(\.kind) == [.translated])
+    #expect(sentences?.first?.source == "Hello there.")
+    #expect(sentences?.first?.result == "你好")
+    #expect(sentences?.first?.sourceLanguage == "en")
+    #expect(sentences?.first?.resultLanguage == "zh")
   }
 
   @Test func translationFailuresAreShownAsReported() async {
     let failure = PanelNotice(title: "The model couldn’t translate this")
     let harness = Harness(
-      [(.success(selection("Hello")), nil)],
+      [(.success(selection("Hello there.")), nil)],
       translator: StubTranslator([.generating(""), .failure(failure)]))
     await harness.press()
 
     #expect(
-      harness.panel.calls.last == .update(PanelState(source: "Hello", phase: .failure(failure))))
+      harness.panel.calls.last
+        == .update(PanelState(source: "Hello there.", phase: .failure(failure))))
   }
 
   /// The incomplete text stays in the panel, and its note's "Try Again" translates again.
   @Test func incompleteTranslationStaysAndRetries() async {
     let note = PanelNote(
       "incomplete", action: PanelAction(id: TranslationStrings.retryAction, title: "Try Again"))
-    let incomplete = PanelState(source: "Hello", phase: .partial("你好"), note: note)
+    let incomplete = PanelState(source: "Hello there.", phase: .partial("你好"), note: note)
     let harness = Harness(
-      [(.success(selection("Hello")), nil)],
+      [(.success(selection("Hello there.")), nil)],
       translator: StubTranslator([.generating("你好"), .partial("你好")], note: note))
     await harness.press()
     #expect(harness.panel.calls.last == .update(incomplete))
 
     harness.coordinator.perform(TranslationStrings.retryAction)
     await harness.coordinator.settle()
-    #expect(harness.translator.requests.map(\.text) == ["Hello", "Hello"])
+    #expect(harness.translator.requests.map(\.text) == ["Hello there.", "Hello there."])
     #expect(harness.panel.calls.last == .update(incomplete))
   }
 
   @Test func retryTranslatesTheSameTextAgain() async {
-    let harness = Harness([(.success(selection("Hello")), nil)])
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
     await harness.press()
 
     harness.coordinator.perform(TranslationStrings.retryAction)
     await harness.coordinator.settle()
 
     #expect(harness.reader.calls == 1)
-    #expect(harness.translator.requests.map(\.text) == ["Hello", "Hello"])
+    #expect(harness.translator.requests.map(\.text) == ["Hello there.", "Hello there."])
   }
 
   @Test func openSettingsEndsTheSession() async {
-    let harness = Harness([(.success(selection("Hello")), nil)])
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
     await harness.press()
     harness.coordinator.perform(TranslationStrings.openSettingsAction)
 
@@ -579,15 +635,15 @@ struct SessionCoordinatorTests {
   @Test func sampleIsTranslatedWithoutReading() async {
     let harness = Harness([])
     let anchor = PanelAnchor.selection(CGRect(x: 10, y: 20, width: 300, height: 40))
-    harness.coordinator.translateSample("Hello", near: anchor)
+    harness.coordinator.translateSample("Hello there.", near: anchor)
     await harness.coordinator.settle()
 
     #expect(harness.reader.calls == 0)
     #expect(
       harness.panel.calls == [
-        .show(PanelState(source: "Hello", phase: .generating("")), anchor),
-        .update(PanelState(source: "Hello", phase: .generating("你"))),
-        .update(PanelState(source: "Hello", phase: .result("你好"))),
+        .show(PanelState(source: "Hello there.", phase: .generating("")), anchor),
+        .update(PanelState(source: "Hello there.", phase: .generating("你"))),
+        .update(PanelState(source: "Hello there.", phase: .result("你好"))),
       ])
   }
 
@@ -643,6 +699,13 @@ struct WriteSessionTests {
     #expect(harness.writer.writes.map(\.result) == ["the cat"])
     #expect(harness.writer.writes.first?.target.selectedText == "teh cat")
     #expect(harness.toasts == [.replaced])
+    let sentences = try? await harness.vocab?.day(today).sentences
+    #expect(sentences?.map(\.kind) == [.corrected])
+    #expect(sentences?.first?.source == "teh cat")
+    #expect(sentences?.first?.result == "the cat")
+    #expect(sentences?.first?.applied == true)
+    #expect(sentences?.first?.editsJSON == #"[{"right":"the","wrong":"teh"}]"#)
+    #expect(sentences?.first?.sourceApp == "com.apple.TextEdit")
   }
 
   @Test func aStaleTargetIsReportedWithTheResultToCopy() async {
@@ -688,5 +751,289 @@ struct WriteSessionTests {
     await harness.coordinator.settle()
     #expect(!harness.panel.isVisible)
     #expect(harness.panel.calls.last == .hide)
+  }
+}
+
+// MARK: - Looking up words
+
+private let runEntry = LexiconEntry(
+  lemma: "run", ipaUS: "/ɹʌn/", ipaUK: "/rʌn/", band: .common,
+  senses: [
+    LexiconSense(pos: "verb", gloss: "跑、奔跑、走", source: "en"),
+    LexiconSense(pos: "verb", gloss: "经营、管理", source: "en"),
+  ])
+
+private let ranCard = WordCard(
+  status: .ok, lemma: "run", phonetic: "/rʌn/", partOfSpeech: "verb", definition: "经营；管理",
+  contextTranslation: "她经营一家小面包店。",
+  otherSenses: [WordCard.Sense(partOfSpeech: "verb", definition: "跑；奔跑")],
+  examples: [WordCard.Example(sentence: "Who runs this shop?", translation: "这家店谁在经营？")],
+  collocations: [WordCard.Collocation(phrase: "run a business", meaning: "经营生意")],
+  level: "B1")
+
+/// `ranCard` as a strict model writes it, in the schema's key order.
+private let ranJSON = """
+  {"status":"ok","lemma":"run","phonetic":"/rʌn/","partOfSpeech":"verb",\
+  "definition":"经营；管理","contextTranslation":"她经营一家小面包店。",\
+  "otherSenses":[{"partOfSpeech":"verb","definition":"跑；奔跑"}],\
+  "examples":[{"sentence":"Who runs this shop?","translation":"这家店谁在经营？"}],\
+  "collocations":[{"phrase":"run a business","meaning":"经营生意"}],"level":"B1"}
+  """
+
+/// The answer cut where a stream would cut it, so the short fields arrive before the end.
+private let ranStream: [StreamEvent] =
+  stride(from: 0, to: ranJSON.count, by: 9).map { start in
+    let from = ranJSON.index(ranJSON.startIndex, offsetBy: start)
+    let to = ranJSON.index(from, offsetBy: 9, limitedBy: ranJSON.endIndex) ?? ranJSON.endIndex
+    return StreamEvent.text(String(ranJSON[from..<to]))
+  } + [.finished(.complete, nil)]
+
+private let bakery = "She ran a small bakery."
+
+private func context(_ term: String, in sentence: String) -> ContextSentence? {
+  sentence.range(of: term).map { ContextSentence(sentence: sentence, termRange: $0) }
+}
+
+private func ran() -> Selection {
+  selection("ran", context: context("ran", in: bakery))
+}
+
+extension FakePanel {
+  /// The card in the last call, if it shows one.
+  fileprivate var lastCard: CardState? {
+    guard let call = calls.last else { return nil }
+    switch call {
+    case .show(let state, _), .update(let state):
+      if case .card(let card) = state.phase { return card }
+      return nil
+    case .hide:
+      return nil
+    }
+  }
+
+  fileprivate var lastState: PanelState? {
+    switch calls.last {
+    case .show(let state, _), .update(let state): state
+    default: nil
+    }
+  }
+}
+
+@MainActor
+struct SessionLookupTests {
+  @Test func aWordShowsTheDictionaryLayerThenTheModelCard() async throws {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.entries = [runEntry]
+    harness.card = ranStream
+    await harness.press()
+
+    let first = CardState(
+      term: "ran", context: bakery, entry: runEntry, accent: .american, model: .loading)
+    #expect(harness.panel.calls.first == .show(PanelState(phase: .card(first)), .selection(bounds)))
+    // The count arrives before any of the model's fields.
+    var counted = first
+    counted.encounters = 1
+    #expect(harness.panel.calls[1] == .update(PanelState(phase: .card(counted))))
+    var streamed = counted
+    streamed.show(definition: "经营；管理", contextTranslation: nil)
+    #expect(harness.panel.calls.contains(.update(PanelState(phase: .card(streamed)))))
+    var complete = counted
+    complete.show(ranCard)
+    #expect(harness.panel.lastState == PanelState(phase: .card(complete)))
+    #expect(harness.translator.requests.isEmpty)
+
+    let log = try #require(try await harness.vocab?.day(today))
+    #expect(log.lookups.map(\.term.lemma) == ["run"])
+    let encounter = try #require(log.lookups.first?.encounter)
+    #expect(encounter.surface == "ran")
+    #expect(encounter.sentence == bakery)
+    #expect(encounter.termStart == 4)
+    #expect(encounter.termLength == 3)
+    #expect(encounter.source == .accessibility)
+    #expect(encounter.sourceApp == "com.apple.TextEdit")
+  }
+
+  @Test func theSecondLookupShowsTheCount() async {
+    let harness = Harness([(.success(ran()), nil), (.success(selection("runs")), nil)])
+    harness.entries = [runEntry]
+    harness.card = ranStream
+    await harness.press()
+    #expect(harness.panel.lastCard?.shownEncounters == nil)
+    harness.coordinator.end()
+
+    await harness.press()
+    #expect(harness.panel.lastCard?.shownEncounters == 2)
+  }
+
+  @Test func withoutAModelTheDictionaryLayerSaysWhatIsMissing() async {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.entries = [runEntry]
+    await harness.press()
+
+    var card = CardState(
+      term: "ran", context: bakery, entry: runEntry, accent: .american, model: .unavailable)
+    card.encounters = 1
+    #expect(
+      harness.panel.lastState == PanelState(phase: .card(card), note: CardStrings.needsModelNote))
+  }
+
+  @Test func withNeitherDictionaryNorModelTheWordIsTranslated() async throws {
+    let harness = Harness([(.success(ran()), nil)])
+    await harness.press()
+
+    #expect(harness.translator.requests.map(\.text) == ["ran"])
+    #expect(
+      harness.panel.calls.first
+        == .show(
+          PanelState(source: "ran", phase: .generating(""), offersLookUp: true),
+          .selection(bounds)))
+    #expect(
+      harness.panel.lastState
+        == PanelState(source: "ran", phase: .result("你好"), offersLookUp: true))
+    // Nothing says it is a word, so it is not recorded as one.
+    #expect(try await harness.vocab?.day(today).lookups.isEmpty == true)
+  }
+
+  @Test func withoutTheDictionaryTheModelCardIsRecordedOnceItIsATerm() async throws {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.card = ranStream
+    await harness.press()
+
+    #expect(harness.panel.lastCard?.lemma == "run")
+    #expect(harness.panel.lastCard?.encounters == 1)
+    let log = try #require(try await harness.vocab?.day(today))
+    // Keyed by the text as selected, never by the model's lemma (architecture 8.1).
+    #expect(log.lookups.map(\.term.lemmaKey) == ["ran"])
+  }
+
+  @Test func notATermIsTranslatedInstead() async throws {
+    let json = """
+      {"status":"not_a_term","lemma":"","phonetic":"","partOfSpeech":"","definition":"",\
+      "contextTranslation":"","otherSenses":[],"examples":[],"collocations":[],"level":""}
+      """
+    let harness = Harness([(.success(selection("asdfgh")), nil)])
+    harness.card = [.text(json), .finished(.complete, nil)]
+    await harness.press()
+
+    #expect(harness.translator.requests.map(\.text) == ["asdfgh"])
+    #expect(harness.panel.lastState?.phase == .result("你好"))
+    #expect(try await harness.vocab?.day(today).lookups.isEmpty == true)
+  }
+
+  @Test func aFailedModelKeepsTheDictionaryLayer() async {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.entries = [runEntry]
+    harness.card = [.text(#"{"status":"ok","#)]
+    await harness.press()
+
+    #expect(harness.panel.lastCard?.model == .unavailable)
+    #expect(harness.panel.lastCard?.senses.count == 2)
+    #expect(harness.panel.lastState?.note == CardStrings.failureNote(CardStreamError.interrupted))
+
+    // Try Again asks again for the same lookup without counting it twice.
+    harness.card = ranStream
+    harness.coordinator.perform(TranslationStrings.retryAction)
+    await harness.coordinator.settle()
+    #expect(harness.panel.lastCard?.model == .complete)
+    #expect(harness.panel.lastCard?.encounters == 1)
+  }
+
+  @Test func learnMarksTheWordAndAgainUnmarksIt() async throws {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.entries = [runEntry]
+    await harness.press()
+
+    harness.coordinator.perform(CardStrings.learnAction)
+    await harness.coordinator.settle()
+    #expect(harness.panel.lastCard?.isLearning == true)
+    let learning = try await harness.vocab?.term(language: "en", lemmaKey: "run")
+    #expect(learning?.tier == .learning)
+
+    harness.coordinator.perform(CardStrings.learnAction)
+    await harness.coordinator.settle()
+    #expect(harness.panel.lastCard?.isLearning == false)
+    let seen = try await harness.vocab?.term(language: "en", lemmaKey: "run")
+    #expect(seen?.tier == .seen)
+  }
+
+  @Test func pronounceSaysTheLemmaThenSlowly() async {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.entries = [runEntry]
+    await harness.press()
+
+    harness.coordinator.perform(CardStrings.pronounceAction)
+    harness.coordinator.perform(CardStrings.pronounceAction)
+    harness.coordinator.perform(CardStrings.pronounceAction)
+    #expect(harness.spoken == ["run en normal", "run en slow", "run en normal"])
+  }
+
+  @Test func cardActionsNeedACard() async {
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
+    await harness.press()
+    let calls = harness.panel.calls
+
+    harness.coordinator.perform(CardStrings.pronounceAction)
+    harness.coordinator.perform(CardStrings.learnAction)
+    harness.coordinator.perform(CardStrings.translateAction)
+    harness.coordinator.perform(CardStrings.lookUpAction)
+    await harness.coordinator.settle()
+    #expect(harness.spoken.isEmpty)
+    #expect(harness.panel.calls == calls)
+  }
+
+  @Test func theCardTurnsIntoTheTranslationAndBack() async throws {
+    let harness = Harness([(.success(ran()), nil)])
+    harness.entries = [runEntry]
+    harness.card = ranStream
+    await harness.press()
+
+    harness.coordinator.perform(CardStrings.translateAction)
+    await harness.coordinator.settle()
+    #expect(harness.translator.requests.map(\.text) == ["ran"])
+    #expect(
+      harness.panel.lastState
+        == PanelState(source: "ran", phase: .result("你好"), offersLookUp: true))
+
+    harness.coordinator.perform(CardStrings.lookUpAction)
+    await harness.coordinator.settle()
+    #expect(harness.panel.lastCard?.model == .complete)
+    #expect(harness.panel.lastCard?.context == bakery)
+    // The same lookup shown again, not a second one.
+    #expect(harness.panel.lastCard?.encounters == 1)
+    let log = try #require(try await harness.vocab?.day(today))
+    #expect(log.lookups.count == 1)
+    #expect(log.sentences.map(\.kind) == [.translated])
+  }
+
+  @Test func aPassageOffersNoLookUp() async {
+    let harness = Harness([(.success(selection("Hello there.")), nil)])
+    await harness.press()
+    #expect(harness.panel.lastState?.offersLookUp == false)
+  }
+
+  @Test func nothingToLookUpSendsNoRequest() async {
+    let harness = Harness([(.success(selection("https://example.com")), nil)])
+    harness.card = ranStream
+    await harness.press()
+
+    #expect(
+      harness.panel.calls == [
+        .show(PanelState(phase: .failure(CardStrings.nothingToLookUp)), .selection(bounds))
+      ])
+    #expect(harness.translator.requests.isEmpty)
+  }
+
+  @Test func aTypedWordIsLookedUp() async throws {
+    let harness = Harness([(.failure(.nothingSelected(fieldText: nil)), nil)])
+    harness.entries = [runEntry]
+    await harness.press()
+
+    harness.coordinator.submitted("ran")
+    await harness.coordinator.settle()
+    #expect(harness.panel.lastCard?.lemma == "run")
+    #expect(harness.panel.lastCard?.context == nil)
+    let encounter = try await harness.vocab?.day(today).lookups.first?.encounter
+    #expect(encounter?.source == .typed)
+    #expect(encounter?.sentence == nil)
   }
 }

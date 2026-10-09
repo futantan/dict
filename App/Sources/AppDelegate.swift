@@ -15,6 +15,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
   private let guide = PermissionGuide()
   private let presets = (try? ProviderPreset.all()) ?? []
   private var reader: AccessibilitySelectionReader?
+  private let speaker = Speaker()
+  /// The dictionary layer; nil when the app was built without the dictionary.
+  private var lexicon: Lexicon?
+  /// The vocabulary log; nil when it could not be opened.
+  private var vocab: VocabStore?
   private var coordinator: SessionCoordinator?
   private var onboarding: OnboardingWindowController?
   private var observers: [any NSObjectProtocol] = []
@@ -77,6 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let reader = AccessibilitySelectionReader()
     reader.start()
     self.reader = reader
+    lexicon = openBundledLexicon()
+    vocab = openVocab()
     let coordinator = makeCoordinator(reader: reader)
     self.coordinator = coordinator
 
@@ -100,6 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     if showingOnboarding && !onboardingCompleted {
       showOnboarding()
     }
+    // Silent: renders one word so the first ⌘P on a card speaks at once (architecture 9).
+    let preferences = PreferencesStore(defaults: .standard).load()
+    speaker.accent = preferences.accent
+    speaker.prewarm(language: preferences.languagePair.learning)
     if let mock = mockModelBaseURL() {
       Log.model.notice("mock model at \(mock, privacy: .public)")
     }
@@ -132,7 +143,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         },
         replaceWriter: SystemReplaceWriter(
           system: LiveReplaceSystem(queue: reader.queue, clipboard: reader.clipboard)),
-        showToast: { ToastController.shared.show($0, near: $1) }))
+        showToast: { ToastController.shared.show($0, near: $1) },
+        lookUpTerm: { [lexicon] term, context in
+          await lexicon?.lookup(term, context: context) ?? []
+        },
+        makeCardMaker: {
+          makeCardMaker(
+            PreferencesStore(defaults: .standard).load().model, presets: presets,
+            secrets: CachedSecretStore.app)
+        },
+        vocab: vocab,
+        accent: { PreferencesStore(defaults: .standard).load().accent },
+        pronounce: { [speaker] text, language, rate in
+          speaker.accent = PreferencesStore(defaults: .standard).load().accent
+          speaker.say(text, language: language, rate: rate)
+        }))
+  }
+
+  /// The vocabulary log in Application Support (architecture 8.2); nil, logged, when it
+  /// cannot be opened, and then nothing is recorded.
+  private func openVocab() -> VocabStore? {
+    do {
+      let support = try FileManager.default.url(
+        for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+      let bundleID = Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName
+      return try VocabStore(url: vocabURL(applicationSupport: support, bundleID: bundleID))
+    } catch {
+      Log.store.error("vocabulary log not opened: \(String(describing: error), privacy: .public)")
+      return nil
+    }
   }
 
   /// Opening Settings or the onboarding window ends the session (architecture 11.4), and

@@ -74,6 +74,16 @@ struct SpeakerTests {
     #expect(counter.count > 0)
   }
 
+  /// The card's ⌘P: `say` consumes the stream itself, so the word is rendered to the end
+  /// although nobody holds the stream.
+  @Test func sayRendersTheWholeWordWithoutAConsumer() async throws {
+    guard englishVoiceInstalled() else { return }
+    let (speaker, counter) = renderingSpeaker()
+    await speaker.say("run", language: english, rate: .slow).value
+    #expect(counter.count > 0)
+    #expect(!speaker.isSpeaking)
+  }
+
   @Test func theRatesAreStepsOfTheSystemDefault() {
     #expect(SpeechRate.normal.value == AVSpeechUtteranceDefaultSpeechRate)
     #expect(abs(SpeechRate.slow.value - 0.30) < 0.0001)

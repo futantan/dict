@@ -62,6 +62,29 @@ final class SessionCoordinator {
     var replaceWriter: any ReplaceWriter
     /// Reports how a replacement went, near the selection when its bounds are known.
     var showToast: (ToastMessage, CGRect?) -> Void
+    /// The dictionary layer: the entries for a term read in a sentence; none without a
+    /// dictionary (architecture 7.4).
+    var lookUpTerm: @MainActor (String, String?) async -> [LexiconEntry] = { _, _ in [] }
+    /// A card maker for the current settings; nil without a usable model.
+    var makeCardMaker: () -> CardMaker? = { nil }
+    /// The vocabulary log; nil when it could not be opened, and then nothing is recorded.
+    var vocab: (any SessionVocab)?
+    /// The accent the card's pronunciation is shown and spoken in.
+    var accent: () -> Accent = { .american }
+    /// Says a word in a language at a rate (architecture 9).
+    var pronounce: (String, Locale.Language, SpeechRate) -> Void = { _, _, _ in }
+    /// Today in the user's time zone, for the vocabulary log.
+    var today: () -> LocalDay = { LocalDay(.now, in: .current) }
+  }
+
+  /// Where the session's text came from, for the vocabulary log (architecture 8.1).
+  struct TextOrigin {
+    var context: ContextSentence?
+    var source: LookupSource
+    /// Bundle id.
+    var app: String?
+
+    static let typed = TextOrigin(context: nil, source: .typed, app: nil)
   }
 
   private let reader: any SelectionReader
@@ -69,8 +92,23 @@ final class SessionCoordinator {
   private let environment: Environment
   private var id = 0
   private var task: Task<Void, Never>?
-  /// The text of the current session, for "Try Again".
+  /// The text of the current session, for "Try Again" and switching between the card and
+  /// the translation.
   private var text: String?
+  /// Where `text` came from; nil for the onboarding sample, which is not recorded.
+  private var origin: TextOrigin?
+  /// The current Read session shows a card rather than a translation.
+  private var showsCard = false
+  /// The card shown, and the note under it, while the session shows one.
+  private var card: CardState?
+  private var cardNote: PanelNote?
+  /// The looked-up term as the vocabulary log has it, once this lookup is recorded. Kept
+  /// across "Try Again" and switching to the translation and back, which show the same
+  /// lookup again rather than a new one.
+  private var recorded: TermSummary?
+  /// The latest ⌘S, for `settle()`.
+  private var tierChange: Task<Void, Never>?
+  private var pace = PronunciationPace()
   /// What the current session does with its text.
   private var role = HotkeyRole.read
   /// Where Return writes the correction, while the panel shows one.
@@ -122,6 +160,7 @@ final class SessionCoordinator {
     let writer = environment.replaceWriter
     let showToast = environment.showToast
     let id = id
+    let source = text
     cancel()
     panel.hide()
     Log.ui.info("session \(id, privacy: .public): replacing")
@@ -130,6 +169,12 @@ final class SessionCoordinator {
       Log.replace.info(
         "session \(id, privacy: .public): \(String(describing: outcome), privacy: .public)")
       showToast(ToastMessage(outcome, result: correction.text), bounds)
+      if let source {
+        let applied = if case .replaced = outcome { true } else { false }
+        await self.recordSentence(
+          .corrected, source, correction.text, correction.editsJSON, applied,
+          target.app.bundleID)
+      }
     }
   }
 
@@ -138,9 +183,10 @@ final class SessionCoordinator {
     cancel()
   }
 
-  /// Text typed into the empty panel and submitted.
+  /// Text typed into the empty panel and submitted; routed like a selection.
   func submitted(_ text: String) {
-    translate(text, source: .typed)
+    start(
+      text, as: readRoute(text, pair: environment.languagePair()), origin: .typed, why: "typed")
   }
 
   /// Translates `text` in a newly shown panel without reading any selection, for the
@@ -149,6 +195,7 @@ final class SessionCoordinator {
     cancel()
     role = .read
     self.text = text
+    origin = nil
     let id = id
     panel.show(PanelState(source: text, phase: .generating("")), near: anchor)
     Log.ui.info("session \(id, privacy: .public): translating the onboarding sample")
@@ -161,8 +208,26 @@ final class SessionCoordinator {
     switch action {
     case TranslationStrings.retryAction:
       if let text {
-        if role == .write { proofreadAgain(text) } else { translate(text, source: .retry) }
+        if role == .write {
+          proofreadAgain(text)
+        } else {
+          start(
+            text, as: showsCard ? .lookUp : .translate, origin: origin, why: "retry",
+            keepingRecord: true)
+        }
       }
+    case CardStrings.translateAction:
+      if let text, showsCard {
+        start(text, as: .translate, origin: origin, why: "switch", keepingRecord: true)
+      }
+    case CardStrings.lookUpAction:
+      if let text, !showsCard, role == .read, offersLookUp(text) {
+        start(text, as: .lookUp, origin: origin, why: "switch", keepingRecord: true)
+      }
+    case CardStrings.learnAction:
+      toggleLearning()
+    case CardStrings.pronounceAction:
+      pronounce()
     case TranslationStrings.openSettingsAction:
       end()
       environment.openSettings()
@@ -191,6 +256,7 @@ final class SessionCoordinator {
   func settle() async {
     await task?.value
     await replacement?.value
+    await tierChange?.value
   }
 
   // MARK: - Flow
@@ -200,6 +266,12 @@ final class SessionCoordinator {
     // The cancelled task stays referenced so `settle()` can wait for it to wind down.
     task?.cancel()
     text = nil
+    origin = nil
+    showsCard = false
+    card = nil
+    cardNote = nil
+    recorded = nil
+    pace = PronunciationPace()
     target = nil
     targetBounds = nil
     currentPhase = nil
@@ -245,6 +317,9 @@ final class SessionCoordinator {
     case .success(let selection)
     where !selection.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty:
       text = selection.text
+      origin = TextOrigin(
+        context: selection.context, source: LookupSource(selection.source),
+        app: selection.app?.bundleID)
       let anchor =
         selection.bounds.map(PanelAnchor.selection) ?? .mouse(environment.mouseLocation())
       if role == .write {
@@ -260,16 +335,26 @@ final class SessionCoordinator {
         await proofread(selection.text, id: id)
         return
       }
-      // Apple Translation gets its session through the panel's view, so the panel is shown
-      // before translating (architecture 6.5).
-      present(PanelState(source: selection.text, phase: .generating("")), anchor)
+      let route = readRoute(selection.text, pair: environment.languagePair())
       Log.ui.info(
         """
         session \(id, privacy: .public): capture \(milliseconds(captured), format: .fixed(precision: 1), privacy: .public)ms \
-        via \(selection.source.caseName, privacy: .public), panel shown \
-        \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms after the shortcut
+        via \(selection.source.caseName, privacy: .public), \(String(describing: route), privacy: .public)
         """)
-      await run(selection.text, id: id, clock: clock, start: start)
+      switch route {
+      case .nothing:
+        present(PanelState(phase: .failure(CardStrings.nothingToLookUp)), anchor)
+      case .lookUp:
+        await lookUp(selection.text, id: id, clock: clock, start: start) { present($0, anchor) }
+      case .translate:
+        // Apple Translation gets its session through the panel's view, so the panel is
+        // shown before translating (architecture 6.5).
+        present(translating(selection.text), anchor)
+        Log.ui.info(
+          "session \(id, privacy: .public): panel shown \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms after the shortcut"
+        )
+        await run(selection.text, id: id, clock: clock, start: start)
+      }
     case .success, .failure(.nothingSelected):
       // Proofreading has no input field: it works on text written somewhere else.
       let state =
@@ -349,20 +434,46 @@ final class SessionCoordinator {
     panel.update(state)
   }
 
-  private enum Origin: String { case typed, retry }
-
-  /// Translates in the visible panel, as a new session.
-  private func translate(_ text: String, source: Origin) {
+  /// Handles `text` in the visible panel as a new Read session: typed text, "Try Again",
+  /// and switching between the card and the translation.
+  private func start(
+    _ text: String, as route: ReadRoute, origin: TextOrigin?, why: String,
+    keepingRecord: Bool = false
+  ) {
     guard panel.isVisible else { return }
+    let recorded = keepingRecord ? recorded : nil
     cancel()
+    role = .read
     self.text = text
+    self.origin = origin
+    self.recorded = recorded
     let id = id
-    panel.update(PanelState(source: text, phase: .generating("")))
     Log.ui.info(
-      "session \(id, privacy: .public): translating \(source.rawValue, privacy: .public) text")
+      "session \(id, privacy: .public): \(why, privacy: .public) text, \(String(describing: route), privacy: .public)"
+    )
     let clock = ContinuousClock()
     let start = clock.now
-    task = Task { await self.run(text, id: id, clock: clock, start: start) }
+    switch route {
+    case .nothing:
+      show(PanelState(phase: .failure(CardStrings.nothingToLookUp)), id: id)
+    case .translate:
+      panel.update(translating(text))
+      task = Task { await self.run(text, id: id, clock: clock, start: start) }
+    case .lookUp:
+      task = Task {
+        await self.lookUp(text, id: id, clock: clock, start: start) { self.panel.update($0) }
+      }
+    }
+  }
+
+  /// The first state of a translation.
+  private func translating(_ text: String) -> PanelState {
+    PanelState(source: text, phase: .generating(""), offersLookUp: offersLookUp(text))
+  }
+
+  /// A translation of a word or phrase offers looking it up instead (architecture 5.1).
+  private func offersLookUp(_ text: String) -> Bool {
+    role == .read && [.word, .phrase].contains(classify(text))
   }
 
   private func run(_ text: String, id: Int, clock: ContinuousClock, start: ContinuousClock.Instant)
@@ -372,9 +483,13 @@ final class SessionCoordinator {
     let direction = resolveDirection(text, pair: pair)
     var firstText: Duration?
     var last: PanelPhase?
+    let offersLookUp = offersLookUp(text)
+    showsCard = false
     await environment.makeTranslator().translate(text, direction: direction, pair: pair) {
       state in
       guard id == self.id else { return }
+      var state = state
+      state.offersLookUp = offersLookUp
       if firstText == nil, state.phase.copyableText != nil {
         firstText = clock.now - start
         Log.ui.info(
@@ -394,5 +509,194 @@ final class SessionCoordinator {
       in \(last?.name ?? "-", privacy: .public) after \
       \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms
       """)
+    if case .result(let result) = last, let origin {
+      let intoLearning = direction == .intoLearning
+      await recordSentence(
+        .translated, text, result, nil, false, origin.app,
+        languages: intoLearning ? (pair.mine, pair.learning) : (pair.learning, pair.mine))
+    }
+  }
+
+  // MARK: - Word card
+
+  /// Shows the card of `text`: the dictionary layer at once through `present`, then the
+  /// model's card as it streams in (architecture 6.6). Without either, translates instead,
+  /// which can still use Apple Translation; so does a model that says the text is no term.
+  private func lookUp(
+    _ text: String, id: Int, clock: ContinuousClock, start: ContinuousClock.Instant,
+    present: (PanelState) -> Void
+  ) async {
+    let term = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let context = origin?.context?.sentence
+    let lookupStart = clock.now
+    let entries = await environment.lookUpTerm(term, context)
+    let dictionaryTime = clock.now - lookupStart
+    guard id == self.id, !Task.isCancelled else { return }
+    let maker = environment.makeCardMaker()
+    if entries.isEmpty && maker == nil {
+      Log.ui.info("session \(id, privacy: .public): no dictionary entry and no model; translating")
+      present(translating(text))
+      await run(text, id: id, clock: clock, start: start)
+      return
+    }
+    showsCard = true
+    card = CardState(
+      term: term, context: context, entry: entries.first, accent: environment.accent(),
+      model: maker == nil ? .unavailable : .loading)
+    cardNote = maker == nil ? CardStrings.needsModelNote : nil
+    present(cardPanel)
+    Log.ui.info(
+      """
+      session \(id, privacy: .public): card shown \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms \
+      after the shortcut, \(entries.count, privacy: .public) dictionary entries in \
+      \(milliseconds(dictionaryTime), format: .fixed(precision: 2), privacy: .public)ms
+      """)
+    // A dictionary entry makes it a term at once; otherwise the model's first field does,
+    // since `status` comes before every field and a non-term ends the stream.
+    let lemma = entries.first?.lemma ?? term
+    if let recorded {
+      showRecorded(recorded)
+    } else if !entries.isEmpty {
+      await recordLookup(term, lemma: lemma, id: id)
+    }
+    guard let maker, id == self.id, !Task.isCancelled else { return }
+
+    do {
+      let stream = maker.card(
+        term: term, context: context, pair: environment.languagePair(),
+        accent: environment.accent())
+      for try await event in stream {
+        guard id == self.id else { return }
+        switch event {
+        case .fields(let definition, let translation):
+          card?.show(definition: definition, contextTranslation: translation)
+        case .card(let complete):
+          card?.show(complete)
+        case .notATerm:
+          Log.ui.info("session \(id, privacy: .public): the model says no term; translating")
+          showsCard = false
+          card = nil
+          panel.update(translating(text))
+          await run(text, id: id, clock: clock, start: start)
+          return
+        }
+        panel.update(cardPanel)
+        if recorded == nil { await recordLookup(term, lemma: lemma, id: id) }
+      }
+      Log.ui.info(
+        "session \(id, privacy: .public): card complete \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms after the shortcut"
+      )
+    } catch {
+      guard id == self.id, !Task.isCancelled, !(error is CancellationError) else { return }
+      Log.model.error("card failed: \(String(describing: error), privacy: .public)")
+      card?.model = .unavailable
+      cardNote = CardStrings.failureNote(error)
+      panel.update(cardPanel)
+    }
+  }
+
+  private var cardPanel: PanelState {
+    guard let card else { return PanelState(phase: .reading) }
+    return PanelState(phase: .card(card), note: cardNote)
+  }
+
+  /// Records the lookup and shows its count; a failure is logged and the card stays.
+  private func recordLookup(_ term: String, lemma: String, id: Int) async {
+    guard let vocab = environment.vocab, let origin else { return }
+    let context = origin.context
+    let range = context.map { context in
+      let utf16 = context.sentence.utf16
+      return (
+        start: utf16.distance(from: utf16.startIndex, to: context.termRange.lowerBound),
+        length: utf16.distance(
+          from: context.termRange.lowerBound, to: context.termRange.upperBound)
+      )
+    }
+    let record = LookupRecord(
+      language: environment.languagePair().learning.languageCode?.identifier ?? "en",
+      lemma: lemma, surface: term, sentence: context?.sentence, termStart: range?.start,
+      termLength: range?.length, source: origin.source, sourceApp: origin.app,
+      day: environment.today(), seenAt: .now)
+    do {
+      let summary = try await vocab.recordLookup(record)
+      guard id == self.id else { return }
+      recorded = summary
+      showRecorded(summary)
+    } catch {
+      Log.store.error(
+        "recording the lookup failed: \(String(describing: error), privacy: .public)")
+    }
+  }
+
+  /// The count and tier of the recorded term on the card.
+  private func showRecorded(_ summary: TermSummary) {
+    card?.encounters = summary.encounterCount
+    card?.isLearning = summary.tier == .learning
+    panel.update(cardPanel)
+  }
+
+  /// ⌘S: marks the term 要学, or back to 查过 (architecture 8.3).
+  private func toggleLearning() {
+    guard let vocab = environment.vocab, let recorded, card != nil else { return }
+    let tier: Tier = recorded.tier == .learning ? .seen : .learning
+    let id = id
+    let day = environment.today()
+    tierChange = Task {
+      do {
+        try await vocab.setTier(tier, termID: recorded.id, on: day)
+        guard id == self.id else { return }
+        self.recorded?.tier = tier
+        if let summary = self.recorded { self.showRecorded(summary) }
+      } catch {
+        Log.store.error(
+          "changing the tier failed: \(String(describing: error), privacy: .public)")
+      }
+    }
+  }
+
+  /// ⌘P: says the card's title, slowly when pressed again right away.
+  private func pronounce() {
+    guard let card else { return }
+    environment.pronounce(
+      card.lemma, environment.languagePair().learning, pace.next(at: ContinuousClock.now))
+  }
+
+  // MARK: - Recording
+
+  /// Records a finished translation or correction; a failure is only logged (architecture
+  /// 8.1). Without `languages`, both sides are the learning language, as for a correction.
+  private func recordSentence(
+    _ kind: SentenceKind, _ source: String, _ result: String, _ editsJSON: String?,
+    _ applied: Bool, _ app: String?,
+    languages: (Locale.Language, Locale.Language)? = nil
+  ) async {
+    guard let vocab = environment.vocab else { return }
+    let learning = environment.languagePair().learning
+    let (from, to) = languages ?? (learning, learning)
+    let record = SentenceRecord(
+      kind: kind, source: source, result: result, editsJSON: editsJSON, applied: applied,
+      sourceLanguage: from.languageCode?.identifier ?? "",
+      resultLanguage: to.languageCode?.identifier ?? "", sourceApp: app,
+      day: environment.today(), createdAt: .now)
+    do {
+      try await vocab.recordSentence(record)
+    } catch {
+      Log.store.error(
+        "recording a \(kind.rawValue, privacy: .public) sentence failed: \(String(describing: error), privacy: .public)"
+      )
+    }
+  }
+}
+
+extension Correction {
+  /// The changes as the vocabulary log stores them: `[{"right": …, "wrong": …}]`.
+  var editsJSON: String? {
+    let edits = segments.compactMap { segment -> [String: String]? in
+      guard case .changed(let wrong, let right) = segment else { return nil }
+      return ["wrong": wrong, "right": right]
+    }
+    guard let data = try? JSONSerialization.data(withJSONObject: edits, options: .sortedKeys)
+    else { return nil }
+    return String(decoding: data, as: UTF8.self)
   }
 }

@@ -15,6 +15,8 @@ struct StepResult {
   let ms: Double?
   let source: String?
   let text: String?
+  /// The context sentence read around the selection, when there is one.
+  let context: String?
   let failure: String?
   /// `read` steps: what the coordinator asked of the panel, e.g. "show:reading@12.3".
   let panelCalls: [String]
@@ -34,6 +36,7 @@ struct StepResult {
     ms = (object["ms"] as? NSNumber)?.doubleValue
     source = object["source"] as? String
     text = object["text"] as? String
+    context = object["context"] as? String
     failure = object["failure"] as? String
     panelCalls = object["panel"] as? [String] ?? []
     readingShownMs = (object["readingShownMs"] as? NSNumber)?.doubleValue

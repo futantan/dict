@@ -341,6 +341,8 @@ struct EvalRun: Sendable {
   /// Cards: whether the top-level `definition` key came before every array key. Reported,
   /// not checked: only the order of the schema sent decides it.
   var definitionFirst: Bool?
+  /// Cards: whether the top-level keys came exactly in the schema's order, `status` first.
+  var schemaOrder: Bool?
   var results: [EvalResult]
 }
 
@@ -437,6 +439,7 @@ struct EvalRunner: Sendable {
         run.output = removingAddedClosingTag(run.output, source: source)
       } else {
         run.definitionFirst = definitionFirst(scanner.keys)
+        run.schemaOrder = scanner.keys == WordCard.keys
       }
     } catch {
       run.error = String(describing: error)
@@ -518,7 +521,8 @@ struct EvalReport: Sendable {
     if !ordered.isEmpty {
       lines.append(
         "  definition    p50 \(seconds(\.definitionAt, 0.5)) p90 \(seconds(\.definitionAt, 0.9))"
-          + ", before the arrays in \(ordered.count { $0 })/\(ordered.count)")
+          + ", before the arrays in \(ordered.count { $0 })/\(ordered.count)"
+          + ", keys in schema order in \(runs.count { $0.schemaOrder == true })/\(ordered.count)")
     }
     for run in runs {
       let failed = run.results.compactMap { result in

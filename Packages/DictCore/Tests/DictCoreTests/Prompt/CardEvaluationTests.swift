@@ -123,9 +123,10 @@ struct CardEvaluationRunnerTests {
 
     #expect(report.passes(threshold: 1))
     #expect(report.runs.allSatisfy { $0.definitionAt != nil && $0.definitionFirst == true })
+    #expect(report.runs.allSatisfy { $0.schemaOrder == true })
     #expect(report.tally().first { $0.invariant == .strictDecode }?.passed == 2)
     #expect(
-      report.rendered(title: "card", threshold: 0.95).contains("before the arrays in 2/2"))
+      report.rendered(title: "card", threshold: 0.95).contains("keys in schema order in 2/2"))
   }
 
   @Test func definitionAfterTheArraysIsReportedNotFailed() async {
@@ -141,6 +142,7 @@ struct CardEvaluationRunnerTests {
     let report = await runner.run([evalCase], runs: 1)
 
     #expect(report.runs[0].definitionFirst == false)
+    #expect(report.runs[0].schemaOrder == false)
     #expect(report.passes(threshold: 1))
     #expect(
       report.rendered(title: "card", threshold: 0.95).contains("before the arrays in 0/1"))

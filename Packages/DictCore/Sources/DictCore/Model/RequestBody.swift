@@ -10,7 +10,7 @@ public func requestBody(
   }
   messages.append(["role": "user", "content": .string(request.user)])
 
-  var body: [String: JSONValue] = [
+  var body: JSONObject = [
     "model": .string(endpoint.model),
     "messages": .array(messages),
     "stream": true,
@@ -20,7 +20,7 @@ public func requestBody(
   if case .object(let fragment) = thinkingFragment(
     for: endpoint.model, setting: endpoint.thinking, rules: rules)
   {
-    body.merge(fragment) { _, fragmentValue in fragmentValue }
+    body.merge(fragment)
   }
   if let format = responseFormat(request.output, mode: endpoint.jsonMode) {
     body["response_format"] = format

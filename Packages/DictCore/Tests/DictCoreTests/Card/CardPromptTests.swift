@@ -96,6 +96,7 @@ struct CardPromptTests {
       return
     }
     #expect(name == "card")
+    #expect(schema["required"] == .array(WordCard.keys.map(JSONValue.string)))
     let partOfSpeech: JSONValue = [
       "type": "string",
       "enum": [
@@ -103,7 +104,7 @@ struct CardPromptTests {
         "determiner", "interjection", "phrasal verb", "idiom", "phrase", "abbreviation", "",
       ],
     ]
-    func list(_ max: Int, _ fields: [String: JSONValue], _ order: [JSONValue]) -> JSONValue {
+    func list(_ max: Int, _ fields: JSONObject, _ order: [JSONValue]) -> JSONValue {
       [
         "type": "array", "maxItems": .number(Double(max)),
         "items": [

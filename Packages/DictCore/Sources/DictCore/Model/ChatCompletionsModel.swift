@@ -135,7 +135,8 @@ public struct ChatCompletionsModel: TextModel {
       case .none: break
       }
     }
-    request.httpBody = try JSONEncoder().encode(body)
+    // In declaration order: strict schemas fix the order of the answer's keys.
+    request.httpBody = body.jsonData()
     let (bytes, response) = try await session.bytes(for: request)
     guard let http = response as? HTTPURLResponse else { throw ModelError.malformedResponse }
     return (bytes, http)

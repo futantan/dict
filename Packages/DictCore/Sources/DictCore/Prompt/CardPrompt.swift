@@ -86,7 +86,7 @@ extension PromptBuilder {
         "items": [
           "type": "object", "additionalProperties": false,
           "required": .array(fields.map { .string($0.0) }),
-          "properties": .object(Dictionary(uniqueKeysWithValues: fields)),
+          "properties": .object(JSONObject(fields)),
         ],
       ]
     }
@@ -109,7 +109,7 @@ extension PromptBuilder {
     return [
       "type": "object", "additionalProperties": false,
       "required": .array(fields.map { .string($0.0) }),
-      "properties": .object(Dictionary(uniqueKeysWithValues: fields)),
+      "properties": .object(JSONObject(fields)),
     ]
   }()
 }

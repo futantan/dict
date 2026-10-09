@@ -73,6 +73,12 @@ public struct WordCard: Codable, Sendable, Equatable {
     self.level = level
   }
 
+  /// The fields in the order the schema declares them, and so the order a strict model
+  /// writes them: `status` first, the short strings, then the arrays.
+  public static let keys = [
+    "status", "lemma", "phonetic", "partOfSpeech", "definition", "contextTranslation",
+    "otherSenses", "examples", "collocations", "level",
+  ]
   public static let partsOfSpeech = [
     "noun", "verb", "adjective", "adverb", "preposition", "conjunction", "pronoun", "determiner",
     "interjection", "phrasal verb", "idiom", "phrase", "abbreviation", "",

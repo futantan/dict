@@ -43,10 +43,12 @@ struct OnboardingLiveTests {
   @Test func testButtonConnects() async throws {
     let model = try onboarding()
     model.settings.testConnection()
-    for _ in 0..<600 where model.settings.connection == .testing {
+    for _ in 0..<600 where model.settings.connection.isTesting {
       try await Task.sleep(for: .milliseconds(50))
     }
-    guard case .succeeded(let elapsed) = model.settings.connection else {
+    guard case .checked(let report) = model.settings.connection, report.translation == .passed,
+      let elapsed = report.firstContent
+    else {
       Issue.record("Expected success, got \(model.settings.connection)")
       return
     }

@@ -106,6 +106,34 @@ extension ConnectionFailure {
       return description
     case .model(let error):
       return Self.message(error)
+    case .structuredOutput(let error):
+      return Self.message(error)
+    case .listUnsupported:
+      return String(
+        localized: "This service doesn’t list its models. Enter the model name by hand.",
+        table: "Settings", comment: "Listing models: the service answered 404 or 405")
+    }
+  }
+
+  private static func message(_ error: ProofreadError) -> String {
+    switch error {
+    case .malformed, .edits:
+      String(
+        localized:
+          "The model didn’t answer in the requested JSON format. Looking up words and correcting writing need it.",
+        table: "Settings", comment: "Connection test: the strict JSON answer didn't decode")
+    case .truncated:
+      String(
+        localized: "The model’s JSON answer was cut off.", table: "Settings",
+        comment: "Connection test: the strict JSON answer hit the output limit")
+    case .refused:
+      String(
+        localized: "The service’s content filter stopped the answer.", table: "Settings",
+        comment: "Connection test: the strict JSON answer was refused")
+    case .interrupted:
+      String(
+        localized: "The answer stopped before it was complete.", table: "Settings",
+        comment: "Connection test: the strict JSON answer ended without a finish reason")
     }
   }
 

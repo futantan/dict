@@ -23,6 +23,17 @@
         }
       }
     },
+    "Advanced" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高级"
+          }
+        }
+      }
+    },
     "American English" : {
       "comment" : "Accent choice",
       "localizations" : {
@@ -41,6 +52,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "澳大利亚英语"
+          }
+        }
+      }
+    },
+    "Automatic" : {
+      "comment" : "JSON mode choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
           }
         }
       }
@@ -78,6 +100,28 @@
         }
       }
     },
+    "Change these only if the test fails. Automatic asks for a strict JSON schema and leaves it out when the service rejects it." : {
+      "comment" : "Footer under the custom provider's advanced options",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只在测试失败时修改。「自动」会要求严格的 JSON 结构，服务不接受时自动去掉。"
+          }
+        }
+      }
+    },
+    "Choose a listed model" : {
+      "comment" : "Help tag of the menu of listed models",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择列出的模型"
+          }
+        }
+      }
+    },
     "Choose a provider." : {
       "comment" : "The model settings have no provider",
       "localizations" : {
@@ -89,6 +133,17 @@
         }
       }
     },
+    "Choose one of the models listed above." : {
+      "comment" : "Hint after the service did not know the model name; its list is shown",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请从上面列出的模型中选一个。"
+          }
+        }
+      }
+    },
     "Click a shortcut and press the new keys. Press Delete to remove it, or Esc to cancel." : {
       "comment" : "Footer under the shortcut fields",
       "localizations" : {
@@ -96,17 +151,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "点按快捷键，然后按下新的组合键。按 Delete 删除，按 Esc 取消。"
-          }
-        }
-      }
-    },
-    "Connected. The model answered in %@ s." : {
-      "comment" : "Test succeeded. The argument is a number of seconds",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已连接，模型在 %@ 秒内作出了回应。"
           }
         }
       }
@@ -133,6 +177,17 @@
         }
       }
     },
+    "Couldn’t reach Ollama. Check that it is running on this Mac." : {
+      "comment" : "Listing Ollama models failed to connect",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连不上 Ollama。请确认它正在这台 Mac 上运行。"
+          }
+        }
+      }
+    },
     "Custom (OpenAI-compatible)" : {
       "comment" : "Model provider choice for any service with an OpenAI-compatible API",
       "localizations" : {
@@ -140,6 +195,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自定义（兼容 OpenAI）"
+          }
+        }
+      }
+    },
+    "Dict can use this model, but it is slow." : {
+      "comment" : "Test finished; every check passed but the model thinks",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 可以使用这个模型，但它很慢。"
+          }
+        }
+      }
+    },
+    "Dict can use this model." : {
+      "comment" : "Test finished and every check passed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 可以使用这个模型。"
           }
         }
       }
@@ -199,6 +276,41 @@
         }
       }
     },
+    "Found %lld models. Choose one from the menu next to the model name." : {
+      "comment" : "Listing models succeeded. The argument is how many",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Found %lld model. Choose it from the menu next to the model name."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Found %lld models. Choose one from the menu next to the model name."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "找到 %lld 个模型。请从模型名旁边的菜单里选择。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Get an API key from %@" : {
       "comment" : "Link to the provider's key page. The argument is its name",
       "localizations" : {
@@ -232,6 +344,17 @@
         }
       }
     },
+    "JSON mode" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON 模式"
+          }
+        }
+      }
+    },
     "Language I’m learning" : {
       "comment" : "Settings field label",
       "localizations" : {
@@ -250,6 +373,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "语言"
+          }
+        }
+      }
+    },
+    "List Available Models" : {
+      "comment" : "Button that asks the service which models it offers",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列出可用模型"
+          }
+        }
+      }
+    },
+    "Listing…" : {
+      "comment" : "Listing models",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在列出…"
+          }
+        }
+      }
+    },
+    "Lowest" : {
+      "comment" : "Thinking choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最低"
           }
         }
       }
@@ -287,6 +443,39 @@
         }
       }
     },
+    "Not checked, because the translation failed." : {
+      "comment" : "A test check that did not run",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译失败，没有检查。"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "comment" : "Thinking or JSON mode choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关"
+          }
+        }
+      }
+    },
+    "Ollama has no models yet. Download one with “ollama pull”, then list again." : {
+      "comment" : "Listing Ollama models found none",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ollama 里还没有模型。先用「ollama pull」下载一个，再重新列出。"
+          }
+        }
+      }
+    },
     "Optional" : {
       "comment" : "Placeholder of an optional field",
       "localizations" : {
@@ -294,6 +483,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "可选"
+          }
+        }
+      }
+    },
+    "Output limit parameter" : {
+      "comment" : "Settings field label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输出上限参数"
           }
         }
       }
@@ -320,13 +520,24 @@
         }
       }
     },
-    "Send a short request to check these settings." : {
-      "comment" : "Shown next to the Test button before a test",
+    "See which models this service offers." : {
+      "comment" : "Shown next to the List Available Models button before it is used",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "发送一个简短的请求来检查这些设置。"
+            "value" : "查看这个服务提供哪些模型。"
+          }
+        }
+      }
+    },
+    "Service default" : {
+      "comment" : "Thinking choice",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务默认"
           }
         }
       }
@@ -371,6 +582,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "简体中文"
+          }
+        }
+      }
+    },
+    "Some checks failed." : {
+      "comment" : "Test finished and a check failed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有检查没有通过。"
+          }
+        }
+      }
+    },
+    "Structured output" : {
+      "comment" : "Name of a test check: the model answers in a strict JSON schema",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结构化输出"
           }
         }
       }
@@ -441,6 +674,72 @@
         }
       }
     },
+    "The answer stopped before it was complete." : {
+      "comment" : "Connection test: the strict JSON answer ended without a finish reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答没有完成就中断了。"
+          }
+        }
+      }
+    },
+    "The first words came after %@ s." : {
+      "comment" : "Translation check passed. The argument is a number of seconds",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 秒后收到第一个字。"
+          }
+        }
+      }
+    },
+    "The model answers in the requested JSON format." : {
+      "comment" : "Structured output check passed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型能按要求的 JSON 格式回答。"
+          }
+        }
+      }
+    },
+    "The model answers without thinking." : {
+      "comment" : "Thinking check passed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型不思考，直接回答。"
+          }
+        }
+      }
+    },
+    "The model didn’t answer in the requested JSON format. Looking up words and correcting writing need it." : {
+      "comment" : "Connection test: the strict JSON answer didn't decode",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型没有按要求的 JSON 格式回答。查词和纠错都需要它。"
+          }
+        }
+      }
+    },
+    "The model’s JSON answer was cut off." : {
+      "comment" : "Connection test: the strict JSON answer hit the output limit",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型的 JSON 回答被截断了。"
+          }
+        }
+      }
+    },
     "The service didn’t answer in time." : {
       "comment" : "Connection test: the request timed out",
       "localizations" : {
@@ -481,6 +780,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务正在限制请求，或者账户余额不足。请稍后再试。"
+          }
+        }
+      }
+    },
+    "The service listed no models." : {
+      "comment" : "Listing models found none",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务没有列出任何模型。"
           }
         }
       }
@@ -529,6 +839,28 @@
         }
       }
     },
+    "The service’s content filter stopped the answer." : {
+      "comment" : "Connection test: the strict JSON answer was refused",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务的内容过滤拦下了回答。"
+          }
+        }
+      }
+    },
+    "Thinking" : {
+      "comment" : "Settings field label, and the name of a test check",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "思考"
+          }
+        }
+      }
+    },
     "This Mac is offline." : {
       "comment" : "Connection test: no network connection",
       "localizations" : {
@@ -536,6 +868,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这台 Mac 没有联网。"
+          }
+        }
+      }
+    },
+    "This model is thinking, so looking up words will be slow." : {
+      "comment" : "Test check: the model thinks or answers slowly",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个模型在思考，查词会很慢。"
           }
         }
       }
@@ -551,6 +894,17 @@
         }
       }
     },
+    "This service doesn’t list its models. Enter the model name by hand." : {
+      "comment" : "Listing models: the service answered 404 or 405",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个服务不提供模型列表，请手动填写模型名。"
+          }
+        }
+      }
+    },
     "Traditional Chinese" : {
       "comment" : "Language name",
       "localizations" : {
@@ -558,6 +912,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "繁体中文"
+          }
+        }
+      }
+    },
+    "Translate a sentence and check the answers." : {
+      "comment" : "Shown next to the Test button before a test",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译一句话并检查回答。"
+          }
+        }
+      }
+    },
+    "Translation" : {
+      "comment" : "Name of a test check",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译"
+          }
+        }
+      }
+    },
+    "Try another JSON mode under Advanced." : {
+      "comment" : "Hint after a failed structured output check of a custom provider",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以在「高级」里换一种 JSON 模式试试。"
           }
         }
       }

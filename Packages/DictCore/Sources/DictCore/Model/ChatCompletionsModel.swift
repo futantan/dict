@@ -127,14 +127,7 @@ public struct ChatCompletionsModel: TextModel {
     request.timeoutInterval = Double(timeouts.total.components.seconds) + 30
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-    for (name, value) in endpoint.extraHeaders { request.setValue(value, forHTTPHeaderField: name) }
-    if let apiKey, !apiKey.isEmpty {
-      switch endpoint.auth {
-      case .bearer: request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-      case .header(let name): request.setValue(apiKey, forHTTPHeaderField: name)
-      case .none: break
-      }
-    }
+    endpoint.authorize(&request, apiKey: apiKey)
     // In declaration order: strict schemas fix the order of the answer's keys.
     request.httpBody = body.jsonData()
     let (bytes, response) = try await session.bytes(for: request)
@@ -146,16 +139,7 @@ public struct ChatCompletionsModel: TextModel {
   private func readFailure(
     _ bytes: URLSession.AsyncBytes, _ response: HTTPURLResponse
   ) async throws -> (error: ModelError, param: String?) {
-    let data = try await collect(bytes, limit: 64 * 1024)
-    let json = try? JSONDecoder().decode(JSONValue.self, from: data)
-    var message = json.map { errorMessage($0["error"] ?? $0) } ?? ""
-    if message.isEmpty { message = String(decoding: data, as: UTF8.self) }
-    if let apiKey, !apiKey.isEmpty {
-      message = message.replacingOccurrences(of: apiKey, with: "••••")
-    }
-    let error = modelError(
-      status: response.statusCode, message: message, retryAfter: retryAfter(response))
-    return (error, json?["error"]?["param"]?.stringValue)
+    httpFailure(try await collect(bytes, limit: 64 * 1024), response, apiKey: apiKey)
   }
 
   /// The optional parameter a 400 complains about, when leaving it out may help.
@@ -184,6 +168,35 @@ public struct ChatCompletionsModel: TextModel {
     }
     return data
   }
+}
+
+extension ModelEndpoint {
+  /// Adds the extra headers and the key, as the endpoint's auth style says.
+  func authorize(_ request: inout URLRequest, apiKey: String?) {
+    for (name, value) in extraHeaders { request.setValue(value, forHTTPHeaderField: name) }
+    guard let apiKey, !apiKey.isEmpty else { return }
+    switch auth {
+    case .bearer: request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+    case .header(let name): request.setValue(apiKey, forHTTPHeaderField: name)
+    case .none: break
+    }
+  }
+}
+
+/// Maps a failed response and its body, with the key masked in the message. `param` is the
+/// parameter an OpenAI-style error names, if any.
+func httpFailure(
+  _ data: Data, _ response: HTTPURLResponse, apiKey: String?
+) -> (error: ModelError, param: String?) {
+  let json = try? JSONDecoder().decode(JSONValue.self, from: data)
+  var message = json.map { errorMessage($0["error"] ?? $0) } ?? ""
+  if message.isEmpty { message = String(decoding: data, as: UTF8.self) }
+  if let apiKey, !apiKey.isEmpty {
+    message = message.replacingOccurrences(of: apiKey, with: "••••")
+  }
+  let error = modelError(
+    status: response.statusCode, message: message, retryAfter: retryAfter(response))
+  return (error, json?["error"]?["param"]?.stringValue)
 }
 
 /// The value of `Retry-After` (seconds) or `retry-after-ms`.

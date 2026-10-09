@@ -55,11 +55,13 @@ public struct ProviderPreset: Codable, Sendable, Equatable {
   public var tokenLimitField: String
   /// Matched by model-name prefix.
   public var thinkingRules: [ThinkingRule]
+  /// How to list the models the service offers.
+  public var modelList: ModelListStyle
 
   public init(
     id: String, displayName: String, baseURL: URL, auth: AuthStyle, requiresKey: Bool,
     keyHelpURL: URL?, defaultModel: String, jsonMode: JSONMode, tokenLimitField: String,
-    thinkingRules: [ThinkingRule]
+    thinkingRules: [ThinkingRule], modelList: ModelListStyle = .openAI
   ) {
     self.id = id
     self.displayName = displayName
@@ -71,8 +73,13 @@ public struct ProviderPreset: Codable, Sendable, Equatable {
     self.jsonMode = jsonMode
     self.tokenLimitField = tokenLimitField
     self.thinkingRules = thinkingRules
+    self.modelList = modelList
   }
 }
+
+/// Where a provider lists its models: `GET <base URL>/models` (OpenAI compatible), or
+/// Ollama's own `GET /api/tags`.
+public enum ModelListStyle: String, Codable, Sendable { case openAI, ollama }
 
 /// The request-body fragments that switch thinking off or to its lowest level.
 public struct ThinkingRule: Codable, Sendable, Equatable {

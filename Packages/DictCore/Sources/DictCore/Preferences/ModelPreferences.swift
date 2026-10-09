@@ -12,6 +12,11 @@ public struct ModelPreferences: Codable, Sendable, Equatable {
   public var model: String
   /// Empty means the preset's base URL. Required for the custom provider.
   public var baseURL: String
+  /// The custom provider's options (architecture 6.2); nil means the preset's value. Other
+  /// providers ignore them and keep their tested preset values.
+  public var thinking: ThinkingSetting?
+  public var tokenLimitField: String?
+  public var jsonMode: JSONMode?
 
   public init(providerID: String? = nil, model: String = "", baseURL: String = "") {
     self.providerID = providerID
@@ -19,13 +24,19 @@ public struct ModelPreferences: Codable, Sendable, Equatable {
     self.baseURL = baseURL
   }
 
-  private enum CodingKeys: String, CodingKey { case providerID, model, baseURL }
+  private enum CodingKeys: String, CodingKey {
+    case providerID, model, baseURL, thinking, tokenLimitField, jsonMode
+  }
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     providerID = try container.decodeIfPresent(String.self, forKey: .providerID)
     model = try container.decodeIfPresent(String.self, forKey: .model) ?? ""
     baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? ""
+    // An option this version doesn't know falls back to the preset instead of failing.
+    thinking = try? container.decodeIfPresent(ThinkingSetting.self, forKey: .thinking)
+    tokenLimitField = try container.decodeIfPresent(String.self, forKey: .tokenLimitField)
+    jsonMode = try? container.decodeIfPresent(JSONMode.self, forKey: .jsonMode)
   }
 }
 
@@ -62,6 +73,26 @@ extension ModelPreferences {
   public func configuration(
     presets: [ProviderPreset], hasKey: Bool
   ) throws(ModelSetupIssue) -> ModelConfiguration {
+    let (endpoint, preset) = try resolved(presets: presets, hasKey: hasKey)
+    guard !endpoint.model.isEmpty else { throw .missingModel }
+    if preset.requiresKey && !hasKey { throw .missingKey }
+    return ModelConfiguration(endpoint: endpoint, rules: preset.thinkingRules)
+  }
+
+  /// The endpoint to list the provider's models from. Unlike `configuration`, it needs no
+  /// model name: listing is how the user finds one.
+  public func listEndpoint(
+    presets: [ProviderPreset], hasKey: Bool
+  ) throws(ModelSetupIssue) -> ModelEndpoint {
+    let (endpoint, preset) = try resolved(presets: presets, hasKey: hasKey)
+    if preset.requiresKey && !hasKey { throw .missingKey }
+    return endpoint
+  }
+
+  /// The endpoint with the provider and base URL checked; the model may be empty.
+  private func resolved(
+    presets: [ProviderPreset], hasKey: Bool
+  ) throws(ModelSetupIssue) -> (endpoint: ModelEndpoint, preset: ProviderPreset) {
     guard let providerID else { throw .noProvider }
     guard let preset = presets.first(where: { $0.id == providerID }) else {
       throw .unknownProvider
@@ -70,14 +101,16 @@ extension ModelPreferences {
     let typedURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
     let url = typedURL.isEmpty && !isCustom ? preset.baseURL : try validatedBaseURL(typedURL)
     let typedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
-    let modelName = typedModel.isEmpty ? preset.defaultModel : typedModel
-    guard !modelName.isEmpty else { throw .missingModel }
-    if preset.requiresKey && !hasKey { throw .missingKey }
 
-    var endpoint = preset.endpoint(model: modelName)
+    var endpoint = preset.endpoint(model: typedModel.isEmpty ? preset.defaultModel : typedModel)
     endpoint.baseURL = url
-    if isCustom { endpoint.auth = hasKey ? preset.auth : .none }
-    return ModelConfiguration(endpoint: endpoint, rules: preset.thinkingRules)
+    if isCustom {
+      endpoint.auth = hasKey ? preset.auth : .none
+      endpoint.thinking = thinking ?? .off
+      endpoint.tokenLimitField = tokenLimitField ?? preset.tokenLimitField
+      endpoint.jsonMode = jsonMode ?? preset.jsonMode
+    }
+    return (endpoint, preset)
   }
 }
 

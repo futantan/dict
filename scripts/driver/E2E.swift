@@ -17,6 +17,8 @@ struct E2EScenario: Decodable {
     /// `read` scenarios: whether the reading panel must show before the clipboard fallback
     /// (true) or not at all (false).
     var readingPanel: Bool?
+    /// The context sentence the capture must read around the selection.
+    var context: String?
   }
 
   var name: String
@@ -195,6 +197,10 @@ struct E2E {
     }
     if let text = expect.text, capture.text != text {
       notes.append("expected text \(Self.quote(text)), got \(Self.quote(capture.text))")
+    }
+    if let context = expect.context, capture.context != context {
+      notes.append(
+        "expected context \(Self.quote(context)), got \(Self.quote(capture.context))")
     }
     return notes
   }

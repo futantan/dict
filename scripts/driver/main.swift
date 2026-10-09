@@ -7,6 +7,7 @@
 //   dict-driver matrix   --app <Dict.app> --pages <dir> --out <json> --work <dir> [--only a,b]
 //   dict-driver live     --app <Dict.app> --fixture <CaptureFixture.app> --pages <dir> --work <dir> [--only a,b] [--runs n]
 //   dict-driver selftest --fixture <CaptureFixture.app> --fakes <dir> --work <dir>
+//   dict-driver check    --scenarios <json>   (decodes the scenario file only)
 //
 // Exit status: 0 all passed, 1 failures, 2 skipped because the app has no `--e2e` entry point
 // yet, 3 usage or environment errors.
@@ -54,6 +55,12 @@ func main() -> Int32 {
       if report.passed { return 0 }
       return report.count(.skip) > 0 && report.count(.fail) == 0 ? 2 : 1
 
+    case "check":
+      // Decodes a scenario file without launching anything.
+      let scenarios = try E2E.loadScenarios(try required("scenarios"))
+      say("check: \(scenarios.count) scenarios decode")
+      return 0
+
     case "matrix":
       try requireAccessibility()
       let only = option("only").map { $0.split(separator: ",").map(String.init) }
@@ -79,7 +86,8 @@ func main() -> Int32 {
       return passed ? 0 : 1
 
     default:
-      throw DriverError("usage: dict-driver e2e|matrix|selftest … (see scripts/driver/main.swift)")
+      throw DriverError(
+        "usage: dict-driver e2e|check|matrix|live|selftest … (see scripts/driver/main.swift)")
     }
   } catch {
     say("driver: error: \(error)")

@@ -124,7 +124,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
 现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型；即时词典查询、词库存储、音色选择规则（M2），结构化输出的后处理与改写校验（M2、M3），复习排程（M5）都还没有。
-选区分类 `classify`、`sentence(containing:in:)`、`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
+选区分类 `classify` 和切句 `sentence(containing:in:)` 已实现；`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
 现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）；M2 的 `Lexicon` 和 `VocabStore` 加入后再用 SQLite3（系统 `libsqlite3`）。
@@ -365,7 +365,9 @@ VS Code 第二次写入的触发条件是从 3 次观察归纳的，机制没有
    4. Chromium 的 contenteditable 不走第 1 步：它的值和范围偏移不一致【实测】。
    5. 都失败或来源是剪贴板、OCR 时，没有上下文句；卡片退化为不带上下文的释义。
    切句和定位设计为 `DictCore` 里的纯函数 `sentence(containing:in:)`，输入段落和选区偏移，输出 `ContextSentence`。
-   现状：上面第 1、2 步的读取已在 M1 实现（`App/Sources/Capture/SecondStage.swift`），切句用的是同一文件里应用目标的 `contextSentence(in:selection:)`（输入 `NSRange`）；`DictCore` 的 `sentence(containing:in:)` 还是调用即崩溃的存根，计划在 M2.2 实现并替换前者（第 15.2 节）。
+   现状：上面第 1、2 步的读取已在 M1 实现（`App/Sources/Capture/SecondStage.swift`）；切句和定位已挪进 `DictCore` 的 `sentence(containing:in:)`，应用目标的 `contextSentence(in:selection:)` 只把 `NSRange` 换成 `String.Index` 后调用它。
+   切句完全交给 `NLTokenizer`：`e.g.`、`Dr.`、`U.S.`、小数、网址和句末的引号括号都留在句内，中日文句末标点断句，换行一律断句；选区首尾的空白不算进词，选区跨句或跨行时没有上下文句【表驱动单测】。
+   `「你去吗？」他问。` 会被切成两句，没有特殊处理。
    M1 只把上下文句放进 `Selection`，翻译不使用它。
 3. **替换目标**：只有「写」键路径需要，规则见第 4.3 节。
    快照必须在面板出现之前取：面板成为 key 后 VS Code 的应用级焦点元素会变成 `noValue`【实测】。
@@ -595,7 +597,7 @@ public enum SelectionKind: Sendable, Equatable { case none, word, phrase, passag
 public func classify(_ text: String) -> SelectionKind
 ```
 
-现状：`classify` 是调用即崩溃的存根，计划在 M2.1 实现；M1 把所有选区都当作段落翻译。
+现状：`classify` 已按下面的规则实现（`DictCore/Text/SelectionKind.swift`，表驱动单测）；会话还没有按它分流，所有选区仍当作段落翻译，分流随 M2 的查词链路接入。
 
 第一版的规则「先去首尾标点再判断句末标点」自相矛盾，在 169 条真实选区上分错 78 条；URL、数字、代码、空串没有「不查」的出口【实测】。
 新规则按固定顺序执行：
@@ -648,11 +650,11 @@ public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
 | 函数 | 用途 |
 |---|---|
 | `normalizedKey(_ text: String) -> String` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
-| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：存根，M2.2 实现；现在切句用应用目标的 `contextSentence(in:selection:)`（第 3.5 节） |
+| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：已实现，应用目标的 `contextSentence(in:selection:)` 是它的 `NSRange` 适配（第 3.5 节） |
 | `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节）。现状：存根，M3 实现 |
 | `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据。现状：存根，M3.2 实现 |
 
-`normalizedKey` 已实现；第 5.1 节的 `classify` 现在是存根，M2.1 实现；第 5.2 节的 `resolveDirection` 已实现。
+`normalizedKey`、`sentence(containing:in:)`、第 5.1 节的 `classify` 和第 5.2 节的 `resolveDirection` 已实现。
 
 `AppKind` 判定不在这里：`AppKind` 是 `DictApp` 的类型，判定函数也在 `DictApp`（第 3.3 节）。
 
@@ -1624,6 +1626,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 现状：M1 的夹具有 `NSTextView`（纯文本、富文本）、`NSTextField`、`NSSecureTextField`、`WKWebView` 的三种控件和三种自绘视图。
 SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计划在 M3.5 加入（第 15.3 节）。
+`make e2e` 的场景可以用 `expect.context` 断言读到的上下文句；已有行内标签（`<b>`、`<a>`）、多段网页、`contenteditable` 第二段、`<textarea>` 第二行和文本视图里带缩写的第二段几个场景。
 
 夹具把收到的每一次拷贝、粘贴、无障碍写入写进一个 JSON Lines 日志；夹具接受分布式通知形式的命令（选中某控件的某段文字）。
 断言示例：无障碍可读的控件上拷贝事件数为 0；替换后粘贴事件恰好 1 次；剪贴板所有类型的哈希在场景前后相同；⌘Z 后全文回到原样；密码框上没有任何拷贝或读取。

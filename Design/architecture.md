@@ -1224,6 +1224,13 @@ public actor Lexicon {
 不使用系统词典的文本作为预览：公开接口返回的是用户启用顺序第一本词典的整段文本，中文母语用户默认拿到的是英英释义和美式重拼音标，短语动词查到的是错的词条【实测，评审】。
 卡片上保留「在系统词典中打开」按钮。
 
+现状：`Lexicon` 已在 M2.4 实现（`Packages/DictCore/Sources/DictCore/Lexicon/`），接口与上面一致，`DataSource` 的字段对应 `meta.sources` 的 JSON（name、url、snapshotDate、sha256、license、licenseURL），`meta` 里没有或解析不了时 `sources()` 返回空。
+`init(url:)` 只读打开并预编译查询，文件不存在、不是 sqlite 或缺表时抛 `LexiconError`；去首尾标点用 `CharacterSet.punctuationCharacters`，符号不去（`C++`）。
+`band` 类型保留可选，但词典层总会给值，没有词频时是 `rare`。
+`NLTagger` 还原逐词进行再用空格连接（`took off` → `take off`）；上下文句里找到这个词（不区分大小写、整词）时在句中还原，找不到就单独还原。
+测试库在测试代码里按 schema 2 现建；计时测试读环境变量 `DICT_DB` 指向真实库，没设时跳过。
+应用还没有加载这个库（找 bundle 里的文件、没有词典时的降级），计划在 M2.8 做（第 15.2 节）。
+
 ## 8. 词库
 
 ### 8.1 记录什么
@@ -1420,6 +1427,12 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - 多音词（record、read、wind 等）：带 IPA 属性时渲染出的音频确实不同【实测，评审】，但读出来是否自然没有人听过【未验证】；v1 先不启用。
 - 逐词高亮：范围会带上尾随标点和前导空格【实测，评审】，绘制前裁掉。
 - 测试一律用渲染模式，不出声。
+
+现状：M2.7 已实现 `DictCore` 的 `resolveVoice`（`Speech/`）和应用的 `Speaker`（`App/Sources/Speech/`），但还没接到界面；⌘P、卡片喇叭、设置页的音色提示和「管理语音」按钮的跳转、启动后调用预热都随 M2.8 做。
+与上面的接口有三处不同。
+`resolveVoice` 返回 `VoiceChoice`：选中的 `VoiceInfo`（没有可用音色时为 nil）加至多一条提示，`noVoice`、`accentMissing`（没有这个口音，暂用同语言的其他地区）或 `higherQuality`（只有 compact 档；enhanced 及以上不提示）。
+`Speaker` 是一个 `@MainActor` 的具体类而不是协议，另有 `accent`、`isSpeaking`、`voiceChoice(for:)` 和 `prewarm(language:)`；构造时选输出到扬声器或渲染进缓冲，测试只用后者。
+选音色时同档里老的 MacinTalk 音色（`com.apple.speech.synthesis.voice.*`，例如 Fred、Kathy）排在最后，否则按名字排序会选到它们而不是 Samantha；口音没有对应音色时先回退到语言的默认地区（英语为美音），再按档位和地区代码选其他地区。
 
 ## 10. 触发
 

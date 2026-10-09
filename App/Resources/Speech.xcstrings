@@ -1,0 +1,83 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "For a more natural voice, download an Enhanced or Premium voice in System Settings." : {
+      "comment" : "Voice hint when only the basic voice is installed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想要更自然的发音，可以在系统设置里下载增强或高品质语音。"
+          }
+        }
+      }
+    },
+    "Manage Voices…" : {
+      "comment" : "Button beside the voice hint that opens the system's voice downloads",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理语音…"
+          }
+        }
+      }
+    },
+    "No voice is installed for this language." : {
+      "comment" : "Shown when nothing can be spoken because no system voice speaks the language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这种语言没有安装语音。"
+          }
+        }
+      }
+    },
+    "No voice is installed for this language. Download one in System Settings." : {
+      "comment" : "Voice hint when no system voice speaks the language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这种语言没有安装语音，可以在系统设置里下载。"
+          }
+        }
+      }
+    },
+    "No voice with this accent is installed, so another accent is used. Download one in System Settings." : {
+      "comment" : "Voice hint when no system voice has the chosen accent",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有安装这种口音的语音，暂用其他口音朗读。可以在系统设置里下载。"
+          }
+        }
+      }
+    },
+    "Pronounce" : {
+      "comment" : "Speaker button: say the text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发音"
+          }
+        }
+      }
+    },
+    "Pronounce Slowly" : {
+      "comment" : "Speaker button, pressed again: say the text slowly",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "慢速发音"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -738,10 +738,12 @@ v1 的预设行：
 | Ollama | `http://localhost:11434/v1` | 由 `GET /api/tags` 列出已装模型让用户选 | `reasoning_effort: "none"` | `max_tokens` | `json_schema` |
 | 自定义 | 用户填写 | 用户填写，可调 `GET /models` 列出 | 下拉：关 / 最低 / 服务商默认 | 下拉 | 下拉，默认自动 |
 
-现状：列模型和三个下拉都未实现，计划在 M2.9 做（第 15.2 节）。
-代码里没有任何列模型的请求；设置的模型页只有服务商下拉、模型名和 Base URL 两个文本框，服务商接受 Key 时再加一个 Key 输入框（`ModelPreferences` 只存前三项，Key 在 Keychain）。
-Ollama 的模型名由用户手填，预设的默认模型是空串，不填就报「缺少模型」。
-自定义服务商用预设表里的固定值：关思考（`reasoning_effort: "none"`）、`max_tokens`、`json_schema`；`ModelEndpoint.thinking` 始终是 `.off`。
+现状：列模型和自定义服务商的三个下拉已实现（M2.9）。
+列模型是 `DictCore` 的 `listModels`：预设行的 `modelList` 决定走 Ollama 的 `GET /api/tags`（去掉 Base URL 末尾的 `/v1`）还是 `GET <Base URL>/models`；OpenAI 预设也走 `/models`，结果不过滤，按名字排序去重。
+列模型不需要先填模型名（`ModelPreferences.listEndpoint`），服务返回 404 或 405 时提示「这个服务不提供模型列表」。
+设置的模型页在模型名旁边多一个已列出模型的菜单，下面一行是「列出可用模型」按钮和结果；Ollama 的模型名仍可手填，预设的默认模型是空串，不填就报「缺少模型」。
+自定义服务商多一个「高级」区，三个下拉存进 `ModelPreferences` 的 `thinking`、`tokenLimitField`、`jsonMode`，不设时用预设表的值（关思考、`max_tokens`、`json_schema`）；JSON 模式的「自动」就是 `json_schema`，服务拒绝时由第 6.4 节的重试去掉。
+其他预设忽略这三项。
 
 依据：
 - `gpt-6-luna` 接受 `reasoning_effort: "none"`，思考 token 为 0；`gpt-5-nano` 发 `none` 返回 400，且 2026-12-11 下线【实测、源码】。
@@ -811,7 +813,7 @@ public enum TimeoutStage: Sendable, Equatable { case firstEvent, idle, total }
 - **重试**：只有一种自动重试：HTTP 400 且错误信息提到某个可选参数（`response_format`、`reasoning_effort`、输出上限字段、`stream_options`），去掉该参数重试一次，并按「端点 + 模型」记住。
   取消、401/403、404、429、5xx、超时都不自动重试，面板显示原因和「重试」按钮。
 - **错误文案**：Key 无效、模型不存在（提供「列出可用模型」）、额度或频率限制、服务商故障、网络离线、超时；错误信息和日志里出现的 Key 一律替换成 `••••`。
-  现状：「列出可用模型」未实现，模型不存在时只显示文案，随 M2.9 的列模型一起做。
+  现状：设置的「测试」遇到模型不存在时自动列出可用模型（M2.9）；面板里模型不存在时还只显示文案。
 - **降级**：
   - 句子翻译：模型失败且这对语言的 Apple 翻译语言包恰好已装时，自动改用它，并在面板上注明。
     注明方式是译文下方一行说明（`PanelState.note`），写出模型失败的原因；模型译文被截断（`.truncated`）时保留已得译文并注明，不降级。
@@ -1083,8 +1085,8 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 - 输出上限：翻译和改写取 `max(256, 原文 UTF-8 字节数)`，查词卡片 800；目的是防止跑飞，不是精确预算【推断】。
 - 设置里的「测试」按钮依次做三件事并分别显示：翻译一句话并显示首个内容耗时；请求一张卡片并严格解码；检查是否收到思考增量。
   首个内容超过 3 s 或收到思考增量时提示「这个模型在思考，查词会很慢」。
-  现状：三项检查和「在思考」的提示都未实现，计划在 M2.9 做（卡片检查要等 M2.5 的卡片提示词）。
-  现在的「测试」（`SettingsModel.probe`）只发一个最小请求（system「Reply with the single word OK.」，输出上限 16），收到第一个正文、思考或结束事件就算成功并显示耗时；收到思考增量也算成功，不提示。
+  现状：三项检查和「在思考」的提示已实现（M2.9，`DictCore` 的 `ModelCheck`）；卡片提示词还没有，第二项暂用纠错的 strict `json_schema` 请求，只检查回答能否严格解码，不管修改是否对得上原文。
+  第一项译成「我的语言」（我的语言是英文时译成学习语言），首个内容只算正文、不算思考增量；第一项失败时后两项不做。
 
 ## 7. 即时词典层
 

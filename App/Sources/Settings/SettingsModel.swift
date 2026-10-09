@@ -7,18 +7,71 @@ import Observation
 /// The result of the "Test" button.
 enum ConnectionStatus: Equatable {
   case idle
-  case testing
-  /// The model answered; the time to its first event.
-  case succeeded(Duration)
+  /// The settings are incomplete or the key can't be read: no request was sent.
   case failed(ConnectionFailure)
+  /// The checks, filled in as they finish.
+  case checked(ConnectionReport)
+
+  var isTesting: Bool {
+    guard case .checked(let report) = self else { return false }
+    return report.isRunning
+  }
+}
+
+/// The state of one check of the "Test" button.
+enum CheckState: Equatable {
+  case waiting
+  case running
+  case passed
+  case failed(ConnectionFailure)
+  /// Not run because an earlier check failed.
+  case skipped
+
+  var isPending: Bool { self == .waiting || self == .running }
+}
+
+/// The three checks of the "Test" button (architecture 6.8): translate a sentence and time
+/// the first content; decode a strict `json_schema` answer; notice thinking.
+struct ConnectionReport: Equatable {
+  var translation = CheckState.waiting
+  /// The translation's time to its first answer text.
+  var firstContent: Duration?
+  var structuredOutput = CheckState.waiting
+  /// Whether either request showed thinking.
+  var sawThinking = false
+
+  var isRunning: Bool { translation.isPending || structuredOutput.isPending }
+
+  /// The third check: whether to warn that the model thinks, so looking up words will be
+  /// slow. Nil until both requests are done, or when the translation failed.
+  var isThinking: Bool? {
+    guard translation == .passed, !structuredOutput.isPending else { return nil }
+    return ModelCheck.isThinking(firstContent: firstContent, sawThinking: sawThinking)
+  }
+
+  /// The service doesn't know the model name: offer its model list (architecture 6.4).
+  var suggestsModelList: Bool { translation == .failed(.model(.modelNotFound)) }
 }
 
 enum ConnectionFailure: Error, Equatable {
   case setup(ModelSetupIssue)
   case model(ModelError)
   case keychain(OSStatus)
+  /// The answer to the strict JSON schema request was unusable.
+  case structuredOutput(ProofreadError)
+  /// The service has no model list at this address.
+  case listUnsupported
   /// Any other error, already free of the key.
   case other(String)
+}
+
+/// The "List Available Models" result.
+enum ModelListStatus: Equatable {
+  case idle
+  case loading
+  /// Sorted names; empty when the service has none.
+  case loaded([String])
+  case failed(ConnectionFailure)
 }
 
 /// State behind the Settings window: preferences saved on every change, the API key of the
@@ -30,28 +83,35 @@ final class SettingsModel {
   /// The key as shown in the field for the selected provider; not yet saved while edited.
   var keyDraft = ""
   private(set) var connection = ConnectionStatus.idle
+  private(set) var modelList = ModelListStatus.idle
   /// The last Keychain failure, shown under the key field.
   private(set) var keychainStatus: OSStatus?
 
   let presets: [ProviderPreset]
 
   typealias ModelFactory = @Sendable (ModelConfiguration, _ apiKey: String?) -> any TextModel
+  typealias ModelLister =
+    @Sendable (ModelEndpoint, ModelListStyle, _ apiKey: String?) async throws -> [String]
 
   @ObservationIgnored private let store: PreferencesStore
   @ObservationIgnored private let secrets: any SecretStore
   @ObservationIgnored private let makeModel: ModelFactory
+  @ObservationIgnored private let lister: ModelLister
   @ObservationIgnored private var savedKey = ""
   @ObservationIgnored private var testTask: Task<Void, Never>?
+  @ObservationIgnored private var listTask: Task<Void, Never>?
 
   init(
     defaults: UserDefaults = .standard, secrets: any SecretStore = CachedSecretStore.app,
     presets: [ProviderPreset] = (try? ProviderPreset.all()) ?? [],
-    makeModel: @escaping ModelFactory = SettingsModel.chatCompletionsModel
+    makeModel: @escaping ModelFactory = SettingsModel.chatCompletionsModel,
+    listModels: @escaping ModelLister = { try await DictCore.listModels($0, style: $1, apiKey: $2) }
   ) {
     store = PreferencesStore(defaults: defaults)
     self.secrets = secrets
     self.presets = presets
     self.makeModel = makeModel
+    self.lister = listModels
     preferences = store.load()
     loadKey()
   }
@@ -65,12 +125,18 @@ final class SettingsModel {
 
   // MARK: - Preferences
 
-  /// Applies `change` and saves. A change to the model settings clears the test result.
+  /// Applies `change` and saves. A change to the model settings clears the test result; a
+  /// change of service clears the model list, but choosing a model from it does not.
   func update(_ change: (inout Preferences) -> Void) {
     var next = preferences
     change(&next)
     guard next != preferences else { return }
     if next.model != preferences.model { resetConnection() }
+    if next.model.providerID != preferences.model.providerID
+      || next.model.baseURL != preferences.model.baseURL
+    {
+      resetModelList()
+    }
     preferences = next
     store.save(next)
   }
@@ -116,6 +182,7 @@ final class SettingsModel {
       savedKey = key
       keychainStatus = nil
       resetConnection()
+      resetModelList()
       Log.ui.info(
         "API key \(key.isEmpty ? "removed" : "saved", privacy: .public) for \(account, privacy: .public)"
       )
@@ -143,16 +210,80 @@ final class SettingsModel {
     }
   }
 
+  /// The saved key, or nil when there is none.
+  private var apiKey: String? { savedKey.isEmpty ? nil : savedKey }
+
+  // MARK: - Model list
+
+  /// Whether "List Available Models" can run: everything but the model name is filled in.
+  var canListModels: Bool {
+    guard modelList != .loading else { return false }
+    do {
+      _ = try preferences.model.listEndpoint(presets: presets, hasKey: !trimmedDraft.isEmpty)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /// Asks the service which models it offers: Ollama's tags, or `GET <base URL>/models`.
+  func listModels() {
+    commitKey()
+    listTask?.cancel()
+    guard let preset = selectedPreset else { return }
+    let endpoint: ModelEndpoint
+    do {
+      endpoint = try preferences.model.listEndpoint(presets: presets, hasKey: apiKey != nil)
+    } catch {
+      modelList = .failed(.setup(error))
+      return
+    }
+    if let keychainStatus {
+      modelList = .failed(.keychain(keychainStatus))
+      return
+    }
+    let key = apiKey
+    let lister = lister
+    modelList = .loading
+    listTask = Task {
+      let status: ModelListStatus
+      do {
+        status = .loaded(try await lister(endpoint, preset.modelList, key))
+      } catch is CancellationError {
+        return
+      } catch {
+        status = .failed(Self.failure(error, redacting: key))
+      }
+      guard !Task.isCancelled else { return }
+      modelList = status
+      Log.model.info(
+        "Model list for \(endpoint.providerID, privacy: .public): \(status.logLabel, privacy: .public)"
+      )
+    }
+  }
+
+  /// Uses a model from the list.
+  func chooseModel(_ name: String) {
+    update { $0.model.model = name }
+  }
+
+  private func resetModelList() {
+    listTask?.cancel()
+    listTask = nil
+    modelList = .idle
+  }
+
   // MARK: - Connection test
 
-  /// Sends one minimal request and reports whether the model answered.
+  /// Runs the checks of architecture 6.8 one after another, showing each result as it
+  /// comes: a translation, then a strict structured-output request; thinking is judged from
+  /// both. A failed translation skips the rest.
   func testConnection() {
     commitKey()
     testTask?.cancel()
     let configuration: ModelConfiguration
     do {
-      configuration = try preferences.model.configuration(
-        presets: presets, hasKey: !savedKey.isEmpty)
+      configuration = try preferences.model.configuration(presets: presets, hasKey: apiKey != nil)
     } catch {
       connection = .failed(.setup(error))
       return
@@ -161,46 +292,65 @@ final class SettingsModel {
       connection = .failed(.keychain(keychainStatus))
       return
     }
-    let key = savedKey.isEmpty ? nil : savedKey
+    let key = apiKey
     let model = makeModel(configuration, key)
-    connection = .testing
-    testTask = Task {
-      let status = await Self.probe(model, redacting: key)
-      guard !Task.isCancelled else { return }
-      connection = status
-      switch status {
-      case .succeeded:
-        Log.model.info(
-          "Connection test succeeded for \(configuration.endpoint.providerID, privacy: .public)")
-      default:
-        Log.model.info(
-          "Connection test failed for \(configuration.endpoint.providerID, privacy: .public)")
+    let target = translationTarget
+    var started = ConnectionReport()
+    started.translation = .running
+    connection = .checked(started)
+    testTask = Task { [started] in
+      var report = started
+      do {
+        let result = try await ModelCheck.checkTranslation(model, into: target)
+        report.translation = .passed
+        report.firstContent = result.firstContent
+        report.sawThinking = result.sawThinking
+        report.structuredOutput = .running
+      } catch is CancellationError {
+        return
+      } catch {
+        report.translation = .failed(Self.failure(error, redacting: key))
+        report.structuredOutput = .skipped
       }
+      guard !Task.isCancelled else { return }
+      connection = .checked(report)
+      // An unknown model name: show the names the service does know (architecture 6.4).
+      if report.suggestsModelList && canListModels { listModels() }
+
+      if report.structuredOutput == .running {
+        do {
+          let thought = try await ModelCheck.checkStructuredOutput(model)
+          report.structuredOutput = .passed
+          report.sawThinking = report.sawThinking || thought
+        } catch is CancellationError {
+          return
+        } catch {
+          report.structuredOutput = .failed(Self.failure(error, redacting: key))
+        }
+        guard !Task.isCancelled else { return }
+        connection = .checked(report)
+      }
+      Log.model.info(
+        "Connection test for \(configuration.endpoint.providerID, privacy: .public): \(report.logLabel, privacy: .public)"
+      )
     }
   }
 
-  /// The request the "Test" button sends: as small as a real call can be.
-  nonisolated static let probeRequest = ModelRequest(
-    system: "Reply with the single word OK.", user: "OK", output: .text, maxOutputTokens: 16)
+  /// The test sentence goes into my language, or into the language I learn when mine is
+  /// English, since the sample is English.
+  private var translationTarget: Locale.Language {
+    let mine = preferences.myLanguage
+    return Locale.Language(identifier: mine == "en" ? preferences.learningLanguage : mine)
+  }
 
-  /// Streams the probe request and stops at the first event from the model.
-  nonisolated static func probe(_ model: any TextModel, redacting key: String?) async
-    -> ConnectionStatus
+  nonisolated static func failure(_ error: any Error, redacting key: String?)
+    -> ConnectionFailure
   {
-    let clock = ContinuousClock()
-    let start = clock.now
-    do {
-      for try await event in model.stream(probeRequest) {
-        switch event {
-        case .text, .thinking, .finished: return .succeeded(clock.now - start)
-        case .discardText: continue
-        }
-      }
-      return .failed(.model(.emptyResponse))
-    } catch let error as ModelError {
-      return .failed(.model(redact(error, key: key)))
-    } catch {
-      return .failed(.other(redact(error.localizedDescription, key: key)))
+    switch error {
+    case let error as ModelError: .model(redact(error, key: key))
+    case let error as ProofreadError: .structuredOutput(error)
+    case is ModelListError: .listUnsupported
+    default: .other(redact(error.localizedDescription, key: key))
     }
   }
 
@@ -221,9 +371,55 @@ final class SettingsModel {
   }
 }
 
+extension ConnectionReport {
+  /// For the log: which checks passed, never any text.
+  fileprivate var logLabel: String {
+    func label(_ state: CheckState) -> String {
+      switch state {
+      case .passed: "passed"
+      case .failed: "failed"
+      case .skipped: "skipped"
+      case .waiting, .running: "unfinished"
+      }
+    }
+    return
+      "translation \(label(translation)), structured output \(label(structuredOutput)), thinking \(isThinking.map(String.init) ?? "unknown")"
+  }
+}
+
+extension ModelListStatus {
+  fileprivate var logLabel: String {
+    switch self {
+    case .idle, .loading: "unfinished"
+    case .loaded(let names): "\(names.count) models"
+    case .failed: "failed"
+    }
+  }
+}
+
 #if DEBUG
   extension SettingsModel {
     /// Sets the test result directly, for renders of each state.
     func showConnection(_ status: ConnectionStatus) { connection = status }
+
+    /// Sets the model list directly, for renders of each state.
+    func showModelList(_ status: ModelListStatus) { modelList = status }
+  }
+
+  extension ConnectionReport {
+    /// A report with the translation done, for renders.
+    static func translated(
+      after firstContent: Duration, structuredOutput: CheckState = .passed,
+      sawThinking: Bool = false
+    ) -> ConnectionReport {
+      ConnectionReport(
+        translation: .passed, firstContent: firstContent, structuredOutput: structuredOutput,
+        sawThinking: sawThinking)
+    }
+
+    /// A report whose translation failed, for renders.
+    static func failed(_ failure: ConnectionFailure) -> ConnectionReport {
+      ConnectionReport(translation: .failed(failure), structuredOutput: .skipped)
+    }
   }
 #endif

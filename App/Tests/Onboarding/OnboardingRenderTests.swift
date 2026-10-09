@@ -83,11 +83,15 @@ struct OnboardingRenderTests {
       ("3-model-empty", model(.model, provider: "openai")),
       (
         "3-model-tested",
-        model(.model, provider: "openai", key: key, connection: .succeeded(.milliseconds(820)))
+        model(
+          .model, provider: "openai", key: key,
+          connection: .checked(.translated(after: .milliseconds(820))))
       ),
       (
         "3-model-rejected",
-        model(.model, provider: "openai", key: key, connection: .failed(.model(.unauthorized)))
+        model(
+          .model, provider: "openai", key: key, connection: .checked(.failed(.model(.unauthorized)))
+        )
       ),
       ("4-try", model(.tryIt, read: true)),
     ]

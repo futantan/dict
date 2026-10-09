@@ -43,7 +43,8 @@ struct SettingsGalleryTests {
 
   private static func samples() -> [(String, AnyView)] {
     func model(
-      _ preferences: Preferences, key: String? = nil, connection: ConnectionStatus = .idle
+      _ preferences: Preferences, key: String? = nil, connection: ConnectionStatus = .idle,
+      list: ModelListStatus = .idle
     ) -> SettingsModel {
       let suite = "SettingsGalleryTests.\(UUID().uuidString)"
       let defaults = UserDefaults(suiteName: suite) ?? .standard
@@ -53,6 +54,7 @@ struct SettingsGalleryTests {
       if let key, let id = preferences.model.providerID { secrets[id] = key }
       let model = SettingsModel(defaults: defaults, secrets: InMemorySecretStore(secrets))
       model.showConnection(connection)
+      model.showModelList(list)
       return model
     }
     func provider(_ id: String, model: String = "", baseURL: String = "") -> Preferences {
@@ -72,18 +74,24 @@ struct SettingsGalleryTests {
         "model-openai-ok",
         AnyView(
           ModelPane(
-            model: model(provider("openai"), key: key, connection: .succeeded(.milliseconds(840)))))
+            model: model(
+              provider("openai"), key: key,
+              connection: .checked(.translated(after: .milliseconds(840))))))
       ),
       (
         "model-openai-testing",
-        AnyView(ModelPane(model: model(provider("openai"), key: key, connection: .testing)))
+        AnyView(
+          ModelPane(
+            model: model(
+              provider("openai"), key: key,
+              connection: .checked(ConnectionReport(translation: .running)))))
       ),
       (
         "model-openai-unauthorized",
         AnyView(
           ModelPane(
             model: model(
-              provider("openai"), key: key, connection: .failed(.model(.unauthorized)))))
+              provider("openai"), key: key, connection: .checked(.failed(.model(.unauthorized))))))
       ),
       (
         "model-ollama",
@@ -91,7 +99,60 @@ struct SettingsGalleryTests {
           ModelPane(
             model: model(
               provider("ollama", model: "qwen3:4b"),
-              connection: .failed(.model(.network(code: -1004))))))
+              connection: .checked(.failed(.model(.network(code: -1004)))),
+              list: .failed(.model(.network(code: -1004))))))
+      ),
+      (
+        "model-ollama-listed",
+        AnyView(
+          ModelPane(
+            model: model(
+              provider("ollama", model: "qwen3:4b"),
+              list: .loaded(["gemma3:1b", "llama3.2:3b", "qwen3:4b"]))))
+      ),
+      (
+        "model-ollama-none-installed",
+        AnyView(ModelPane(model: model(provider("ollama"), list: .loaded([]))))
+      ),
+      (
+        "model-openai-notfound",
+        AnyView(
+          ModelPane(
+            model: model(
+              provider("openai", model: "gpt-9"), key: key,
+              connection: .checked(.failed(.model(.modelNotFound))),
+              list: .loaded(["gpt-5-nano", "gpt-6-luna", "gpt-6-sol"]))))
+      ),
+      (
+        "model-openai-structured",
+        AnyView(
+          ModelPane(
+            model: model(
+              provider("openai"), key: key,
+              connection: .checked(
+                ConnectionReport(
+                  translation: .passed, firstContent: .milliseconds(760),
+                  structuredOutput: .running)))))
+      ),
+      (
+        "model-ollama-thinking",
+        AnyView(
+          ModelPane(
+            model: model(
+              provider("ollama", model: "qwen3:4b"),
+              connection: .checked(.translated(after: .milliseconds(4200), sawThinking: true)))))
+      ),
+      (
+        "model-custom-json-failed",
+        AnyView(
+          ModelPane(
+            model: model(
+              provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
+              key: key,
+              connection: .checked(
+                .translated(
+                  after: .milliseconds(1100),
+                  structuredOutput: .failed(.structuredOutput(.malformed)))))))
       ),
       (
         "model-custom-insecure",
@@ -107,12 +168,13 @@ struct SettingsGalleryTests {
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
               key: key,
-              connection: .failed(
-                .model(
-                  .badRequest(
-                    message:
-                      "Model Not Exist. Please check the model name and try again; see the documentation for the list of available models."
-                  ))))))
+              connection: .checked(
+                .failed(
+                  .model(
+                    .badRequest(
+                      message:
+                        "Model Not Exist. Please check the model name and try again; see the documentation for the list of available models."
+                    )))))))
       ),
       ("shortcuts-empty", AnyView(ShortcutsPane(center: hotkeys(assigned: false)))),
       ("shortcuts", AnyView(ShortcutsPane(center: hotkeys(assigned: true)))),

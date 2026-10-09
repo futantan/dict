@@ -96,6 +96,8 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
     var reply: @Sendable (_ body: JSONValue) -> StubReply
     var bodies: [JSONValue] = []
     var headers: [[String: String]] = []
+    var urls: [URL] = []
+    var methods: [String] = []
     var stopped = 0
   }
 
@@ -125,6 +127,8 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
     let reply = Self.hosts.withLock { hosts -> StubReply? in
       hosts[host]?.bodies.append(body)
       hosts[host]?.headers.append(request.allHTTPHeaderFields ?? [:])
+      if let url = request.url { hosts[host]?.urls.append(url) }
+      hosts[host]?.methods.append(request.httpMethod ?? "GET")
       return hosts[host]?.reply(body)
     }
     guard let reply, let url = request.url,

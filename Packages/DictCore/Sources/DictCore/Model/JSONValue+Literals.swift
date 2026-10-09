@@ -28,6 +28,11 @@ extension JSONValue {
     return value
   }
 
+  var arrayValue: [JSONValue]? {
+    guard case .array(let value) = self else { return nil }
+    return value
+  }
+
   var intValue: Int? {
     guard case .number(let value) = self, value.rounded() == value, abs(value) < 1e15 else {
       return nil

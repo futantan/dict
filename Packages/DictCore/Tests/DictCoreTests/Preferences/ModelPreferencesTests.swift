@@ -121,6 +121,93 @@ struct ModelPreferencesTests {
     #expect(configuration(preferences, hasKey: false) == .failure(.insecureBaseURL))
   }
 
+  // MARK: - Custom options
+
+  @Test func customOptionsOverrideThePreset() throws {
+    var preferences = ModelPreferences(
+      providerID: "custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1")
+    preferences.thinking = .providerDefault
+    preferences.tokenLimitField = "max_completion_tokens"
+    preferences.jsonMode = .object
+
+    let endpoint = try configuration(preferences, hasKey: true).get().endpoint
+
+    #expect(endpoint.thinking == .providerDefault)
+    #expect(endpoint.tokenLimitField == "max_completion_tokens")
+    #expect(endpoint.jsonMode == .object)
+  }
+
+  @Test func customOptionsDefaultToThePreset() throws {
+    let custom = try preset("custom")
+    let preferences = ModelPreferences(
+      providerID: "custom", model: "m", baseURL: "https://api.example.org/v1")
+
+    let endpoint = try configuration(preferences, hasKey: false).get().endpoint
+
+    #expect(endpoint.thinking == .off)
+    #expect(endpoint.tokenLimitField == custom.tokenLimitField)
+    #expect(endpoint.jsonMode == custom.jsonMode)
+  }
+
+  /// The options belong to the custom provider; presets keep their tested values.
+  @Test func presetsIgnoreCustomOptions() throws {
+    var preferences = ModelPreferences(providerID: "openai")
+    preferences.thinking = .providerDefault
+    preferences.tokenLimitField = "max_tokens"
+    preferences.jsonMode = JSONMode.none
+
+    #expect(
+      try configuration(preferences, hasKey: true).get().endpoint == preset("openai").endpoint())
+  }
+
+  @Test func preferencesWithoutOptionsDecode() throws {
+    let json = #"{"providerID":"custom","model":"m","baseURL":"https://a.example/v1"}"#
+    let decoded = try JSONDecoder().decode(ModelPreferences.self, from: Data(json.utf8))
+
+    #expect(
+      decoded
+        == ModelPreferences(providerID: "custom", model: "m", baseURL: "https://a.example/v1"))
+    #expect(decoded.thinking == nil && decoded.tokenLimitField == nil && decoded.jsonMode == nil)
+  }
+
+  @Test func optionsRoundTrip() throws {
+    var preferences = ModelPreferences(providerID: "custom")
+    preferences.thinking = .lowest
+    preferences.tokenLimitField = "max_tokens"
+    preferences.jsonMode = JSONMode.none
+
+    let data = try JSONEncoder().encode(preferences)
+
+    #expect(try JSONDecoder().decode(ModelPreferences.self, from: data) == preferences)
+  }
+
+  // MARK: - Model list endpoint
+
+  /// Listing is how the user finds a model name, so it must work before one is typed.
+  @Test func listEndpointNeedsNoModel() throws {
+    let endpoint = try listEndpoint(ModelPreferences(providerID: "ollama"), hasKey: false).get()
+
+    #expect(endpoint.baseURL == URL(string: "http://localhost:11434/v1"))
+    #expect(endpoint.auth == .none)
+  }
+
+  @Test func listEndpointStillChecksTheURLAndKey() {
+    #expect(
+      listEndpoint(ModelPreferences(providerID: "custom"), hasKey: false)
+        == .failure(.missingBaseURL))
+    #expect(
+      listEndpoint(ModelPreferences(providerID: "openai"), hasKey: false) == .failure(.missingKey))
+    #expect(listEndpoint(ModelPreferences(), hasKey: true) == .failure(.noProvider))
+  }
+
+  private func listEndpoint(
+    _ preferences: ModelPreferences, hasKey: Bool
+  ) -> Result<ModelEndpoint, ModelSetupIssue> {
+    Result { () throws(ModelSetupIssue) in
+      try preferences.listEndpoint(presets: presets, hasKey: hasKey)
+    }
+  }
+
   // MARK: - Base URL validation
 
   private func validate(_ text: String) -> Result<URL, ModelSetupIssue> {

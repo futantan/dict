@@ -9,6 +9,7 @@
     "defaultModel": "gpt-6-luna",
     "jsonMode": "schema",
     "tokenLimitField": "max_completion_tokens",
+    "modelList": "openAI",
     "thinkingRules": [
       {
         "modelPrefix": "",
@@ -37,6 +38,7 @@
     "defaultModel": "",
     "jsonMode": "schema",
     "tokenLimitField": "max_tokens",
+    "modelList": "ollama",
     "thinkingRules": [
       {
         "modelPrefix": "",
@@ -55,6 +57,7 @@
     "defaultModel": "",
     "jsonMode": "schema",
     "tokenLimitField": "max_tokens",
+    "modelList": "openAI",
     "thinkingRules": [
       {
         "modelPrefix": "",

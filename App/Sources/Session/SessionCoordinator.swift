@@ -109,6 +109,9 @@ final class SessionCoordinator {
   /// The latest ⌘S, for `settle()`.
   private var tierChange: Task<Void, Never>?
   private var pace = PronunciationPace()
+  /// The text has neither a dictionary entry nor a model to explain it, so looking it up
+  /// would only translate it again; kept like `recorded`.
+  private var cannotLookUp = false
   /// What the current session does with its text.
   private var role = HotkeyRole.read
   /// Where Return writes the correction, while the panel shows one.
@@ -272,6 +275,7 @@ final class SessionCoordinator {
     cardNote = nil
     recorded = nil
     pace = PronunciationPace()
+    cannotLookUp = false
     target = nil
     targetBounds = nil
     currentPhase = nil
@@ -442,11 +446,13 @@ final class SessionCoordinator {
   ) {
     guard panel.isVisible else { return }
     let recorded = keepingRecord ? recorded : nil
+    let cannotLookUp = keepingRecord && cannotLookUp
     cancel()
     role = .read
     self.text = text
     self.origin = origin
     self.recorded = recorded
+    self.cannotLookUp = cannotLookUp
     let id = id
     Log.ui.info(
       "session \(id, privacy: .public): \(why, privacy: .public) text, \(String(describing: route), privacy: .public)"
@@ -473,7 +479,7 @@ final class SessionCoordinator {
 
   /// A translation of a word or phrase offers looking it up instead (architecture 5.1).
   private func offersLookUp(_ text: String) -> Bool {
-    role == .read && [.word, .phrase].contains(classify(text))
+    role == .read && !cannotLookUp && [.word, .phrase].contains(classify(text))
   }
 
   private func run(_ text: String, id: Int, clock: ContinuousClock, start: ContinuousClock.Instant)
@@ -535,6 +541,7 @@ final class SessionCoordinator {
     let maker = environment.makeCardMaker()
     if entries.isEmpty && maker == nil {
       Log.ui.info("session \(id, privacy: .public): no dictionary entry and no model; translating")
+      cannotLookUp = true
       present(translating(text))
       await run(text, id: id, clock: clock, start: start)
       return

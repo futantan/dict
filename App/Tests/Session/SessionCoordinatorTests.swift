@@ -878,6 +878,7 @@ struct SessionLookupTests {
   }
 
   @Test func withNeitherDictionaryNorModelTheWordIsTranslated() async throws {
+    // Looking it up again could only translate it again, so it is not offered.
     let harness = Harness([(.success(ran()), nil)])
     await harness.press()
 
@@ -885,11 +886,11 @@ struct SessionLookupTests {
     #expect(
       harness.panel.calls.first
         == .show(
-          PanelState(source: "ran", phase: .generating(""), offersLookUp: true),
+          PanelState(source: "ran", phase: .generating(""), offersLookUp: false),
           .selection(bounds)))
     #expect(
       harness.panel.lastState
-        == PanelState(source: "ran", phase: .result("你好"), offersLookUp: true))
+        == PanelState(source: "ran", phase: .result("你好"), offersLookUp: false))
     // Nothing says it is a word, so it is not recorded as one.
     #expect(try await harness.vocab?.day(today).lookups.isEmpty == true)
   }

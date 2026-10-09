@@ -55,7 +55,13 @@ struct PanelGalleryTests {
     let backing = try #require(Self.firstView(PanelBacking.self, in: panel.contentView))
     #expect(PanelBacking.opacity >= 0.9)
     #expect(PanelBacking.color.alphaComponent == PanelBacking.opacity)
-    #expect(backing.subviews.first is NSHostingView<PanelView>)
+    let hosting = try #require(backing.subviews.first as? NSHostingView<PanelView>)
+
+    // It fills the panel at any size, the content with it.
+    panel.setContentSize(CGSize(width: PanelLayout.width, height: 300))
+    panel.contentView?.layoutSubtreeIfNeeded()
+    #expect(backing.frame.size == panel.contentView?.bounds.size)
+    #expect(hosting.frame == backing.bounds)
   }
 
   private static func firstView<T: NSView>(_ type: T.Type, in view: NSView?) -> T? {

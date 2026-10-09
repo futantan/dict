@@ -1039,6 +1039,15 @@ struct SessionLookupTests {
     #expect(term?.tier == .seen)
   }
 
+  @Test func aChinesePassageIsASentenceEvent() async throws {
+    let harness = Harness([(.success(selection("他把一句很长的话翻来覆去地想了好几遍")), nil)])
+    await harness.press()
+
+    let sentences = try await harness.vocab?.day(today).sentences
+    #expect(sentences?.map(\.kind) == [.translated])
+    #expect(sentences?.first?.sourceLanguage == "zh")
+  }
+
   @Test func aTranslatedPhraseIsNotASentenceEvent() async throws {
     let harness = Harness([(.success(selection("take off")), nil)])
     await harness.press()

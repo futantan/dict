@@ -81,12 +81,14 @@ final class ResultPanel: NSPanel {
   }
 
   /// Wraps the content in the system material with rounded corners: Liquid Glass from
-  /// macOS 26, the popover material before.
+  /// macOS 26, the popover material before. A nearly opaque `PanelBacking` lies between the
+  /// material and the content, so the text stays readable over any window behind the panel.
   private static func background(around content: NSView) -> NSView {
+    let backed = PanelBacking(content: content)
     if #available(macOS 26, *) {
       let glass = NSGlassEffectView()
       glass.cornerRadius = cornerRadius
-      glass.contentView = content
+      glass.contentView = backed
       // Without this mask the window shadow follows the rectangular frame and draws a
       // grey outline around the rounded glass (seen on macOS 26).
       glass.wantsLayer = true
@@ -100,9 +102,9 @@ final class ResultPanel: NSPanel {
     effect.blendingMode = .behindWindow
     effect.state = .active
     effect.maskImage = roundedMask(radius: cornerRadius)
-    content.frame = effect.bounds
-    content.autoresizingMask = [.width, .height]
-    effect.addSubview(content)
+    backed.frame = effect.bounds
+    backed.autoresizingMask = [.width, .height]
+    effect.addSubview(backed)
     return effect
   }
 
@@ -117,5 +119,41 @@ final class ResultPanel: NSPanel {
     image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
     image.resizingMode = .stretch
     return image
+  }
+}
+
+/// The panel's fill over the material: the window background, nearly opaque. On the bare
+/// material a dark window behind a light panel shows through and darkens it while the text
+/// keeps the light appearance's colours, so the secondary text all but disappears.
+final class PanelBacking: NSView {
+  /// Enough to hide the text of a window behind; the rest leaves a trace of the material.
+  static let opacity: CGFloat = 0.95
+
+  static var color: NSColor { .windowBackgroundColor.withAlphaComponent(opacity) }
+
+  init(content: NSView) {
+    super.init(frame: content.frame)
+    // The material's own mask does not reach its subviews; the same corners as the glass.
+    wantsLayer = true
+    layer?.cornerRadius = ResultPanel.cornerRadius
+    layer?.cornerCurve = .continuous
+    layer?.masksToBounds = true
+    content.frame = bounds
+    content.autoresizingMask = [.width, .height]
+    addSubview(content)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  override func draw(_ dirtyRect: CGRect) {
+    // The dynamic colour resolves in the view's appearance while it draws.
+    Self.color.setFill()
+    bounds.fill(using: .copy)
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    needsDisplay = true
   }
 }

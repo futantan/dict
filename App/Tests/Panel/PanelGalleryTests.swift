@@ -48,6 +48,28 @@ struct PanelGalleryTests {
     #expect(height == 48)
   }
 
+  /// The content lies on a nearly opaque fill, not on the bare material, so a window behind
+  /// the panel neither shows through nor darkens its text.
+  @Test func theContentLiesOnANearlyOpaqueFill() throws {
+    let panel = PanelController().window
+    let backing = try #require(Self.firstView(PanelBacking.self, in: panel.contentView))
+    #expect(PanelBacking.opacity >= 0.9)
+    #expect(PanelBacking.color.alphaComponent == PanelBacking.opacity)
+    #expect(backing.subviews.first is NSHostingView<PanelView>)
+  }
+
+  private static func firstView<T: NSView>(_ type: T.Type, in view: NSView?) -> T? {
+    guard let view else { return nil }
+    if let match = view as? T { return match }
+    for subview in view.subviews {
+      if let match = firstView(type, in: subview) { return match }
+    }
+    if #available(macOS 26, *), let glass = view as? NSGlassEffectView {
+      return firstView(type, in: glass.contentView)
+    }
+    return nil
+  }
+
   /// ⌘` cycles through Dict's own windows and skips the panel.
   @Test func panelIsLeftOutOfWindowCycling() {
     let panel = PanelController().window
@@ -150,8 +172,8 @@ struct PanelGalleryTests {
     return Layout(view: view, height: height)
   }
 
-  /// Draws the content over a stand-in for the panel material, with the panel's corner
-  /// radius and a shadow, on a neutral backdrop, at 2x. Materials do not render offscreen.
+  /// Draws the content over the panel's fill, with the panel's corner radius and a shadow,
+  /// on a neutral backdrop, at 2x.
   private static func render(_ state: PanelState, appearance: NSAppearance.Name) -> Data? {
     let content = layOut(state, appearance: appearance).view
     let inset: CGFloat = 32
@@ -186,7 +208,8 @@ struct PanelGalleryTests {
 
     override func draw(_ dirtyRect: CGRect) {
       let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-      NSColor(white: dark ? 0.12 : 0.82, alpha: 1).setFill()
+      let backdrop = NSColor(white: dark ? 0.12 : 0.82, alpha: 1)
+      backdrop.setFill()
       bounds.fill()
       let radius = ResultPanel.cornerRadius
       let shape = NSBezierPath(roundedRect: panelRect, xRadius: radius, yRadius: radius)
@@ -196,9 +219,13 @@ struct PanelGalleryTests {
       shadow.shadowOffset = CGSize(width: 0, height: -8)
       shadow.shadowColor = NSColor.black.withAlphaComponent(dark ? 0.6 : 0.25)
       shadow.set()
-      NSColor(white: dark ? 0.19 : 0.96, alpha: 1).setFill()
+      backdrop.setFill()
       shape.fill()
       NSGraphicsContext.restoreGraphicsState()
+      // The panel's own fill over what lies behind it; the material itself does not render
+      // offscreen.
+      PanelBacking.color.setFill()
+      shape.fill()
     }
   }
 }

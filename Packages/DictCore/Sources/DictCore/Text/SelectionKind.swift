@@ -15,7 +15,8 @@ public enum SelectionKind: Sendable, Equatable { case none, word, phrase, passag
 /// 4. `raw` ending in `. ! ? 。 ！ ？ …` is a `.passage`.
 /// 5. Without Han or kana, 2 to 6 whitespace-separated words are a `.phrase`, more a `.passage`.
 /// 6. With Han or kana, by `NLTokenizer` words: 1 is a `.word`; 2 or 3 within 7 characters a
-///    `.phrase`; anything else a `.passage`.
+///    `.phrase`, where a run of letters and digits outside Han and kana counts as one
+///    character (`Python编程` is 3); anything else a `.passage`.
 public func classify(_ text: String) -> SelectionKind {
   let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
   let core = raw.strippingEdges { $0.isWhitespace || $0.isPunctuation || $0.isSymbol }
@@ -23,12 +24,7 @@ public func classify(_ text: String) -> SelectionKind {
     return .none
   }
 
-  let hasHanOrKana = core.unicodeScalars.contains {
-    switch WritingScript.of($0) {
-    case .han, .hiragana, .katakana: true
-    default: false
-    }
-  }
+  let hasHanOrKana = core.unicodeScalars.contains(where: isHanOrKana)
   if !hasHanOrKana, !core.contains(where: \.isWhitespace) { return .word }
   if let last = raw.last, sentenceEnds.contains(last) { return .passage }
 
@@ -39,11 +35,32 @@ public func classify(_ text: String) -> SelectionKind {
   let tokenizer = NLTokenizer(unit: .word)
   tokenizer.string = core
   let words = tokenizer.tokens(for: core.startIndex..<core.endIndex).count
-  let characters = core.count { !$0.isWhitespace }
   switch words {
   case 1: return .word
-  case 2...3 where characters <= 7: return .phrase
+  case 2...3 where characterCount(core) <= 7: return .phrase
   default: return .passage
+  }
+}
+
+/// Characters of rule 6: each non-whitespace character counts once, except that a run of
+/// letters and digits outside Han and kana, such as `Python` or `iPhone15`, counts as one.
+private func characterCount(_ text: String) -> Int {
+  var count = 0
+  var inRun = false
+  for character in text where !character.isWhitespace {
+    let isRunPart =
+      (character.isLetter || character.isNumber)
+      && !character.unicodeScalars.contains(where: isHanOrKana)
+    if !(isRunPart && inRun) { count += 1 }
+    inRun = isRunPart
+  }
+  return count
+}
+
+private func isHanOrKana(_ scalar: Unicode.Scalar) -> Bool {
+  switch WritingScript.of(scalar) {
+  case .han, .hiragana, .katakana: true
+  default: false
   }
 }
 

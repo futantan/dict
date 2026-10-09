@@ -598,6 +598,7 @@ public func classify(_ text: String) -> SelectionKind
 ```
 
 现状：`classify` 已按下面的规则实现（`DictCore/Text/SelectionKind.swift`，表驱动单测）；会话还没有按它分流，所有选区仍当作段落翻译，分流随 M2 的查词链路接入。
+第 6 条的「字」里，一段连续的非汉字、非假名的字母数字（`Python`、`iPhone15`）算 1 个字，所以 `Python编程` 是 `.phrase`。
 
 第一版的规则「先去首尾标点再判断句末标点」自相矛盾，在 169 条真实选区上分错 78 条；URL、数字、代码、空串没有「不查」的出口【实测】。
 新规则按固定顺序执行：

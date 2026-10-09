@@ -100,6 +100,9 @@ struct ClassifyTests {
     "人工智能技术",
     "東京タワー",
     "画蛇添足的故事",
+    "Python编程",
+    "学习Swift语言",
+    "iPhone15手机壳",
   ])
   func phrase(_ text: String) {
     #expect(classify(text) == .phrase)
@@ -125,7 +128,7 @@ struct ClassifyTests {
     "我在学英语，你呢",
     "这个 PR 我已经 review 过了",
     "ありがとうございます",
-    "Python编程",
+    "我用Python写了一个小程序",
   ])
   func passage(_ text: String) {
     #expect(classify(text) == .passage)

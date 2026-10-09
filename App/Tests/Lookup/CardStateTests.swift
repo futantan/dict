@@ -99,4 +99,53 @@ struct CardStateTests {
     state.show(definition: "经营；管理", contextTranslation: nil)
     #expect(state.copyableText == "run\n经营；管理")
   }
+
+  @Test func withTheDictionaryTheModelDefinitionIsTheMeaningInTheSentence() {
+    var state = CardState(
+      term: "ran", context: "She ran a bakery.", entry: run, accent: .american, model: .loading)
+    #expect(state.mainSenses == state.senses)
+    #expect(state.sentenceMeaning == nil)
+    #expect(state.showsSentenceSection)
+    state.show(card)
+    #expect(state.mainSenses == state.senses)
+    #expect(state.sentenceMeaning == "经营；管理")
+    #expect(state.showsSentenceSection)
+  }
+
+  @Test func withoutTheDictionaryTheModelDefinitionLeadsTheCard() {
+    var state = CardState(
+      term: "ran", context: "She ran a bakery.", entry: nil, accent: .american, model: .loading)
+    #expect(state.mainSenses.isEmpty)
+    #expect(state.showsSentenceSection)
+
+    // The part of speech comes with the whole card, after the definition.
+    state.show(definition: "经营；管理", contextTranslation: nil)
+    #expect(state.mainSenses == [CardState.Sense(partOfSpeech: "", gloss: "经营；管理")])
+    state.show(card)
+    #expect(state.mainSenses == [CardState.Sense(partOfSpeech: "verb", gloss: "经营；管理")])
+    // Shown once, under the title; the sentence section keeps the sentence and its translation.
+    #expect(state.sentenceMeaning == nil)
+    #expect(state.showsSentenceSection)
+  }
+
+  @Test func aTypedTermWithoutTheDictionaryHasNoSentenceSection() {
+    var state = CardState(
+      term: "ran", context: nil, entry: nil, accent: .american, model: .loading)
+    var typed = card
+    typed.contextTranslation = ""
+    state.show(typed)
+    #expect(state.mainSenses.map(\.gloss) == ["经营；管理"])
+    #expect(!state.showsSentenceSection)
+  }
+
+  @Test func thePartOfSpeechColumnFitsTheWidestLabel() {
+    #expect(CardLayout.partOfSpeechWidth([]) == 0)
+    #expect(CardLayout.partOfSpeechWidth(["", ""]) == 0)
+    let verb = CardLayout.partOfSpeechWidth(["verb", "verb"])
+    #expect(verb > 6)
+    #expect(verb < 20)
+    let adjective = CardLayout.partOfSpeechWidth(["verb", "adjective"])
+    #expect(adjective > verb)
+    #expect(adjective == CardLayout.partOfSpeechWidth(["adjective"]))
+  }
 }

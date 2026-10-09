@@ -39,6 +39,8 @@ struct CardState: Sendable, Equatable {
   var context: String?
   /// The meaning in this sentence, from the model.
   var definition: String?
+  /// The model's part of speech for `definition`; it comes with the whole card.
+  var partOfSpeech: String?
   var contextTranslation: String?
   var otherSenses: [WordCard.Sense] = []
   var examples: [WordCard.Example] = []
@@ -74,6 +76,27 @@ struct CardState: Sendable, Equatable {
     encounters.flatMap { $0 > 1 ? $0 : nil }
   }
 
+  /// The senses under the title: the dictionary's, else the model's definition, which is
+  /// then the card's main meaning rather than a meaning "in this sentence".
+  var mainSenses: [Sense] {
+    if !senses.isEmpty { return senses }
+    return definition.map { [Sense(partOfSpeech: partOfSpeech ?? "", gloss: $0)] } ?? []
+  }
+
+  /// The meaning the "In this sentence" section leads with; nil when it is already the main
+  /// meaning.
+  var sentenceMeaning: String? {
+    senses.isEmpty ? nil : definition
+  }
+
+  /// With the dictionary, the section waits for the model's meaning; without it, it holds
+  /// only the sentence and its translation, and a typed term has neither.
+  var showsSentenceSection: Bool {
+    senses.isEmpty
+      ? context != nil || contextTranslation != nil
+      : model == .loading || definition != nil
+  }
+
   /// What ⌘C copies when nothing is selected: the title and the meaning shown first.
   var copyableText: String {
     let meaning = definition ?? senses.first?.gloss
@@ -94,6 +117,7 @@ struct CardState: Sendable, Equatable {
     show(definition: card.definition, contextTranslation: card.contextTranslation)
     if !hasDictionary, !card.lemma.isEmpty { lemma = card.lemma }
     if phonetic == nil, !card.phonetic.isEmpty { phonetic = card.phonetic }
+    if !card.partOfSpeech.isEmpty { partOfSpeech = card.partOfSpeech }
     otherSenses = card.otherSenses
     examples = card.examples
     collocations = band == .rare ? [] : card.collocations

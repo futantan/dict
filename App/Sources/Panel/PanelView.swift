@@ -459,14 +459,14 @@ private struct ActionBar: View {
           Text(title)
             .font(.system(size: 12, weight: isPrimary ? .semibold : .regular))
             .foregroundStyle(isPrimary ? .primary : .secondary)
-          HStack(spacing: 3) {
-            ForEach(keys, id: \.self) { key in
-              Text(key)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 18, minHeight: 18)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
-            }
+          if !keys.isEmpty {
+            // One key cap for the whole shortcut, as menus print it.
+            Text(keys.joined())
+              .font(.system(size: 11, weight: .medium))
+              .foregroundStyle(.secondary)
+              .padding(.horizontal, 5)
+              .frame(minWidth: 18, minHeight: 18)
+              .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
           }
         }
         .fixedSize()

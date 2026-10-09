@@ -1,31 +1,43 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import AppKit
 import DictCore
 import SwiftUI
 
-/// The word card in the panel (architecture 6.6): the dictionary layer on top, then the
-/// meaning in this sentence and the model's other fields as they arrive.
+/// The word card in the panel (architecture 6.6): the main senses on top, the dictionary's
+/// or else the model's, then the meaning in this sentence and the model's other fields as
+/// they arrive.
 struct CardView: View {
   let card: CardState
 
   var body: some View {
+    let main = card.mainSenses
+    // One column for every part of speech on the card, as narrow as the widest label, so
+    // the senses and the other meanings share one left edge.
+    let column = CardLayout.partOfSpeechWidth(
+      main.map(\.partOfSpeech) + card.otherSenses.map(\.partOfSpeech))
+    let followed =
+      card.showsSentenceSection || !card.otherSenses.isEmpty || !card.examples.isEmpty
+      || !card.collocations.isEmpty
     VStack(alignment: .leading, spacing: 12) {
       header
-      if !card.senses.isEmpty {
+      if !main.isEmpty {
         VStack(alignment: .leading, spacing: 4) {
-          ForEach(Array(card.senses.enumerated()), id: \.offset) { _, sense in
-            SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.gloss)
+          ForEach(Array(main.enumerated()), id: \.offset) { _, sense in
+            SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.gloss, column: column)
           }
         }
+      } else if card.model == .loading {
+        LookingUp()
       }
-      if card.model == .loading || card.definition != nil {
-        if !card.senses.isEmpty { Divider() }
-        inThisSentence
+      if followed && (!main.isEmpty || card.model == .loading) { Divider() }
+      if card.showsSentenceSection {
+        inThisSentence(spinning: card.model == .loading && !main.isEmpty)
       }
       if !card.otherSenses.isEmpty {
         CardSection(title: CardStrings.otherSenses) {
           ForEach(Array(card.otherSenses.enumerated()), id: \.offset) { _, sense in
-            SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.definition)
+            SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.definition, column: column)
           }
         }
       }
@@ -80,19 +92,19 @@ struct CardView: View {
     }
   }
 
-  @ViewBuilder private var inThisSentence: some View {
+  private func inThisSentence(spinning: Bool) -> some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack(spacing: 6) {
         Heading(CardStrings.inThisSentence)
-        if card.model == .loading {
+        if spinning {
           ProgressView()
             .controlSize(.mini)
             .accessibilityLabel(CardStrings.lookingUp)
         }
       }
-      if let definition = card.definition {
-        Wrapped(definition, size: 15, weight: .medium)
-      } else {
+      if let meaning = card.sentenceMeaning {
+        Wrapped(meaning, size: 15, weight: .medium)
+      } else if !card.senses.isEmpty {
         Text(CardStrings.lookingUp)
           .font(.system(size: 13))
           .foregroundStyle(.tertiary)
@@ -107,17 +119,54 @@ struct CardView: View {
   }
 }
 
+/// The measures of the card that depend on its text.
+enum CardLayout {
+  static var partOfSpeechFont: NSFont {
+    let regular = NSFont.systemFont(ofSize: 12)
+    return NSFont(descriptor: regular.fontDescriptor.withSymbolicTraits(.italic), size: 12)
+      ?? regular
+  }
+  /// Between the part of speech and the sense.
+  static let columnSpacing: CGFloat = 8
+
+  /// The width of the part-of-speech column: the widest label among `names`, 0 for none.
+  static func partOfSpeechWidth(_ names: [String]) -> CGFloat {
+    let widths = names.filter { !$0.isEmpty }.map { name in
+      NSAttributedString(
+        string: CardStrings.partOfSpeech(name), attributes: [.font: partOfSpeechFont]
+      ).size().width
+    }
+    return (widths.max() ?? 0).rounded(.up)
+  }
+}
+
 private struct SenseRow: View {
   let partOfSpeech: String
   let text: String
+  let column: CGFloat
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 6) {
-      Text(CardStrings.partOfSpeech(partOfSpeech))
-        .font(.system(size: 12).italic())
-        .foregroundStyle(.secondary)
-        .frame(minWidth: 30, alignment: .leading)
+    HStack(alignment: .firstTextBaseline, spacing: column > 0 ? CardLayout.columnSpacing : 0) {
+      if column > 0 {
+        Text(partOfSpeech.isEmpty ? "" : CardStrings.partOfSpeech(partOfSpeech))
+          .font(Font(CardLayout.partOfSpeechFont))
+          .foregroundStyle(.secondary)
+          .frame(minWidth: column, alignment: .leading)
+          .fixedSize()
+      }
       Wrapped(text, size: 14)
+    }
+  }
+}
+
+/// In place of the main senses until the model's definition arrives.
+private struct LookingUp: View {
+  var body: some View {
+    HStack(spacing: 6) {
+      ProgressView().controlSize(.mini)
+      Text(CardStrings.lookingUp)
+        .font(.system(size: 13))
+        .foregroundStyle(.tertiary)
     }
   }
 }
@@ -140,8 +189,11 @@ private struct Heading: View {
   init(_ title: String) { self.title = title }
 
   var body: some View {
+    // Small capitals carry a Latin heading at 11 pt; Chinese has no case, so it needs the
+    // size to stand apart from the body text.
+    let isLatin = title.unicodeScalars.allSatisfy(\.isASCII)
     Text(title)
-      .font(.system(size: 11, weight: .semibold))
+      .font(.system(size: isLatin ? 11 : 12.5, weight: .semibold))
       .foregroundStyle(.secondary)
       .textCase(.uppercase)
   }

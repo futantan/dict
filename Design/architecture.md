@@ -123,7 +123,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（`project.yml` 里的一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
 | 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
-现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型；即时词典查询、词库存储、音色选择规则（M2），结构化输出的后处理与改写校验（M2、M3），复习排程（M5）都还没有。
+现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`；查词卡片的后处理（M2.5）和润色、译出的改写校验（M3）还没有。
 选区分类 `classify`、`sentence(containing:in:)`、`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。

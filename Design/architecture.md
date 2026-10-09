@@ -127,7 +127,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 选区分类 `classify` 和切句 `sentence(containing:in:)` 已实现；`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
-现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）；M2 的 `Lexicon` 和 `VocabStore` 加入后再用 SQLite3（系统 `libsqlite3`）。
+现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）和 SQLite3（系统 `libsqlite3`，`Lexicon` 和 `VocabStore` 用）。
 Keychain 读写（Security 框架）在 `DictApp` 的 `App/Sources/Settings/SecretStore.swift`，`DictCore` 不碰 Keychain。
 它不 import AppKit、SwiftUI、ApplicationServices、Carbon、AVFoundation、Translation、Vision、Security。
 凡是需要这些框架的能力，`DictCore` 只定义协议或纯函数，实现放在 `DictApp`；以后 iOS 版提供自己的实现。
@@ -143,7 +143,7 @@ Keychain 读写（Security 框架）在 `DictApp` 的 `App/Sources/Settings/Secr
 - 界面、剪贴板、合成按键、全局快捷键、系统语音、键盘布局查询都在主 actor 上。
   其中键盘布局查询（`TISCopyCurrentKeyboardLayoutInputSource`、`UCKeyTranslate`）要求主线程。
 - 无障碍调用（`AXUIElement…`）都在一个专用的串行队列上执行，每条消息用 `AXUIElementSetMessagingTimeout` 设超时，调用方通过 `async` 接口等待结果，主线程永远不被跨进程消息阻塞。
-- 每个 sqlite 文件由一个 actor 独占一条连接：`Lexicon`（只读词典）、`VocabStore`（词库）；两者都在 M2 加入。
+- 每个 sqlite 文件由一个 actor 独占一条连接：`Lexicon`（只读词典）、`VocabStore`（词库）；两者都已在 M2 加入。
 - 模型客户端 `ChatCompletionsModel` 是不可变的 `Sendable` 结构体，内部用 `URLSession` 的异步字节流。
   它唯一共享的可变状态是进程级的 `DroppedParameters.shared`：服务商以 400 拒绝过的可选参数按「端点 + 模型」记在这里（第 6.4 节），由 `Mutex` 保护，之后的请求都不再带；测试注入自己的实例。
 
@@ -597,7 +597,7 @@ public enum SelectionKind: Sendable, Equatable { case none, word, phrase, passag
 public func classify(_ text: String) -> SelectionKind
 ```
 
-现状：`classify` 已按下面的规则实现（`DictCore/Text/SelectionKind.swift`，表驱动单测）；会话还没有按它分流，所有选区仍当作段落翻译，分流随 M2 的查词链路接入。
+现状：`classify` 已按下面的规则实现（`DictCore/Text/SelectionKind.swift`，表驱动单测）；会话已按它分流（M2.8，第 6.6 节「查词卡片」的 `readRoute`）：词和短语查卡片，段落翻译。
 第 6 条的「字」里，一段连续的非汉字、非假名的字母数字（`Python`、`iPhone15`）算 1 个字，所以 `Python编程` 是 `.phrase`。
 
 第一版的规则「先去首尾标点再判断句末标点」自相矛盾，在 169 条真实选区上分错 78 条；URL、数字、代码、空串没有「不查」的出口【实测】。
@@ -1200,7 +1200,7 @@ CREATE TABLE form (
 ```
 
 应用以只读方式打开（`SQLITE_OPEN_READONLY`）。
-`schema_version` 2 比 1 多了 `sense.source` 和 `sense.hint` 两列，应用还没有读这个库，不需要兼容旧版本。
+`schema_version` 2 比 1 多了 `sense.source` 和 `sense.hint` 两列，应用开始读这个库时已是 2，不需要兼容旧版本。
 
 ### 7.4 查询
 
@@ -1248,7 +1248,7 @@ public actor Lexicon {
 `band` 类型保留可选，但词典层总会给值，没有词频时是 `rare`。
 `NLTagger` 还原逐词进行再用空格连接（`took off` → `take off`）；上下文句里找到这个词（不区分大小写、整词）时在句中还原，找不到就单独还原。
 测试库在测试代码里按 schema 2 现建；计时测试读环境变量 `DICT_DB` 指向真实库，没设时跳过。
-应用还没有加载这个库（找 bundle 里的文件、没有词典时的降级），计划在 M2.8 做（第 15.2 节）。
+应用在 M2.8 接入了这个库：启动时打开打包进 `Resources` 的 `dict-en-zh.sqlite`（`App/Sources/Lookup/LookupServices.swift`），没有或打不开时记日志，卡片只显示模型的部分。
 
 ## 8. 词库
 
@@ -1420,7 +1420,8 @@ public actor VocabStore {
 与上面代码块的差别：`init` 多一个 `autoPromotion: AutoPromotion? = .standard`（传 nil 关闭自动升档）；`setTier` 多一个 `on day: LocalDay`，因为升档要写「次日到期」而存储层不算日期；`recordReview` 多一个 `at date: Date = .now`，写 `review_log.reviewed_at`。
 自动升档只在跨过门槛的那一次查词时发生，用户撤回到「查过」后不会被再次自动升上去。
 删除某一天只删那天的 `encounter` 和 `sentence_event`，之后没有任何 `encounter` 的词条只删「查过」的，「要学」的连同 `review_state`、`review_log` 保留。
-应用层还没有打开这个文件，也没有记录、⌘S 和星标，计划在 M2.8 接入；每日回顾、复习和导出的界面在 M5。
+应用层在 M2.8 接入：打开这个文件，记录查词和句子翻译，⌘S 和星标切换「要学」（见第 8.1 节的现状）。
+`dueReviews`、`recordReview`、`exportAnkiTSV` 是最小实现；每日回顾、复习和导出的界面在 M5。
 
 ## 9. 发音
 
@@ -1755,15 +1756,24 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 
 | 任务 | 内容 | 依赖 | 可并行 |
 |---|---|---|---|
-| M2.1 选区分类 | `classify` 与自写语料的表驱动测试 | M1 | 是 |
-| M2.2 上下文句 | 第二段的上下文句读取（值窗口 + 段落文本标记）已在 M1 做完；剩下实现 `DictCore` 的 `sentence(containing:in:)` 并替换应用目标里的 `contextSentence(in:selection:)`，表驱动单测；夹具加行内标签和多段的上下文句场景 | M1 | 是 |
-| M2.3 词典构建工具 | `tools/build-dict`、清单、`make dict`、覆盖统计、繁简抽样对照、`LICENSE` 和 `ATTRIBUTION` | 无 | 是 |
-| M2.4 词典查询 | `Lexicon` actor 与测试小库 | M2.3 的表结构（可先按本文的表结构写） | 是 |
-| M2.5 卡片 | 卡片提示词和 schema、顶层字段扫描器、找外语说法；`DictEval` 卡片套件 | M1.2 | 是 |
-| M2.6 词库 | `VocabStore`（表结构、迁移、记录查词和翻译、档位升级规则） | M1.0 | 是 |
-| M2.7 发音 | `resolveVoice`、`Speaker`、预热、音色提示 | M1.0 | 是 |
-| M2.8 界面串联 | 卡片视图（词典层先出、模型卡片补齐、第 N 次遇到、⌘S、⌘P）、「作为句子翻译」和「查这个词」互转、记录 | M2.1–M2.7 | 最后 |
-| M2.9 模型设置补全 | Ollama 用 `GET /api/tags`、自定义服务商用 `GET /models` 列出模型；模型不存在时「列出可用模型」；自定义服务商的关思考、输出上限字段、JSON 模式下拉；「测试」按钮的三项检查和「在思考」提示（第 6.2、6.4、6.8 节；归属见第 16.1 节第 9 项） | M2.5 | 是 |
+| M2.1 选区分类（已完成） | `classify` 与自写语料的表驱动测试 | M1 | 是 |
+| M2.2 上下文句（已完成） | 第二段的上下文句读取（值窗口 + 段落文本标记）已在 M1 做完；剩下实现 `DictCore` 的 `sentence(containing:in:)` 并替换应用目标里的 `contextSentence(in:selection:)`，表驱动单测；夹具加行内标签和多段的上下文句场景 | M1 | 是 |
+| M2.3 词典构建工具（已完成） | `tools/build-dict`、清单、`make dict`、覆盖统计、繁简抽样对照、`LICENSE` 和 `ATTRIBUTION` | 无 | 是 |
+| M2.4 词典查询（已完成） | `Lexicon` actor 与测试小库 | M2.3 的表结构（可先按本文的表结构写） | 是 |
+| M2.5 卡片（已完成） | 卡片提示词和 schema、顶层字段扫描器、找外语说法；`DictEval` 卡片套件 | M1.2 | 是 |
+| M2.6 词库（已完成） | `VocabStore`（表结构、迁移、记录查词和翻译、档位升级规则） | M1.0 | 是 |
+| M2.7 发音（已完成） | `resolveVoice`、`Speaker`、预热、音色提示 | M1.0 | 是 |
+| M2.8 界面串联（已完成） | 卡片视图（词典层先出、模型卡片补齐、第 N 次遇到、⌘S、⌘P）、「作为句子翻译」和「查这个词」互转、记录 | M2.1–M2.7 | 最后 |
+| M2.9 模型设置补全（已完成） | Ollama 用 `GET /api/tags`、自定义服务商用 `GET /models` 列出模型；模型不存在时「列出可用模型」；自定义服务商的关思考、输出上限字段、JSON 模式下拉；「测试」按钮的三项检查和「在思考」提示（第 6.2、6.4、6.8 节；归属见第 16.1 节第 9 项） | M2.5 | 是 |
+
+现状：M2.1–M2.9 都已合并进 main，下面这些 M2 范围内的部分没有做。
+- 找外语说法没有实现，我的语言的词和短语暂走翻译（第 6.6 节）。
+- Tab 在卡片和译文之间切换没有做（第 11.5 节）。
+- 卡片上不显示音色提示，设置页「管理语音」按钮的跳转没有做（第 9 节）。
+- 面板报模型不存在时只有文案，没有「列出可用模型」按钮（第 6.4 节）。
+- 查词记录只在卡片显示时写一次，本句意思、上下文句译文和卡片 JSON 没有存（第 8.1 节）。
+- 词典里没有的词不再用 `NLTagger` 还原，词条键直接用选中的原文（第 8.1 节）。
+- 真人听正常与慢速发音、在真实应用里上屏查看卡片的人工验收还没有做。
 
 验收：`make test` 通过；`make dict` 生成数据库并打印行数和覆盖统计，前 5 千词元覆盖不低于 85%；查 `ran` 显示 `run` 的中文释义和美式音标，词典层耗时不超过 5 ms（日志）；在 Safari 只读页面查一个词，卡片的本句意思与上下文一致，上下文句与夹具一致（`make matrix` 增加上下文列）；`sqlite3` 查 `vocab.sqlite` 能看到词条和带原句的 `encounter`，同一个词第二次查询显示「第 2 次」；删除词条后 `encounter` 为 0；`make eval SUITE=card` 严格解码率不低于 98%；人工听一次正常与慢速。
 

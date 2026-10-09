@@ -3,7 +3,6 @@
 import ApplicationServices
 import DictCore
 import Foundation
-import NaturalLanguage
 
 // MARK: - Selection bounds (architecture 3.5, step 1)
 
@@ -48,34 +47,11 @@ func contextWindow(selection: NSRange, total: Int, radius: Int) -> NSRange {
   return NSRange(location: start, length: max(0, end - start))
 }
 
-/// The sentence of `text` containing `selection` (UTF-16 offsets), trimmed, or nil when the
-/// selection is empty, out of range or crosses a sentence boundary.
-/// This is a local stand-in for DictCore's `sentence(containing:in:)`, which M2.2 implements.
+/// The sentence of `text` containing `selection` (UTF-16 offsets), through DictCore's
+/// `sentence(containing:in:)`; nil when the selection is out of range.
 func contextSentence(in text: String, selection: NSRange) -> ContextSentence? {
-  guard selection.length > 0, let term = Range(selection, in: text) else { return nil }
-  let tokenizer = NLTokenizer(unit: .sentence)
-  tokenizer.string = text
-  let sentenceRange = tokenizer.tokenRange(at: term.lowerBound)
-  guard sentenceRange.upperBound >= term.upperBound else { return nil }
-
-  let sentenceText = text[sentenceRange]
-  let trimmedStart =
-    sentenceText.firstIndex { !$0.isWhitespace && !$0.isNewline } ?? sentenceText.endIndex
-  let trimmedEnd =
-    sentenceText.lastIndex { !$0.isWhitespace && !$0.isNewline }.map {
-      sentenceText.index(after: $0)
-    } ?? trimmedStart
-  guard trimmedStart <= term.lowerBound, trimmedEnd >= term.upperBound else { return nil }
-
-  let sentence = String(text[trimmedStart..<trimmedEnd])
-  let startOffset = text.utf16.distance(from: trimmedStart, to: term.lowerBound)
-  let utf16 = sentence.utf16
-  let lower = utf16.index(utf16.startIndex, offsetBy: startOffset)
-  let upper = utf16.index(lower, offsetBy: selection.length)
-  guard let lowerIndex = String.Index(lower, within: sentence),
-    let upperIndex = String.Index(upper, within: sentence)
-  else { return nil }
-  return ContextSentence(sentence: sentence, termRange: lowerIndex..<upperIndex)
+  guard let term = Range(selection, in: text) else { return nil }
+  return sentence(containing: term, in: text)
 }
 
 /// Reads the context sentence of a found selection. Accessibility queue only.

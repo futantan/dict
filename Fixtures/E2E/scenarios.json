@@ -167,6 +167,42 @@
       "step": "read",
       "force": "key",
       "expect": { "source": "keyCopy", "text": "jumps over the lazy dog", "copyEvents": 1, "readingPanel": true }
+    },
+    {
+      "name": "context, web paragraph: word inside an inline tag",
+      "control": "web.paragraph",
+      "text": "bright",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "bright", "copyEvents": 0, "context": "It was a bright cold day in April." }
+    },
+    {
+      "name": "context, web paragraph: link in the second paragraph",
+      "control": "web.paragraph",
+      "text": "link",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "link", "copyEvents": 0, "context": "Second paragraph with a link inside it." }
+    },
+    {
+      "name": "context, web contenteditable: second paragraph",
+      "control": "web.contenteditable",
+      "text": "editable",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "editable", "copyEvents": 0, "context": "Another editable paragraph." }
+    },
+    {
+      "name": "context, web textarea: second line",
+      "control": "web.textarea",
+      "text": "line of",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "line of", "copyEvents": 0, "context": "Second line of the textarea." }
+    },
+    {
+      "name": "context, text view: abbreviation in the second paragraph",
+      "control": "textView.plain",
+      "text": "Smith",
+      "content": "The first paragraph ends here.\n\nDr. Smith opened the second one, e.g. with a joke. It has two sentences.",
+      "policy": "allowed",
+      "expect": { "source": "accessibility", "text": "Smith", "copyEvents": 0, "context": "Dr. Smith opened the second one, e.g. with a joke." }
     }
   ]
 }

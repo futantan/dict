@@ -49,47 +49,20 @@ struct SelectionBoundsTests {
   }
 }
 
+/// The sentence rules are DictCore's (`SentenceLocatorTests`); these check the UTF-16 adapter.
 struct ContextLocatorTests {
-  func locate(_ paragraph: String, _ term: String, occurrence: Int = 0) -> (String, String)? {
-    var searchStart = paragraph.startIndex
-    var found: Range<String.Index>?
-    for _ in 0...occurrence {
-      found = paragraph.range(of: term, range: searchStart..<paragraph.endIndex)
-      guard let hit = found else { return nil }
-      searchStart = hit.upperBound
-    }
-    guard let found else { return nil }
-    let location = NSRange(found, in: paragraph)
-    guard let context = contextSentence(in: paragraph, selection: location) else { return nil }
-    return (context.sentence, String(context.sentence[context.termRange]))
+  @Test func convertsUTF16OffsetsAfterEmojiAndChinese() throws {
+    let paragraph = "你好，世界。🙂 我在学英语。Then a test word."
+    let location = NSRange(try #require(paragraph.range(of: "学英语")), in: paragraph)
+    let context = try #require(contextSentence(in: paragraph, selection: location))
+    #expect(context.sentence == "🙂 我在学英语。")
+    #expect(context.sentence[context.termRange] == "学英语")
   }
 
-  @Test func findsTheSentenceAroundAWord() throws {
-    let result = try #require(
-      locate("Hello world. This is the second sentence. The fox jumps.", "second"))
-    #expect(result.0 == "This is the second sentence.")
-    #expect(result.1 == "second")
-  }
-
-  @Test func trimsSurroundingWhitespaceAndNewlines() throws {
-    let result = try #require(locate("First one.\n  Second has a word here.  \n", "word"))
-    #expect(result.0 == "Second has a word here.")
-    #expect(result.1 == "word")
-  }
-
-  @Test func handlesUTF16OffsetsAfterEmojiAndChinese() throws {
-    let result = try #require(locate("你好，世界。🙂 我在学英语。Then a test word.", "学英语"))
-    #expect(result.0 == "🙂 我在学英语。")
-    #expect(result.1 == "学英语")
-  }
-
-  @Test func usesTheRightOccurrence() throws {
-    let result = try #require(locate("A cat sat. Another cat ran.", "cat", occurrence: 1))
-    #expect(result.0 == "Another cat ran.")
-  }
-
-  @Test func selectionSpanningSentencesHasNoContext() {
-    #expect(locate("One two. Three four.", "two. Three") == nil)
+  @Test func selectionSpanningSentencesHasNoContext() throws {
+    let paragraph = "One two. Three four."
+    let location = NSRange(try #require(paragraph.range(of: "two. Three")), in: paragraph)
+    #expect(contextSentence(in: paragraph, selection: location) == nil)
   }
 
   @Test func emptyOrOutOfRangeSelectionHasNoContext() {

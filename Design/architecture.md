@@ -123,8 +123,8 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（`project.yml` 里的一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
 | 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
-现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型；即时词典查询、词库存储、音色选择规则（M2），结构化输出的后处理与改写校验（M2、M3），复习排程（M5）都还没有。
-选区分类 `classify`、`sentence(containing:in:)`、`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
+现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`；查词卡片的后处理（M2.5）和润色、译出的改写校验（M3）还没有。
+选区分类 `classify` 和切句 `sentence(containing:in:)` 已实现；`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
 现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）；M2 的 `Lexicon` 和 `VocabStore` 加入后再用 SQLite3（系统 `libsqlite3`）。
@@ -365,7 +365,9 @@ VS Code 第二次写入的触发条件是从 3 次观察归纳的，机制没有
    4. Chromium 的 contenteditable 不走第 1 步：它的值和范围偏移不一致【实测】。
    5. 都失败或来源是剪贴板、OCR 时，没有上下文句；卡片退化为不带上下文的释义。
    切句和定位设计为 `DictCore` 里的纯函数 `sentence(containing:in:)`，输入段落和选区偏移，输出 `ContextSentence`。
-   现状：上面第 1、2 步的读取已在 M1 实现（`App/Sources/Capture/SecondStage.swift`），切句用的是同一文件里应用目标的 `contextSentence(in:selection:)`（输入 `NSRange`）；`DictCore` 的 `sentence(containing:in:)` 还是调用即崩溃的存根，计划在 M2.2 实现并替换前者（第 15.2 节）。
+   现状：上面第 1、2 步的读取已在 M1 实现（`App/Sources/Capture/SecondStage.swift`）；切句和定位已挪进 `DictCore` 的 `sentence(containing:in:)`，应用目标的 `contextSentence(in:selection:)` 只把 `NSRange` 换成 `String.Index` 后调用它。
+   切句完全交给 `NLTokenizer`：`e.g.`、`Dr.`、`U.S.`、小数、网址和句末的引号括号都留在句内，中日文句末标点断句，换行一律断句；选区首尾的空白不算进词，选区跨句或跨行时没有上下文句【表驱动单测】。
+   `「你去吗？」他问。` 会被切成两句，没有特殊处理。
    M1 只把上下文句放进 `Selection`，翻译不使用它。
 3. **替换目标**：只有「写」键路径需要，规则见第 4.3 节。
    快照必须在面板出现之前取：面板成为 key 后 VS Code 的应用级焦点元素会变成 `noValue`【实测】。
@@ -595,7 +597,8 @@ public enum SelectionKind: Sendable, Equatable { case none, word, phrase, passag
 public func classify(_ text: String) -> SelectionKind
 ```
 
-现状：`classify` 是调用即崩溃的存根，计划在 M2.1 实现；M1 把所有选区都当作段落翻译。
+现状：`classify` 已按下面的规则实现（`DictCore/Text/SelectionKind.swift`，表驱动单测）；会话还没有按它分流，所有选区仍当作段落翻译，分流随 M2 的查词链路接入。
+第 6 条的「字」里，一段连续的非汉字、非假名的字母数字（`Python`、`iPhone15`）算 1 个字，所以 `Python编程` 是 `.phrase`。
 
 第一版的规则「先去首尾标点再判断句末标点」自相矛盾，在 169 条真实选区上分错 78 条；URL、数字、代码、空串没有「不查」的出口【实测】。
 新规则按固定顺序执行：
@@ -648,11 +651,11 @@ public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
 | 函数 | 用途 |
 |---|---|
 | `normalizedKey(_ text: String) -> String` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
-| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：存根，M2.2 实现；现在切句用应用目标的 `contextSentence(in:selection:)`（第 3.5 节） |
+| `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：已实现，应用目标的 `contextSentence(in:selection:)` 是它的 `NSRange` 适配（第 3.5 节） |
 | `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节）。现状：存根，M3 实现 |
 | `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据。现状：存根，M3.2 实现 |
 
-`normalizedKey` 已实现；第 5.1 节的 `classify` 现在是存根，M2.1 实现；第 5.2 节的 `resolveDirection` 已实现。
+`normalizedKey`、`sentence(containing:in:)`、第 5.1 节的 `classify` 和第 5.2 节的 `resolveDirection` 已实现。
 
 `AppKind` 判定不在这里：`AppKind` 是 `DictApp` 的类型，判定函数也在 `DictApp`（第 3.3 节）。
 
@@ -1226,6 +1229,13 @@ public actor Lexicon {
 不使用系统词典的文本作为预览：公开接口返回的是用户启用顺序第一本词典的整段文本，中文母语用户默认拿到的是英英释义和美式重拼音标，短语动词查到的是错的词条【实测，评审】。
 卡片上保留「在系统词典中打开」按钮。
 
+现状：`Lexicon` 已在 M2.4 实现（`Packages/DictCore/Sources/DictCore/Lexicon/`），接口与上面一致，`DataSource` 的字段对应 `meta.sources` 的 JSON（name、url、snapshotDate、sha256、license、licenseURL），`meta` 里没有或解析不了时 `sources()` 返回空。
+`init(url:)` 只读打开并预编译查询，文件不存在、不是 sqlite 或缺表时抛 `LexiconError`；去首尾标点用 `CharacterSet.punctuationCharacters`，符号不去（`C++`）。
+`band` 类型保留可选，但词典层总会给值，没有词频时是 `rare`。
+`NLTagger` 还原逐词进行再用空格连接（`took off` → `take off`）；上下文句里找到这个词（不区分大小写、整词）时在句中还原，找不到就单独还原。
+测试库在测试代码里按 schema 2 现建；计时测试读环境变量 `DICT_DB` 指向真实库，没设时跳过。
+应用还没有加载这个库（找 bundle 里的文件、没有词典时的降级），计划在 M2.8 做（第 15.2 节）。
+
 ## 8. 词库
 
 ### 8.1 记录什么
@@ -1384,6 +1394,12 @@ public actor VocabStore {
 
 `LocalDay` 是 `YYYY-MM-DD` 的值类型，由调用方按当前时区算好传入，存储层不碰时区。
 
+现状：`VocabStore` 已在 M2.6 实现（`Packages/DictCore/Sources/DictCore/Vocab/`），五张表与索引照第 8.2 节，`user_version` 为 1，坏文件改名为 `<原名>.bad-<UTC 时间>`（连同 `-wal`、`-shm`）后新建。
+与上面代码块的差别：`init` 多一个 `autoPromotion: AutoPromotion? = .standard`（传 nil 关闭自动升档）；`setTier` 多一个 `on day: LocalDay`，因为升档要写「次日到期」而存储层不算日期；`recordReview` 多一个 `at date: Date = .now`，写 `review_log.reviewed_at`。
+自动升档只在跨过门槛的那一次查词时发生，用户撤回到「查过」后不会被再次自动升上去。
+删除某一天只删那天的 `encounter` 和 `sentence_event`，之后没有任何 `encounter` 的词条只删「查过」的，「要学」的连同 `review_state`、`review_log` 保留。
+应用层还没有打开这个文件，也没有记录、⌘S 和星标，计划在 M2.8 接入；每日回顾、复习和导出的界面在 M5。
+
 ## 9. 发音
 
 ```swift
@@ -1422,6 +1438,12 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 - 多音词（record、read、wind 等）：带 IPA 属性时渲染出的音频确实不同【实测，评审】，但读出来是否自然没有人听过【未验证】；v1 先不启用。
 - 逐词高亮：范围会带上尾随标点和前导空格【实测，评审】，绘制前裁掉。
 - 测试一律用渲染模式，不出声。
+
+现状：M2.7 已实现 `DictCore` 的 `resolveVoice`（`Speech/`）和应用的 `Speaker`（`App/Sources/Speech/`），但还没接到界面；⌘P、卡片喇叭、设置页的音色提示和「管理语音」按钮的跳转、启动后调用预热都随 M2.8 做。
+与上面的接口有三处不同。
+`resolveVoice` 返回 `VoiceChoice`：选中的 `VoiceInfo`（没有可用音色时为 nil）加至多一条提示，`noVoice`、`accentMissing`（没有这个口音，暂用同语言的其他地区）或 `higherQuality`（只有 compact 档；enhanced 及以上不提示）。
+`Speaker` 是一个 `@MainActor` 的具体类而不是协议，另有 `accent`、`isSpeaking`、`voiceChoice(for:)` 和 `prewarm(language:)`；构造时选输出到扬声器或渲染进缓冲，测试只用后者。
+选音色时同档里老的 MacinTalk 音色（`com.apple.speech.synthesis.voice.*`，例如 Fred、Kathy）排在最后，否则按名字排序会选到它们而不是 Samantha；口音没有对应音色时先回退到语言的默认地区（英语为美音），再按档位和地区代码选其他地区。
 
 ## 10. 触发
 
@@ -1629,6 +1651,7 @@ public func resolveVoice(language: Locale.Language, accent: Accent?, installed: 
 
 现状：M1 的夹具有 `NSTextView`（纯文本、富文本）、`NSTextField`、`NSSecureTextField`、`WKWebView` 的三种控件和三种自绘视图。
 SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计划在 M3.5 加入（第 15.3 节）。
+`make e2e` 的场景可以用 `expect.context` 断言读到的上下文句；已有行内标签（`<b>`、`<a>`）、多段网页、`contenteditable` 第二段、`<textarea>` 第二行和文本视图里带缩写的第二段几个场景。
 
 夹具把收到的每一次拷贝、粘贴、无障碍写入写进一个 JSON Lines 日志；夹具接受分布式通知形式的命令（选中某控件的某段文字）。
 断言示例：无障碍可读的控件上拷贝事件数为 0；替换后粘贴事件恰好 1 次；剪贴板所有类型的哈希在场景前后相同；⌘Z 后全文回到原样；密码框上没有任何拷贝或读取。

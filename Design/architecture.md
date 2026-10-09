@@ -1221,6 +1221,13 @@ public actor Lexicon {
 不使用系统词典的文本作为预览：公开接口返回的是用户启用顺序第一本词典的整段文本，中文母语用户默认拿到的是英英释义和美式重拼音标，短语动词查到的是错的词条【实测，评审】。
 卡片上保留「在系统词典中打开」按钮。
 
+现状：`Lexicon` 已在 M2.4 实现（`Packages/DictCore/Sources/DictCore/Lexicon/`），接口与上面一致，`DataSource` 的字段对应 `meta.sources` 的 JSON（name、url、snapshotDate、sha256、license、licenseURL），`meta` 里没有或解析不了时 `sources()` 返回空。
+`init(url:)` 只读打开并预编译查询，文件不存在、不是 sqlite 或缺表时抛 `LexiconError`；去首尾标点用 `CharacterSet.punctuationCharacters`，符号不去（`C++`）。
+`band` 类型保留可选，但词典层总会给值，没有词频时是 `rare`。
+`NLTagger` 还原逐词进行再用空格连接（`took off` → `take off`）；上下文句里找到这个词（不区分大小写、整词）时在句中还原，找不到就单独还原。
+测试库在测试代码里按 schema 2 现建；计时测试读环境变量 `DICT_DB` 指向真实库，没设时跳过。
+应用还没有加载这个库（找 bundle 里的文件、没有词典时的降级），计划在 M2.8 做（第 15.2 节）。
+
 ## 8. 词库
 
 ### 8.1 记录什么

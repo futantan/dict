@@ -23,14 +23,14 @@ struct CardView: View {
         inThisSentence
       }
       if !card.otherSenses.isEmpty {
-        Section(title: CardStrings.otherSenses) {
+        CardSection(title: CardStrings.otherSenses) {
           ForEach(Array(card.otherSenses.enumerated()), id: \.offset) { _, sense in
             SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.definition)
           }
         }
       }
       if !card.examples.isEmpty {
-        Section(title: CardStrings.examples) {
+        CardSection(title: CardStrings.examples) {
           ForEach(Array(card.examples.enumerated()), id: \.offset) { _, example in
             VStack(alignment: .leading, spacing: 2) {
               Wrapped(example.sentence, size: 13)
@@ -40,7 +40,7 @@ struct CardView: View {
         }
       }
       if !card.collocations.isEmpty {
-        Section(title: CardStrings.collocations) {
+        CardSection(title: CardStrings.collocations) {
           ForEach(Array(card.collocations.enumerated()), id: \.offset) { _, collocation in
             HStack(alignment: .firstTextBaseline, spacing: 8) {
               Text(collocation.phrase).font(.system(size: 13, weight: .medium))
@@ -122,7 +122,7 @@ private struct SenseRow: View {
   }
 }
 
-private struct Section<Content: View>: View {
+private struct CardSection<Content: View>: View {
   let title: String
   @ViewBuilder let content: Content
 

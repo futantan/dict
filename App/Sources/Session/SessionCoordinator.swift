@@ -172,8 +172,8 @@ final class SessionCoordinator {
       if let source {
         let applied = if case .replaced = outcome { true } else { false }
         await self.recordSentence(
-          .corrected, source, correction.text, correction.editsJSON, applied,
-          target.app.bundleID)
+          .corrected, source: source, result: correction.text, edits: correction.editsJSON,
+          applied: applied, app: target.app.bundleID)
       }
     }
   }
@@ -512,7 +512,7 @@ final class SessionCoordinator {
     if case .result(let result) = last, let origin {
       let intoLearning = direction == .intoLearning
       await recordSentence(
-        .translated, text, result, nil, false, origin.app,
+        .translated, source: text, result: result, app: origin.app,
         languages: intoLearning ? (pair.mine, pair.learning) : (pair.learning, pair.mine))
     }
   }
@@ -553,18 +553,20 @@ final class SessionCoordinator {
       """)
     // A dictionary entry makes it a term at once; otherwise the model's first field does,
     // since `status` comes before every field and a non-term ends the stream.
+    // The request starts before the lookup is recorded, so the write is not on the way to
+    // the first field; the stream keeps what arrives meanwhile.
+    let stream = maker?.card(
+      term: term, context: context, pair: environment.languagePair(),
+      accent: environment.accent())
     let lemma = entries.first?.lemma ?? term
     if let recorded {
       showRecorded(recorded)
     } else if !entries.isEmpty {
       await recordLookup(term, lemma: lemma, id: id)
     }
-    guard let maker, id == self.id, !Task.isCancelled else { return }
+    guard let stream, id == self.id, !Task.isCancelled else { return }
 
     do {
-      let stream = maker.card(
-        term: term, context: context, pair: environment.languagePair(),
-        accent: environment.accent())
       for try await event in stream {
         guard id == self.id else { return }
         switch event {
@@ -666,9 +668,8 @@ final class SessionCoordinator {
   /// Records a finished translation or correction; a failure is only logged (architecture
   /// 8.1). Without `languages`, both sides are the learning language, as for a correction.
   private func recordSentence(
-    _ kind: SentenceKind, _ source: String, _ result: String, _ editsJSON: String?,
-    _ applied: Bool, _ app: String?,
-    languages: (Locale.Language, Locale.Language)? = nil
+    _ kind: SentenceKind, source: String, result: String, edits editsJSON: String? = nil,
+    applied: Bool = false, app: String?, languages: (Locale.Language, Locale.Language)? = nil
   ) async {
     guard let vocab = environment.vocab else { return }
     let learning = environment.languagePair().learning

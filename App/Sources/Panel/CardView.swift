@@ -65,10 +65,35 @@ struct CardView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
+  /// The word, its pronunciation and band, and the encounters on one line; a word too long
+  /// for that keeps its own line and the rest goes below, so neither wraps mid-word.
   private var header: some View {
+    ViewThatFits(in: .horizontal) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        lemma.fixedSize()
+        details.fixedSize()
+        Spacer(minLength: 0)
+        encounters
+      }
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          lemma
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+          encounters
+        }
+        details
+      }
+    }
+  }
+
+  private var lemma: some View {
+    Text(card.lemma)
+      .font(.system(size: 20, weight: .semibold))
+  }
+
+  private var details: some View {
     HStack(alignment: .firstTextBaseline, spacing: 8) {
-      Text(card.lemma)
-        .font(.system(size: 20, weight: .semibold))
       if let phonetic = card.phonetic {
         Text(phonetic)
           .font(.system(size: 13))
@@ -82,13 +107,15 @@ struct CardView: View {
           .padding(.vertical, 1)
           .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
       }
-      Spacer(minLength: 0)
-      if let count = card.shownEncounters {
-        Text(CardStrings.encounters(count))
-          .font(.system(size: 11.5))
-          .foregroundStyle(.secondary)
-          .fixedSize()
-      }
+    }
+  }
+
+  @ViewBuilder private var encounters: some View {
+    if let count = card.shownEncounters {
+      Text(CardStrings.encounters(count))
+        .font(.system(size: 11.5))
+        .foregroundStyle(.secondary)
+        .fixedSize()
     }
   }
 

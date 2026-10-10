@@ -50,6 +50,11 @@ final class PanelController {
     layOut()
     isVisible = true
     panel.makeKeyAndOrderFront(nil)
+    // With keyboard navigation on, becoming key focuses the first key view, which on a word
+    // card is its first action, drawn with a focus ring. Only the input field wants focus,
+    // and it takes it itself; elsewhere the panel's keys work without any, and Tab still
+    // reaches the actions.
+    if state.phase != .input { panel.makeFirstResponder(nil) }
     installMonitors()
     Log.ui.info("panel shown: \(state.phase.name, privacy: .public)")
   }

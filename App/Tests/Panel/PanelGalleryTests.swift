@@ -48,6 +48,19 @@ struct PanelGalleryTests {
     #expect(height == 48)
   }
 
+  /// The first words of a result take the place of the progress line without moving the
+  /// panel's bottom edge, in Latin and in Chinese.
+  @Test func theFirstWordsKeepThePanelHeight() {
+    let source = "他把一句很长的话翻来覆去地想了好几遍。"
+    for words in ["He turned", "他把一句"] {
+      let waiting = Self.layOut(
+        PanelState(source: source, phase: .generating("")), appearance: .aqua)
+      let streaming = Self.layOut(
+        PanelState(source: source, phase: .generating(words)), appearance: .aqua)
+      #expect(waiting.height == streaming.height, "\(words)")
+    }
+  }
+
   /// The content lies on a nearly opaque fill, not on the bare material, so a window behind
   /// the panel neither shows through nor darkens its text.
   @Test func theContentLiesOnANearlyOpaqueFill() throws {

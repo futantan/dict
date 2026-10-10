@@ -132,8 +132,9 @@ struct CardView: View {
       if let meaning = card.sentenceMeaning {
         Wrapped(meaning, size: 15, weight: .medium)
       } else if !card.senses.isEmpty {
+        // The meaning's size, so the line keeps its height when the meaning replaces it.
         Text(CardStrings.lookingUp)
-          .font(.system(size: 13))
+          .font(.system(size: 15))
           .foregroundStyle(.tertiary)
       }
       if let context = card.context {

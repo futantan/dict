@@ -60,6 +60,11 @@ private enum Metrics {
   static var bodyNSFont: NSFont { .systemFont(ofSize: 14) }
   static var sourceNSFont: NSFont { .systemFont(ofSize: 12.5) }
   static let bodyLineSpacing: CGFloat = 3
+  /// One line of the result, so a progress line in its place is exactly as tall and the
+  /// panel keeps its height when the first words arrive.
+  static var bodyLineHeight: CGFloat {
+    NSLayoutManager().defaultLineHeight(for: bodyNSFont).rounded(.up)
+  }
 }
 
 private struct PanelContent: View {
@@ -217,7 +222,7 @@ private struct ProgressLine: View {
         .font(Metrics.bodyFont)
         .foregroundStyle(.secondary)
     }
-    .frame(maxWidth: .infinity, minHeight: 20, alignment: .leading)
+    .frame(maxWidth: .infinity, minHeight: Metrics.bodyLineHeight, alignment: .leading)
   }
 }
 

@@ -64,6 +64,30 @@ struct PanelGalleryTests {
     #expect(hosting.frame == backing.bounds)
   }
 
+  /// The panel follows the app's appearance, not the windows behind it: from macOS 26 the
+  /// glass adapts its content's colour scheme to the backdrop, which offscreen it never
+  /// does, so the test stands in for it by giving every view above the fill the opposite
+  /// appearance.
+  @Test func theFillFollowsTheAppAppearanceNotTheBackdrop() throws {
+    let panel = PanelController().window
+    let backing = try #require(Self.firstView(PanelBacking.self, in: panel.contentView))
+    let hosting = try #require(backing.subviews.first)
+    defer { NSApp.appearance = nil }
+
+    for (app, backdrop) in [
+      (NSAppearance.Name.aqua, NSAppearance.Name.darkAqua), (.darkAqua, .aqua),
+    ] {
+      NSApp.appearance = NSAppearance(named: app)
+      var view = backing.superview
+      while let above = view {
+        above.appearance = NSAppearance(named: backdrop)
+        view = above.superview
+      }
+      #expect(backing.effectiveAppearance.name == app)
+      #expect(hosting.effectiveAppearance.name == app)
+    }
+  }
+
   private static func firstView<T: NSView>(_ type: T.Type, in view: NSView?) -> T? {
     guard let view else { return nil }
     if let match = view as? T { return match }

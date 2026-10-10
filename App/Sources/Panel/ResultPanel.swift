@@ -88,7 +88,12 @@ final class ResultPanel: NSPanel {
     if #available(macOS 26, *) {
       let glass = NSGlassEffectView()
       glass.cornerRadius = cornerRadius
-      glass.contentView = backed
+      // The fill sits one view below the glass's content view, so whatever colour scheme
+      // the glass gives its content view, the fill's own appearance wins.
+      let holder = NSView(frame: backed.frame)
+      backed.autoresizingMask = [.width, .height]
+      holder.addSubview(backed)
+      glass.contentView = holder
       // Without this mask the window shadow follows the rectangular frame and draws a
       // grey outline around the rounded glass (seen on macOS 26).
       glass.wantsLayer = true
@@ -125,14 +130,26 @@ final class ResultPanel: NSPanel {
 /// The panel's fill over the material: the window background, nearly opaque. On the bare
 /// material a dark window behind a light panel shows through and darkens it while the text
 /// keeps the light appearance's colours, so the secondary text all but disappears.
+///
+/// The fill and the content follow the app's appearance, which is the system's unless Dict
+/// sets its own. From macOS 26 the glass adapts the colour scheme of its content to the
+/// windows behind the panel, so in light mode over a dark terminal the panel turned dark;
+/// the fill hides those windows, so following them only made the panel disagree with the
+/// rest of the system.
 final class PanelBacking: NSView {
   /// Enough to hide the text of a window behind; the rest leaves a trace of the material.
   static let opacity: CGFloat = 0.95
 
   static var color: NSColor { .windowBackgroundColor.withAlphaComponent(opacity) }
 
+  private var appearanceObservation: NSKeyValueObservation?
+
   init(content: NSView) {
     super.init(frame: content.frame)
+    appearance = NSApp.effectiveAppearance
+    appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] app, _ in
+      MainActor.assumeIsolated { self?.appearance = app.effectiveAppearance }
+    }
     // The material's own mask does not reach its subviews; the same corners as the glass.
     wantsLayer = true
     layer?.cornerRadius = ResultPanel.cornerRadius

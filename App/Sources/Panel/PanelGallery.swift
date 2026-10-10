@@ -40,7 +40,44 @@
             source: text.source, phase: .partial(text.partial),
             note: TranslationStrings.incompleteNote(ModelTranslationError.interrupted))
         ),
-      ] + cardStates
+      ] + writeStates + cardStates
+    }
+
+    /// The Write key's states. The text is English in either UI language: it is the
+    /// language being learned that gets proofread.
+    static var writeStates: [(name: String, state: PanelState)] {
+      let changed = AppliedEdits(
+        text: "She has lived here since 2019 and works at a bakery.",
+        segments: [
+          .unchanged("She "),
+          .changed(from: "have", to: "has"),
+          .unchanged(" lived here "),
+          .changed(from: "for", to: "since"),
+          .unchanged(" 2019 and "),
+          .changed(from: "work", to: "works"),
+          .unchanged(" at "),
+          .changed(from: "", to: "a "),
+          .unchanged("bakery."),
+        ])
+      let clean = AppliedEdits(
+        text: "She has lived here since 2019.",
+        segments: [.unchanged("She has lived here since 2019.")])
+      return [
+        ("checking", PanelState(phase: .checking(Write.original))),
+        ("corrected", PanelState(phase: .corrected(Correction(changed, replaceable: true)))),
+        (
+          "corrected-read-only",
+          PanelState(phase: .corrected(Correction(changed, replaceable: false)))
+        ),
+        (
+          "corrected-no-mistakes",
+          PanelState(phase: .corrected(Correction(clean, replaceable: true)))
+        ),
+      ]
+    }
+
+    private enum Write {
+      static let original = "She have lived here for 2019 and work at bakery."
     }
 
     /// The word card in each of its states (architecture 6.6). The dictionary is English to
@@ -69,6 +106,18 @@
         ("card-complete", card { $0.show(Card.word) }),
         ("card-no-dictionary", card(entry: nil) { $0.show(Card.word) }),
         ("card-rare", card(entry: rare) { $0.show(Card.word) }),
+        // The longest a header and a sense get: the title and the band must not truncate.
+        (
+          "card-long",
+          {
+            var state = CardState(
+              term: "antidisestablishmentarianism", context: Card.longContext, entry: Card.long,
+              accent: .british, model: .loading)
+            state.show(Card.longWord)
+            state.encounters = 12
+            return PanelState(phase: .card(state))
+          }()
+        ),
         (
           "card-learning",
           card {
@@ -110,6 +159,21 @@
 
     private enum Card {
       static let context = "She ran a small bakery for ten years."
+      static let longContext =
+        "His antidisestablishmentarianism set him against every reformer in the parish, "
+        + "and he said so at every meeting."
+      static let long = LexiconEntry(
+        lemma: "antidisestablishmentarianism", ipaUS: "/ˌæntaɪˌdɪsɪˌstæblɪʃmənˈtɛəriənɪzəm/",
+        ipaUK: "/ˌæntiˌdɪsɪˌstæblɪʃmənˈteəriənɪzəm/", band: .rare,
+        senses: [
+          LexiconSense(
+            pos: "noun", gloss: "反对废除国教主义（十九世纪英国反对解除英国国教会国教地位的政治主张）", source: "en")
+        ])
+      static let longWord = WordCard(
+        status: .ok, lemma: "antidisestablishmentarianism", phonetic: "", partOfSpeech: "noun",
+        definition: "反对废除国教的立场",
+        contextTranslation: "他反对废除国教的立场让他与教区里的每一位改革者为敌，而且他在每次集会上都这么说。",
+        otherSenses: [], examples: [], collocations: [], level: "")
       static let run = LexiconEntry(
         lemma: "run", ipaUS: "/ɹʌn/", ipaUK: "/rʌn/", band: .common,
         senses: [

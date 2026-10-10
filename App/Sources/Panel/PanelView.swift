@@ -322,6 +322,8 @@ extension PanelPhase {
 /// the inserted ones in green, a plain space between the two so they do not run together.
 @MainActor
 func diffText(_ segments: [DiffSegment]) -> NSAttributedString {
+  let red = DiffColor.removed
+  let green = DiffColor.inserted
   let paragraph = NSMutableParagraphStyle()
   paragraph.lineSpacing = Metrics.bodyLineSpacing
   let base: [NSAttributedString.Key: Any] = [
@@ -335,9 +337,9 @@ func diffText(_ segments: [DiffSegment]) -> NSAttributedString {
     case .changed(let from, let to):
       if !from.isEmpty {
         var removed = base
-        removed[.foregroundColor] = NSColor.systemRed
+        removed[.foregroundColor] = red
         removed[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
-        removed[.strikethroughColor] = NSColor.systemRed
+        removed[.strikethroughColor] = red
         text.append(NSAttributedString(string: from, attributes: removed))
       }
       if !from.isEmpty && !to.isEmpty {
@@ -345,13 +347,28 @@ func diffText(_ segments: [DiffSegment]) -> NSAttributedString {
       }
       if !to.isEmpty {
         var inserted = base
-        inserted[.foregroundColor] = NSColor.systemGreen
+        inserted[.foregroundColor] = green
         inserted[.backgroundColor] = NSColor.systemGreen.withAlphaComponent(0.14)
         text.append(NSAttributedString(string: to, attributes: inserted))
       }
     }
   }
   return text
+}
+
+/// The diff's text colours. The system red and green are bright enough for dark mode, but
+/// on the light fill green text reads at about 2:1, so in light mode both are darkened to
+/// read at 4.5:1 or more on the fill, the strike-through with them.
+enum DiffColor {
+  static let removed = legible(.systemRed, darkening: 0.2)
+  static let inserted = legible(.systemGreen, darkening: 0.45)
+
+  private static func legible(_ color: NSColor, darkening fraction: CGFloat) -> NSColor {
+    NSColor(name: nil) { appearance in
+      guard appearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua else { return color }
+      return color.blended(withFraction: fraction, of: .black) ?? color
+    }
+  }
 }
 
 private func copyToClipboard(_ text: String) {

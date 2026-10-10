@@ -413,7 +413,8 @@ private struct ActionBar: View {
         }
       }
     }
-    .padding(.horizontal, 12)
+    // The content's edges, so the bar's first and last words line up with the text above.
+    .padding(.horizontal, Metrics.padding)
     .frame(height: 38)
   }
 

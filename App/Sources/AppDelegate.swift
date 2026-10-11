@@ -5,7 +5,7 @@ import DictCore
 
 @main
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
   private var statusItem: NSStatusItem?
   private var appName = ProcessInfo.processInfo.processName
 
@@ -22,6 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
   private var vocab: VocabStore?
   private var coordinator: SessionCoordinator?
   private var onboarding: OnboardingWindowController?
+  /// nil when updates are off for this build (`UpdateFeed`).
+  private var updater: Updater?
   private var observers: [any NSObjectProtocol] = []
 
   static func main() {
@@ -111,6 +113,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let preferences = PreferencesStore(defaults: .standard).load()
     speaker.accent = preferences.accent
     speaker.prewarm(language: preferences.languagePair.learning)
+    let info = Bundle.main.infoDictionary ?? [:]
+    Log.update.notice(
+      "version \(info["CFBundleShortVersionString"] as? String ?? "?", privacy: .public) (\(info["CFBundleVersion"] as? String ?? "?", privacy: .public))"
+    )
+    updater = Updater.start()
     if let mock = mockModelBaseURL() {
       Log.model.notice("mock model at \(mock, privacy: .public)")
     }
@@ -242,6 +249,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
   @objc func showShortcutSettings(_ sender: Any?) {
     SettingsWindowController.shared.show(.shortcuts)
+  }
+
+  @objc func checkForUpdates(_ sender: Any?) {
+    updater?.checkForUpdates()
+  }
+
+  /// 「检查更新…」 is dimmed when this build has no updater or Sparkle is busy.
+  func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+    guard menuItem.action == #selector(checkForUpdates(_:)) else { return true }
+    return updater?.canCheckForUpdates ?? false
   }
 }
 

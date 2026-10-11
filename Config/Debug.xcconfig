@@ -7,3 +7,6 @@
 
 DICT_APP_NAME = $(DICT_PRODUCT_NAME) Dev
 DICT_APP_BUNDLE_ID = $(DICT_BUNDLE_ID).dev
+
+// Never the real feed: a Debug build reads only DICT_UPDATE_FEED, a local appcast.
+DICT_UPDATE_FEED_URL =

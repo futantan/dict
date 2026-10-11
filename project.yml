@@ -97,6 +97,8 @@ targets:
         PRODUCT_MODULE_NAME: DictApp
         PRODUCT_BUNDLE_IDENTIFIER: $(DICT_APP_BUNDLE_ID)
         GENERATE_INFOPLIST_FILE: YES
+        # Sparkle's keys, which have no INFOPLIST_KEY_ setting; merged with the generated ones.
+        INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: $(DICT_APP_NAME)
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.reference

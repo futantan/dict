@@ -30,6 +30,11 @@ enum StatusMenu {
         localized: "About \(appName)", comment: "Menu item that opens the About panel"),
       action: #selector(AppDelegate.showAbout(_:)),
       keyEquivalent: "")
+    menu.addItem(
+      withTitle: String(
+        localized: "Check for Updates…", comment: "Menu item that checks for a new version"),
+      action: #selector(AppDelegate.checkForUpdates(_:)),
+      keyEquivalent: "")
     menu.addItem(.separator())
     menu.addItem(
       withTitle: String(localized: "Quit \(appName)", comment: "Menu item that quits the app"),

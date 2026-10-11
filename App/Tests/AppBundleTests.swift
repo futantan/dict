@@ -18,6 +18,7 @@ struct AppBundleTests {
   @Test(arguments: [
     ("About %@", "关于 %@"),
     ("Quit %@", "退出 %@"),
+    ("Check for Updates…", "检查更新…"),
     ("Couldn’t read the selection", "无法读取选中的文字"),
     ("Welcome to %@", "欢迎使用 %@"),
     ("Step %lld of %lld", "第 %1$lld 步，共 %2$lld 步"),

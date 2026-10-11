@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Merged with the keys Xcode generates. Auto-update (Design/architecture.md 15.6); the values
+     come from Config/*.xcconfig, and App/Sources/Update/UpdateFeed.swift decides whether the
+     updater runs at all. -->
+<plist version="1.0">
+<dict>
+	<key>DictUpdateFeedURL</key>
+	<string>$(DICT_UPDATE_FEED_URL)</string>
+	<key>SUPublicEDKey</key>
+	<string>$(DICT_UPDATE_PUBLIC_KEY)</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+</dict>
+</plist>

@@ -9,6 +9,9 @@
 # Usage: scripts/release.sh [--dry-run] [<private-key-file>]
 #   Without a key file, the appcast is signed with the key in the login Keychain.
 #
+# If gh release create fails after the tag was pushed, delete the tag here and on origin
+# before running it again.
+#
 # Before each release: raise CURRENT_PROJECT_VERSION (Sparkle compares it) and
 # MARKETING_VERSION (it names the tag) in Config/Base.xcconfig, and commit.
 #

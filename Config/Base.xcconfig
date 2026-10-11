@@ -18,8 +18,8 @@ ENABLE_HARDENED_RUNTIME = YES
 // GitHub account and paste the public key printed by Sparkle's generate_keys; until then the
 // updater does not start. `//` starts a comment in an xcconfig, hence `/$()/`; write any `//`
 // in the key the same way.
-DICT_UPDATE_FEED_URL = https:/$()/github.com/OWNER/dict/releases/latest/download/appcast.xml
-DICT_UPDATE_PUBLIC_KEY =
+DICT_UPDATE_FEED_URL = https:/$()/github.com/futantan/dict/releases/latest/download/appcast.xml
+DICT_UPDATE_PUBLIC_KEY = eodyMRTGJ+udKqjQtgBdcNXmBxVR3S/oFqICch86RrM=
 
 MACOSX_DEPLOYMENT_TARGET = 15.0
 SWIFT_VERSION = 6.0

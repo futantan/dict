@@ -24,6 +24,7 @@ enum PanelKeys {
   static let escape: UInt16 = 53
   static let returnKey: UInt16 = 36
   static let keypadEnter: UInt16 = 76
+  static let tab: UInt16 = 48
 
   /// - Parameters:
   ///   - hasMarkedText: The focused text field holds uncommitted input-method text. Return,

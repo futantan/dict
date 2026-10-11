@@ -61,6 +61,7 @@ final class ResultPanel: NSPanel {
 
   override func sendEvent(_ event: NSEvent) {
     guard event.type == .keyDown else { return super.sendEvent(event) }
+    if enterKeyViewLoop(for: event) { return }
     switch route(for: event) {
     case .dismiss:
       onEscape()
@@ -78,6 +79,26 @@ final class ResultPanel: NSPanel {
     case .pass:
       super.sendEvent(event)
     }
+  }
+
+  /// Tab and ⇧Tab while no view has focus. The controller clears the first responder so no
+  /// action shows a focus ring when the panel appears (`PanelController.show`), but a window
+  /// that is its own first responder has no place in the key view loop, so AppKit ignores
+  /// Tab. Start the loop from the content view instead, forwards or backwards. The loop is
+  /// recalculated first: the SwiftUI content adds and removes views as the state changes, and
+  /// AppKit does not keep the loop current by itself.
+  private func enterKeyViewLoop(for event: NSEvent) -> Bool {
+    let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+    guard event.keyCode == PanelKeys.tab, modifiers.subtracting(.shift).isEmpty,
+      firstResponder === self, let contentView
+    else { return false }
+    recalculateKeyViewLoop()
+    if modifiers.contains(.shift) {
+      selectKeyView(preceding: contentView)
+    } else {
+      selectKeyView(following: contentView)
+    }
+    return true
   }
 
   /// Wraps the content in the system material with rounded corners: Liquid Glass from

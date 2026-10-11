@@ -89,6 +89,33 @@ Keys listed in `tools/build-dict/blocklist.txt` are left out, for example after 
 
 ## Distribution
 
-`make package` produces a zip signed with the Apple Development certificate.
-It is not notarized, so Gatekeeper blocks it on other Macs after download.
+`make package` produces `build/dist/Dict-<version>-<build>.zip`, signed with the Apple Development certificate and not notarized.
+Releases go to GitHub Releases with an `appcast.xml`, and installed copies update themselves with Sparkle (see `Design/architecture.md` 15.6).
+
+To install, unzip, drag Dict into Applications, and open it from there.
+The first time, macOS blocks it because it is not notarized: open System Settings > Privacy & Security and choose Open Anyway.
+Opened straight from Downloads, the app runs from a read-only translocated copy and cannot update itself.
+Later versions install themselves without Gatekeeper asking again, and keep the Accessibility permission, because every build has the same signing identity.
+
+The app checks for updates once a day and from Check for Updates… in the menu bar menu.
+It sends Sparkle's plain request for the appcast, without system information.
+Debug builds never check the real feed: they check only a local appcast named in `DICT_UPDATE_FEED` (an `http://127.0.0.1` URL), which `make update-test` uses.
+
+```sh
+make package                  # the zip
+make release DRY_RUN=1        # check and print the release commands
+make release KEY=<key file>   # package, appcast, tag, push the tag, gh release create
+make update-test              # the update cycle offline with two Debug builds; quit the Dev app first
+```
+
+Before the first release, run Sparkle's `generate_keys` once (`"$(scripts/sparkle-bin.sh)/generate_keys"`, after `make build`), which keeps the private key in the login Keychain.
+Put the public key it prints in `DICT_UPDATE_PUBLIC_KEY` and the GitHub account in place of `OWNER` in `DICT_UPDATE_FEED_URL` (`Config/Base.xcconfig`).
+Until both are set, the app does not check for updates.
+Before each release, raise `CURRENT_PROJECT_VERSION`, which Sparkle compares, and `MARKETING_VERSION`, which names the tag.
+
 Notarized distribution needs a Developer ID Application certificate and a `notarytool` keychain profile named in `DICT_NOTARY_PROFILE`; see `scripts/package.sh`.
+
+## Third-party software
+
+The app embeds [Sparkle](https://sparkle-project.org) 2.10.0 for updates, under the MIT licence; its licence ships in the app as `Sparkle-LICENSE.txt` (`App/Resources/`).
+It is the only third-party code in the app, and none of it is copied into this repository's sources.

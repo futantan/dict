@@ -133,7 +133,7 @@ Keychain 读写（Security 框架）在 `DictApp` 的 `App/Sources/Settings/Secr
 凡是需要这些框架的能力，`DictCore` 只定义协议或纯函数，实现放在 `DictApp`；以后 iOS 版提供自己的实现。
 
 不引入第三方库。
-唯一考虑中的例外是自动更新用的 Sparkle，放到发布里程碑再定（第 16 节）。
+唯一的例外是应用目标里自动更新用的 Sparkle 2（MIT，2026-10-11 定，第 15.6 节）；`DictCore` 不依赖它。
 
 ### 2.3 并发模型
 
@@ -1591,7 +1591,7 @@ M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读
   引导里没有、也不会有下载翻译语言包的步骤。
 - 应用已在运行时再次打开（Finder、Spotlight、`open`，即收到 reopen 事件）：引导没完成就显示引导，完成了就打开设置；没有 Dock 图标，窗口是用户唯一能看到的反应。
 - 菜单栏菜单：今天（每日回顾）、复习（显示待复习数）、截图取词、暂停记录、设置、关于（含数据署名）、退出。
-  M1 只有设置、关于、退出；快捷键注册失败或已被 macOS 占用时，菜单最上面多出警告项，点击打开设置的快捷键页。
+  现在有设置、关于、检查更新（第 15.6 节）、退出；快捷键注册失败或已被 macOS 占用时，菜单最上面多出警告项，点击打开设置的快捷键页。
 - 登录时启动用 `SMAppService.mainApp`，设置里一个开关，首次引导里询问。
 - 应用不在 `/Applications` 里运行时（例如直接从下载目录打开），提示移动，否则更新和授权都会出问题【推断】。
 
@@ -1610,7 +1610,11 @@ M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读
 
 ## 12. 隐私、密钥与日志
 
-- 所有用户数据只存本机；网络请求只发往用户配置的模型服务商；没有遥测。
+- 所有用户数据只存本机；没有遥测。
+- 网络请求只发往两处：用户配置的模型服务商，和正式版的更新地址（第 15.6 节）。
+  更新检查每天最多一次，是 Sparkle 默认的 GET `appcast.xml`，User-Agent 带应用名和版本；不发系统信息（`SUEnableSystemProfiling` 为否），不带用户数据。
+  有新版且用户选择安装时，再从同一个 GitHub Release 下载 zip。
+  开发版只在设置了 `DICT_UPDATE_FEED`（必须是 `http://127.0.0.1`）时检查，否则不发更新请求。
 - 发给模型的内容：选中的文字；查词时加上下文句。
   Apple 翻译框架、拼写检查、系统语音、OCR 全部在设备上处理。
   首次配置模型时说明「选中的文字会发给你选择的服务商」。
@@ -1618,10 +1622,10 @@ M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读
   开发版和正式版 bundle id 不同，条目互不影响。
   Key 不进 UserDefaults、不进日志、不进错误信息；错误信息里出现 Key 时替换成 `••••`。
 - 带 `ConcealedType` 的剪贴板内容从不读取；密码框从不读取。
-- 日志用 `os.Logger`，子系统是 bundle id，分类为 `capture`、`replace`、`model`、`store`、`ui`。
+- 日志用 `os.Logger`，子系统是 bundle id，分类为 `capture`、`replace`、`model`、`store`、`ui`、`update`。
   记录每个阶段的耗时、走了哪条途径、无障碍错误码、HTTP 状态、token 用量、应用 bundle id；从不记录用户的文字和 Key。
   查看：`log show --last 10m --info --predicate 'subsystem == "au.ibra.dict.dev"'`。
-- 这五个 `Logger` 只在 `App/Sources/Support/Log.swift` 的 `Log` 里定义；`DictCore` 不写日志，模型请求的耗时、HTTP 状态和用量由 `DictApp` 里的调用方记录。
+- 这六个 `Logger` 只在 `App/Sources/Support/Log.swift` 的 `Log` 里定义；`DictCore` 不写日志，模型请求的耗时、HTTP 状态和用量由 `DictApp` 里的调用方记录。
 - Ollama 的 `http://localhost` 是否被应用传输安全默认放行【未验证】；不放行就在工程里加一个 Info.plist 片段设置 `NSAllowsLocalNetworking`；自定义服务商的非本机 `http://` 地址在表单里直接拒绝。
 
 ## 13. 本地化与语言设置
@@ -1808,8 +1812,33 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 
 ### 15.6 M6：发布准备
 
-任务：Developer ID 签名与公证、DMG、自动更新方案（第 16 节）、登录时启动、「关于 → 致谢」与数据许可文件、`/Applications` 检查、虚拟机矩阵。
-验收：公证通过的 DMG 能在另一台 Mac 上安装运行；致谢页列出全部数据来源。
+任务：签名与发布、自动更新、登录时启动、「关于 → 致谢」与数据许可文件、`/Applications` 检查、虚拟机矩阵。
+验收：发布的 zip 能在另一台 Mac 上安装运行，并能自动更新到下一版；致谢页列出全部数据来源和第三方软件。
+
+决定（Tantan，2026-10-11）：不上 App Store，也不买 Developer ID。
+应用用现有的 Apple Development 证书签名（`Config/Base.xcconfig`），开启 Hardened Runtime，不公证。
+用户第一次安装要先把 Dict 拖进「应用程序」文件夹，打开时 Gatekeeper 拦一次，在「系统设置 → 隐私与安全性」里点「仍要打开」。
+以后的版本由 Sparkle 2 安装：它下载 zip、校验 EdDSA 签名和代码签名、去掉隔离属性、替换应用并重新启动，不再经过 Gatekeeper。
+zip 和 `appcast.xml` 放在 GitHub Releases，应用读 `https://github.com/<账号>/dict/releases/latest/download/appcast.xml`。
+
+- 签名身份：指定要求（designated requirement）是 bundle id 加叶证书 CN `Apple Development: 97321776@qq.com (B9GTUPTX5T)`，每次构建都相同（实测两个不同构建号的正式版逐字节一致），辅助功能授权按它认应用，所以更新后授权还在。
+  证书 2027-07-06 到期；续期后 CN 不变就不影响授权，换了 CN 所有用户都要重新授权。
+- Sparkle 2.10.0 用 SPM 精确版本引入；Xcode 嵌入时重签框架，`project.yml` 的构建后阶段再用同一身份重签框架里的 `Autoupdate`、`Updater.app` 和两个 XPC 服务，满足 Hardened Runtime 的库验证。
+- Info.plist（`App/Info.plist`）：更新地址在我们自己的键 `DictUpdateFeedURL` 里（不用 Sparkle 的 `SUFeedURL`，Sparkle 只能从 `Updater` 拿到地址），公钥在 `SUPublicEDKey`，两者来自 xcconfig 的 `DICT_UPDATE_FEED_URL` 和 `DICT_UPDATE_PUBLIC_KEY`；`SUEnableAutomaticChecks` 写死为是，所以 Sparkle 不会问「是否自动检查」；`SUEnableSystemProfiling` 为否；`SUScheduledCheckInterval` 为一天。
+- 是否启动更新器只由纯函数 `UpdateFeed.resolve` 决定（`App/Sources/Update/`，有单测）：正式版要求地址是 https 且不再含占位的 `OWNER`；开发版不看 Info.plist，只认环境变量 `DICT_UPDATE_FEED` 里的 `http://127.0.0.1` 地址，所以开发版不可能把自己更新成正式版；两者都要求 32 字节的 EdDSA 公钥。
+  不满足就不创建 `SPUUpdater`，不发任何请求，菜单的「检查更新…」置灰。
+- 界面用 Sparkle 的标准窗口：发现新版时列出版本和说明，可以安装、跳过这个版本或以后提醒；点「检查更新…」没有新版时提示已是最新。
+  还没有实现 Sparkle 给菜单栏应用的「温和提醒」，定时检查发现新版时窗口可能出现在别的窗口后面。
+  这一轮没有设置项。
+- App Translocation：从下载目录直接打开的隔离应用在随机的只读路径运行，Sparkle 换不掉它。
+  现在只检测（路径含 `AppTranslocation`）、记日志、不启动更新器，安装说明要求先拖进「应用程序」；第 11.4 节的「移到应用程序」提示没做，因为真的移动要处理已有副本、权限和原始路径（只有私有 API）。
+- 调试版的 `DICT_UPDATE_HEADLESS=1` 换上 `HeadlessUserDriver`：每一步自动同意、安装并重启，每一步记一行 `update` 日志，供无人值守的更新测试用。
+- 脚本：`make package` 生成 `build/dist/Dict-<版本>-<构建号>.zip`；`make appcast` 为一个 zip 生成 `build/dist/appcast.xml`；`make release`（`DRY_RUN=1` 只打印命令）打包、生成 appcast、打 tag、`gh release create`；`make update-test` 离线跑完整的更新流程（两个构建号的调试版、一次性密钥、一个签名错误的反例），会启动和退出开发版的副本，只能在没有其他开发版运行时跑。
+- 只有 Tantan 能做的一次性准备：在自己的 Mac 上运行 Sparkle 的 `generate_keys`（私钥存进登录钥匙串，`generate_keys -x` 导出备份），把打印的公钥填进 `DICT_UPDATE_PUBLIC_KEY`；把 `DICT_UPDATE_FEED_URL` 里的 `OWNER` 换成 GitHub 账号并加上远端；`gh auth login`。
+  每次发版前提高 `CURRENT_PROJECT_VERSION`（Sparkle 比较它）和 `MARKETING_VERSION`（它决定 tag）。
+
+现状：更新器、菜单项、脚本和单测已完成；`make update-test` 的真机更新流程还没有跑过，`http://127.0.0.1` 的 appcast 是否被应用传输安全放行也在那时验证。
+登录时启动、致谢页、虚拟机矩阵还没有做。
 
 ## 16. 未决问题与风险
 
@@ -1822,7 +1851,7 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 | 3 | 复习算法 | 建议 v1 用固定间隔阶梯加完整复习日志，FSRS 以后再换 |
 | 4 | 词频数据来源 | wordfreq 质量更好但导出需要 Python 包；FrequencyWords 是纯文本、零工具。建议 v1 用 FrequencyWords，后续再换 |
 | 5 | 词典输入的来源文件 | 已定：英文维基词典翻译表作为第二来源默认启用，前 5 千个词覆盖 94.5%（构建报告）。待定：kaikki.org 要撤掉按语言拆分的后处理文件（我们用的三个都是）。选项一是届时换成全量原始提取（英文版 2.98 GB 压缩、含所有语言，接近单次下载 3 GB 的上限，构建时多解压约 20 GB；好处是翻译表保留页面顺序）；选项二是现在就把用到的输入（约 630 MB）存进自己的存储，清单指向副本。建议先做选项二，上游真撤掉时再评估选项一 |
-| 6 | 自动更新 | Sparkle 是唯一考虑中的第三方依赖；替代是只在应用内检查新版本并打开下载页。建议 M6 再定 |
+| 6 | 自动更新 | 已定（Tantan，2026-10-11）：Sparkle 2，EdDSA 签名，zip 和 appcast 放 GitHub Releases；用 Apple Development 证书签名，不买 Developer ID、不公证，首次安装接受一次 Gatekeeper「仍要打开」。现状见第 15.6 节 |
 | 7 | 订阅的范围 | 托管模型、云同步、高质量语音之一或组合；不影响 v1 结构，只影响 `TextModel` 的第三个实现何时做 |
 | 8 | M3 与 M4 的先后 | 本文先做写作替换（风险已被原型降低，且是五个需求里的两个半），再做图标与截图取词；如果阅读体验优先，可以对调，两者没有依赖 |
 | 9 | 设计了但原来没有里程碑归属的功能 | 以下设计在 M1 没做（或只做了最小版本），原计划也没有写进任何里程碑：Chrome 和 Electron 无障碍支持的开关与 Electron 首次询问（第 3.3 节）；列模型、「列出可用模型」、自定义服务商的高级下拉、「测试」按钮的三项检查（第 6.2、6.4、6.8 节）；夹具的 SwiftUI 控件（第 14.3 节）。建议分别放进 M4、M2.9、M3.5（已写进第 15 节），请确认；如果列模型和高级下拉不是 v1 必需，可以挪到 M6 之后 |

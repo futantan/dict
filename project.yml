@@ -21,6 +21,11 @@ configFiles:
 packages:
   DictCore:
     path: Packages/DictCore
+  # Auto-update (architecture 15.6 and 16.1 #6). MIT; its notice ships in
+  # the app's Acknowledgements. Pinned exactly: a Sparkle update is a reviewed change.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 
 targets:
   DictApp:
@@ -31,6 +36,9 @@ targets:
       - App/Resources
     dependencies:
       - package: DictCore
+      # A binary framework: Xcode embeds it and re-signs it with our identity, which the
+      # hardened runtime's library validation requires.
+      - package: Sparkle
     # The dictionary is built by `make dict` and never tracked (architecture 7.2). When it is
     # there it ships in Resources with its licence and attribution; without it the app
     # builds and runs with no instant layer.
@@ -59,6 +67,27 @@ targets:
             rm -f "$resources/dict-en-zh.sqlite" "$resources/dict-en-zh-LICENSE" \
               "$resources/dict-en-zh-ATTRIBUTION"
           fi
+    # Xcode re-signs the embedded Sparkle.framework but leaves its helpers (Autoupdate, the
+    # updater app, the XPC services) ad hoc. Sign them with our identity too, inside out, as
+    # Sparkle's documentation asks; the app itself is signed after this phase.
+    postBuildScripts:
+      - name: Sign Sparkle's helpers
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          sparkle="$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/Sparkle.framework"
+          [ -d "$sparkle" ] || { echo "error: Sparkle.framework is not embedded"; exit 1; }
+          sign() {
+            # OTHER_CODE_SIGN_FLAGS carries --timestamp when notarizing (scripts/package.sh).
+            # shellcheck disable=SC2086
+            codesign --force --sign "$EXPANDED_CODE_SIGN_IDENTITY" --options runtime \
+              ${OTHER_CODE_SIGN_FLAGS:-} "$@"
+          }
+          sign "$sparkle/Versions/B/XPCServices/Installer.xpc"
+          sign --preserve-metadata=entitlements "$sparkle/Versions/B/XPCServices/Downloader.xpc"
+          sign "$sparkle/Versions/B/Autoupdate"
+          sign "$sparkle/Versions/B/Updater.app"
+          sign "$sparkle"
     settings:
       base:
         PRODUCT_NAME: $(DICT_APP_NAME)

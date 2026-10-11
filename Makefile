@@ -8,7 +8,7 @@ SWIFT_SOURCES := App Fixtures Packages/DictCore/Package.swift Packages/DictCore/
 	Packages/DictCore/Tests scripts tools/build-dict/Package.swift tools/build-dict/Sources \
 	tools/build-dict/Tests
 
-.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update dict-cloud-export dict-cloud-verify smoke window-test e2e e2e-live matrix eval import-key run run-mock stop-mock test-mock package lint format clean
+.PHONY: generate build test test-core test-app test-dict dict dict-stats dict-update dict-cloud-export dict-cloud-verify smoke window-test e2e e2e-live matrix eval import-key run run-mock stop-mock test-mock package appcast release update-test lint format clean
 
 generate:
 	xcodegen generate --quiet
@@ -105,6 +105,21 @@ stop-mock:
 
 package: generate
 	scripts/package.sh
+
+# build/dist/appcast.xml for one zip from `make package`, for GitHub release TAG. KEY is the
+# EdDSA private key file; without it Sparkle's tool reads the key from the login Keychain.
+appcast:
+	scripts/appcast.sh "$(ZIP)" "$(TAG)" $(KEY)
+
+# Builds, packages, writes the appcast and publishes a GitHub release (scripts/release.sh).
+# DRY_RUN=1 checks and prints the commands only.
+release:
+	scripts/release.sh $(if $(DRY_RUN),--dry-run) $(KEY)
+
+# The Sparkle update cycle offline with the Debug app and a throwaway key. Launches and quits
+# a copy of the Dev app, so it refuses to run while another Dev app is running.
+update-test:
+	scripts/update-test.sh
 
 lint:
 	swift format lint --strict --recursive $(SWIFT_SOURCES)

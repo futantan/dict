@@ -27,7 +27,7 @@ zip_app() {
 check_signature() {
   local app="$1"
   codesign --verify --deep --strict "$app"
-  codesign -dv --verbose=2 "$app" 2>&1 | grep -E '^(Authority|TeamIdentifier)=' | head -2 | sed 's/^/package: /'
+  codesign -dv --verbose=2 "$app" 2>&1 | grep -E '^(Authority=(Apple Development|Developer ID)|TeamIdentifier=)' | sed 's/^/package: /'
 }
 
 # Notarization needs, and this machine does not have yet:

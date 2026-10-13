@@ -123,7 +123,7 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（`project.yml` 里的一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
 | 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
-现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`、查词卡片的提示词、解码和流式字段扫描（M2.5）、译成外语与回译的提示词和请求、改写的 `cleanUp` 与 `validate`（M3.2）；润色的提示词还没有。
+现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`、查词卡片的提示词、解码和流式字段扫描（M2.5）、译成外语与回译的提示词和请求、改写的 `cleanUp` 与 `validate`、应用场合映射 `appContext`（M3.2）；润色的提示词还没有。
 选区分类 `classify`、切句 `sentence(containing:in:)` 和 `writeAction` 已实现；`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
@@ -653,7 +653,7 @@ public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
 | `normalizedKey(_ text: String) -> String` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
 | `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：已实现，应用目标的 `contextSentence(in:selection:)` 是它的 `NSRange` 适配（第 3.5 节） |
 | `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节）。「主要是我的语言」就是 `resolveDirection` 给出 `.intoLearning`：书写系统不同时我的文字至少占字母的三分之一（混排的「这个 PR 我已经 review 过了」译成外语，「Please review 这个」纠错），相同时由语言识别判定；学习语言、第三种语言和没有字母的文字都纠错，纠错不会改变语言。现状：已实现（M3.2） |
-| `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据。现状：存根，M3.2 实现 |
+| `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据。现状：已实现（M3.2），bundle id 不分大小写精确匹配，覆盖常见的邮件、聊天、文档笔记、编辑器和终端；浏览器和表里没有的应用都是 `other` |
 
 `normalizedKey`、`sentence(containing:in:)`、`writeAction`、第 5.1 节的 `classify` 和第 5.2 节的 `resolveDirection` 已实现。
 
@@ -1141,6 +1141,26 @@ public func validate(source: String, result: String, action: RewriteAction, pair
   现状：三项检查和「在思考」的提示已实现（M2.9，`DictCore` 的 `ModelCheck`）；第二项用纠错的 strict `json_schema` 请求而不是卡片（manager 验收时认可），只检查回答能否严格解码，不管修改是否对得上原文。
   第一项译成「我的语言」（我的语言是英文时译成学习语言），首个内容只算正文、不算思考增量；第一项失败时后两项不做。
 
+### 6.9 译成外语面板
+
+「写」键选中的文字由 `writeAction` 判成 `.translateOut` 时，会话协调者不纠错，改走译成外语（M3.2、M3.2b 的串联）。
+面板状态是 `PanelPhase.translatedOut(TranslateOut)`：译文、正向流是否完整、回译（等待、文字、不可用）、`validate` 的问题、字段能否写入。
+引擎是 `TranslateOutEngine`，选择和降级同句子翻译（第 6.4、6.5 节）：有模型用 `ModelTranslator.translateOut`，应用场合由 `appContext(bundleID:)` 从取词的来源应用得到；没有模型而这对语言的语言包已装时用 Apple 翻译框架（我的语言 → 学习语言）；模型失败时按 `translationRecovery` 保留未完成的结果、降级到 Apple 翻译或显示错误。
+Apple 翻译的结果同样过 `cleanUp` 和 `validate`，回译也用 Apple 翻译（学习语言 → 我的语言），折成一行。
+正向流正常结束后才校验、才发回译；回译失败只把回译行改成「这次没能回译」，不挡替换。
+
+布局从上到下：原文（次要文字，最多 4 行）、分隔线、译文（主体，可选中复制，流式时带小转圈）、回译行、校验问题、底栏。
+回译行前面是一个「回译」小标识，后面是次要文字；回译到达前这一行就在，写着「译文完成后显示」或「正在回译…」，所以一行的回译到达时面板不跳高（`PanelGalleryTests` 有断言）。
+校验有问题时，回译行下面用橙色三角列出问题，`unchanged` 和 `languageMismatch` 同时出现只说「译文和原文一模一样」一条；底栏左边是橙色的「替换前请检查」。
+底栏右边：没有问题时是「替换 ↩」和「复制 ⌘C」；有问题时「替换」换成「仍要替换 ⌘↩」；字段不可写时只有「复制」，左边说明原因；生成中只在左边显示「译成外语」。
+
+键：回车只在译文完整、字段可写、没有问题时替换（`PanelPhase.canReplace`）；⌘回车在译文完整、字段可写时替换，有没有问题都行（`canReplaceAnyway`）；生成中两者都不做。
+替换走第 4 节的同一条管线：面板先隐藏，原应用重新成为 key 后写入，结果用提示胶囊报告，⌘Z 在原应用里撤销。
+胶囊里「复制结果」和「结果在剪贴板里」的说法对纠错和译成外语通用。
+「再试」重新判定动作并保留替换目标。
+画廊里有 `translate-out-generating-empty`、`translate-out-generating`、`translate-out-done`、`translate-out-back`、`translate-out-back-long`、`translate-out-issues`、`translate-out-read-only`、`translate-out-back-failed`、`translate-out-fallback`、`translate-out-failure`。
+e2e 场景「write shortcut, text view: my language is translated out, replaced and undone」用存根模型走真实面板：回车替换、读回字段、⌘Z 还原；还没有在真机上跑过。
+
 ## 7. 即时词典层
 
 ### 7.1 数据源与许可
@@ -1315,6 +1335,7 @@ public actor Lexicon {
 「再试」和卡片与译文互转沿用同一次记录。
 句子翻译在结果完整时记 `translated`；纠错在替换完成后记 `corrected`，`applied` 只在读回确认替换时为真，错处列表是 `[{"right": …, "wrong": …}]`，只记被接受的改动，改后文也是实际应用的文本；没有替换就关掉面板的纠错不记。
 引导里的示例翻译不记。
+译成外语同纠错：替换完成后记 `translated_out`，原文语言是我的语言、结果语言是学习语言，`applied` 只在读回确认替换时为真；没有替换就关掉面板（包括只复制）不记，回译不存。
 暂停记录、按应用排除和删除还没有界面。
 
 ### 8.2 表结构
@@ -1612,7 +1633,7 @@ M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读
   宽度固定，高度上限为屏幕可见高度的 60%，内容超出时滚动。
 - 状态：读取中、生成中（流式）、结果、未完成的结果、错误、需要设置（权限、模型）。
   未完成的结果（`PanelPhase.partial`）是被长度上限截断，或流中途失败时保留下来的译文，下方说明行写明原因；流中途失败的那种带「重试」（第 6.4 节）。
-  它和完整的结果（`PanelPhase.result`）一样能选中和拷贝，但不能作为替换的内容；替换只接受 `.result`。
+  它和完整的结果（`PanelPhase.result`）一样能选中和拷贝，但不能作为替换的内容；替换只接受完整的「写」结果（`.corrected`，或正向流已完成的 `.translatedOut`）。
   所有提示都在面板里，不弹系统对话框。
   唯一的例外由用户点击触发：辅助功能说明里的「打开系统设置」按钮先调用带 prompt 选项的 `AXIsProcessTrustedWithOptions`，把应用登记进辅助功能列表（系统可能弹出自己的提示），再跳到系统设置；按快捷键的路径和权限检查只用不弹窗的 `AXIsProcessTrusted()`、`CGPreflightPostEventAccess()`，绝不弹系统对话框。
 - Esc、点面板外、切到别的应用（例如 ⌘Tab）、再按同一个快捷键都会隐藏面板；隐藏即结束会话并取消进行中的请求。
@@ -1788,7 +1809,9 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 没有可用模型时，语言包恰好已装就用 Apple 翻译框架，否则面板显示「需要配置」。
 这个里程碑把所有选区都当作段落翻译，分类和查词在 M2。
 「写」键在 M1 只能设置，按下没有动作（只记一行日志），写作在 M3。
-现状：M3 的第一刀已做，「写」键只做纠错：取词时快照替换目标，面板显示 diff，回车隐藏面板后按第 4.4 节替换，结果用提示胶囊报告；润色、译成外语、动作切换、无选区时处理整个输入框和评测还没有做。
+现状：「写」键按 `writeAction` 分流：主要是我的语言就译成外语，面板流式显示译文、完成后给一行回译，回车替换（有校验问题时 ⌘回车）；否则纠错，面板显示 diff。
+两者都在取词时快照替换目标，回车隐藏面板后按第 4.4 节替换，结果用提示胶囊报告（第 6.9 节）。
+润色、动作切换、无选区时处理整个输入框还没有做；纠错的评测见第 14.5 节，译成外语的评测已有 `translateOut` 套件。
 
 | 任务 | 内容 | 依赖 | 可并行 |
 |---|---|---|---|
@@ -1848,13 +1871,13 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 | 任务 | 内容 | 依赖 | 可并行 |
 |---|---|---|---|
 | M3.1 纠错提示词与评测 | 带逗号连接分句规则的纠错提示词；评测证明收敛 | M1.2 | 是 |
-| M3.2 润色与译成外语 | 两个提示词、`appContext`、`cleanUp`、`validate`；评测。现状：`DictCore` 层的译成外语已做：`writeAction` 按方向路由，`PromptBuilder.translateOut` 带应用场合，`ModelTranslator.translateOut` 流式输出已清理的结果，`cleanUp` 和 `validate`（含 `unchanged`）已实现，`translateOut` 评测在 `gpt-6-luna` 上每个不变量 100%（第 6.6 节）；润色的提示词和评测、`appContext(bundleID:)` 的映射表、面板与会话的串联还没有做 | M1.2 | 是 |
-| M3.2b 回译 | 译成外语完成后把最终译文再译回我的语言，面板给一行核对；对照 Raycast google-translate 插件的回译核对补齐。现状：`ModelTranslator.backTranslate` 和评测的回译粗检已做，面板串联没有做 | M3.2 | 是 |
+| M3.2 润色与译成外语 | 两个提示词、`appContext`、`cleanUp`、`validate`；评测。现状：`DictCore` 层的译成外语已做：`writeAction` 按方向路由，`PromptBuilder.translateOut` 带应用场合，`ModelTranslator.translateOut` 流式输出已清理的结果，`cleanUp` 和 `validate`（含 `unchanged`）已实现，`translateOut` 评测在 `gpt-6-luna` 上每个不变量 100%（第 6.6 节）；`appContext(bundleID:)` 的映射表和面板与会话的串联已做（第 6.9 节）；润色的提示词和评测还没有做 | M1.2 | 是 |
+| M3.2b 回译 | 译成外语完成后把最终译文再译回我的语言，面板给一行核对；对照 Raycast google-translate 插件的回译核对补齐。现状：`ModelTranslator.backTranslate`、评测的回译粗检和面板里的回译行已做（第 6.9 节） | M3.2 | 是 |
 | M3.3 错处与 diff | `applyEdits`、通用 diff、`replacementConfirmed` | M1.0 | 是 |
 | M3.4 替换 | 可写判定、`ReplaceTarget` 快照、`ReplaceWriter` 状态机与假实现测试、提示胶囊 | M1.4 | 是 |
 | M3.5 夹具扩展 | 撒谎控件、迟到粘贴、异步写入、⌘Z 断言；SwiftUI `TextField` 和 `TextEditor`（第 14.3 节）；替换场景 | M1.5 | 是 |
 | M3.6 零配置写作 | 系统拼写检查转错处列表；Apple 翻译的译成外语 | M1.8 | 是 |
-| M3.7 界面串联 | 写键流程、动作切换、diff 视图、校验警告、记录纠正的句子；Chromium 多段的拷贝取原文 | M3.1–M3.6 | 最后 |
+| M3.7 界面串联 | 写键流程、动作切换、diff 视图、校验警告、记录纠正的句子；Chromium 多段的拷贝取原文。现状：写键按 `writeAction` 在纠错和译成外语之间分流，译成外语的面板、回译行、校验警告和 ⌘回车、替换后记 `translated_out` 已做（第 6.9 节）；动作切换、润色和 Chromium 多段还没有做 | M3.1–M3.6 | 最后 |
 | M3.8 逐条接受 | `AppliedEdits.accepting`；面板里点击或 ← → 加空格逐条接受、拒绝改动；回车只替换被接受的改动，全部拒绝时不替换并提示；画廊 `proofread-partial`、`proofread-all-rejected`（第 6.7 节） | M3.3、M3.7 | 是 |
 | M3.9 双击修饰键 | 「读」「写」可以设为双击一个修饰键（左侧录入为任一侧，右侧录入只认右侧）：`Hotkey` 类型与向后兼容的持久化、纯状态机 `DoubleTapDetector`、事件监视器、录键控件与引导选键步骤、⌘⌃ 的系统冲突提示（第 10.1 节） | M1.6 | 是 |
 

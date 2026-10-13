@@ -57,6 +57,16 @@ struct TranslateOutEvaluationTests {
     #expect(failures(english, back: "We meet on May 20 at 3.")[.backLanguage] != nil)
   }
 
+  /// A live gpt-6-luna round trip: "3月份" went out as "March" and came back as "三月份".
+  @Test func singleDigitMayComeBackAsAChineseNumeral() {
+    let invoice = "附件是3月份的发票，金额共计12,800元，请查收。"
+    let results = evaluateTranslateOut(
+      "Attached is the invoice for March. The total amount is 12,800 yuan. Please review it.",
+      back: "附件是三月份的发票。总金额为12,800元。请查阅。", source: invoice, pair: pair, checks: [])
+    #expect(results.first { $0.invariant == .backMeaning }?.failure == nil)
+    #expect(failures(english, back: "我们五月20日下午三点开会。")[.backMeaning] == nil)
+  }
+
   @Test func runnerTranslatesOutThenBacktranslatesTheCleanedResult() async {
     let requests = Mutex<[ModelRequest]>([])
     let runner = EvalRunner(

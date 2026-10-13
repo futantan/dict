@@ -31,12 +31,13 @@ let translateOutCases = [
   out("chat-hotpot", "今晚一起吃火锅吗？我请客", .chat, back: ["火锅"], extra: [.keepsQuestion]),
   out("chat-late", "不好意思，路上堵车，我要晚到十分钟", .chat, back: ["堵"]),
   out("chat-thanks", "太感谢了，帮了我大忙！", .chat, back: ["谢"]),
-  out("chat-hike", "周末去爬山不？天气预报说是晴天", .chat, back: ["山"]),
+  // "爬山" naturally goes out as "go hiking", which comes back as "徒步".
+  out("chat-hike", "周末去爬山不？天气预报说是晴天", .chat, back: ["山", "徒步"]),
   out("chat-pr", "这个 PR 我已经 review 过了，没问题就合了吧", .chat, verbatim: ["PR"], back: ["PR"]),
   out("chat-birthday", "生日快乐🎂 今天玩得开心！", .chat, verbatim: ["🎂"], back: ["生日"]),
   out("chat-wechat", "我在微信上把文件发你了，记得查收", .chat, verbatim: ["WeChat"], back: ["文件"]),
   out("chat-short", "好的，收到", .chat),
-  out("chat-opinion", "你觉得这个方案怎么样？", .chat, back: ["方案"], extra: [.keepsQuestion]),
+  out("chat-opinion", "你觉得这个方案怎么样？", .chat, back: ["方案", "计划"], extra: [.keepsQuestion]),
   // Mail: names, dates, amounts, links and paragraphs.
   out(
     "mail-reschedule", "王经理您好，原定于5月20日的会议改到5月22日上午10点，地点不变。", .mail,
@@ -44,7 +45,7 @@ let translateOutCases = [
   out(
     "mail-invoice", "附件是3月份的发票，金额共计12,800元，请查收。", .mail,
     verbatim: ["12,800"], back: ["发票"]),
-  out("mail-leave", "李老师，我下周一到周三请假，作业会按时提交。", .mail, back: ["作业"]),
+  out("mail-leave", "李老师，我下周一到周三请假，作业会按时提交。", .mail, back: ["作业", "任务"]),
   out("mail-sorry", "抱歉回复晚了，这两天一直在出差。", .mail, back: ["出差"]),
   out(
     "mail-link", "报名链接在这里：https://example.com/signup?id=42 ，截止日期是周五。", .mail,

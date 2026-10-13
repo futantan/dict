@@ -605,11 +605,17 @@ func evaluateTranslateOut(
 
 /// Why `back` does not look like it says what `source` said, or nil: a number of the source
 /// is missing, too few of the source's distinct Han characters are in it, or none of a group
-/// of key words is.
+/// of key words is. A single digit may come back as its Chinese numeral: "3月" goes out as
+/// "March" and comes back as "三月" (measured with gpt-6-luna).
 private func meaningLoss(_ back: String, source: String, keeps: [[String]]) -> String? {
   let backDigits = back.filter { !$0.isWhitespace && $0 != "," }
+  let numerals: [String: [String]] = [
+    "0": ["零"], "1": ["一"], "2": ["二", "两"], "3": ["三"], "4": ["四"], "5": ["五"],
+    "6": ["六"], "7": ["七"], "8": ["八"], "9": ["九"],
+  ]
   if let number = source.matches(of: /[0-9]+/).map({ String($0.output) }).first(where: {
-    !backDigits.contains($0)
+    number in
+    !backDigits.contains(number) && !(numerals[number] ?? []).contains { back.contains($0) }
   }) {
     return "missing \(quoted(number))"
   }

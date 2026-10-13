@@ -30,6 +30,28 @@
         }
       }
     },
+    "%lld of %lld changes" : {
+      "comment" : "Panel footer: how many of the corrections are accepted, when not all are",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已接受 %1$lld/%2$lld 处修改"
+          }
+        }
+      }
+    },
+    "All changes declined" : {
+      "comment" : "Panel footer when the user declined every correction",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拒绝全部修改"
+          }
+        }
+      }
+    },
     "blocked by the content filter" : {
       "comment" : "Proofread failure reason",
       "localizations" : {
@@ -59,6 +81,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在检查拼写和语法…"
+          }
+        }
+      }
+    },
+    "Click a change, or use ← → and Space, to accept or decline it" : {
+      "comment" : "Tooltip of the proofread text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击修改处，或用 ← → 和空格键，接受或拒绝它"
           }
         }
       }
@@ -136,6 +169,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有发现错误"
+          }
+        }
+      }
+    },
+    "Nothing replaced: accept a change first" : {
+      "comment" : "Panel footer after Return with every correction declined; nothing was replaced",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未替换：请先接受至少一处修改"
           }
         }
       }

@@ -59,6 +59,16 @@
           .changed(from: "", to: "a "),
           .unchanged("bakery."),
         ])
+      // Two changes declined, one of them a pure insertion, and the current one accepted.
+      var partial = Correction(changed, replaceable: true)
+      partial.toggle(1)
+      partial.toggle(3)
+      partial.current = 2
+      // Return was pressed with every change declined.
+      var declined = Correction(changed, replaceable: true)
+      for change in 0..<declined.changeCount { declined.toggle(change) }
+      declined.current = 0
+      declined.declinedReturn = true
       let clean = AppliedEdits(
         text: "She has lived here since 2019.",
         segments: [.unchanged("She has lived here since 2019.")])
@@ -69,6 +79,8 @@
           "corrected-read-only",
           PanelState(phase: .corrected(Correction(changed, replaceable: false)))
         ),
+        ("proofread-partial", PanelState(phase: .corrected(partial))),
+        ("proofread-all-rejected", PanelState(phase: .corrected(declined))),
         (
           "corrected-no-mistakes",
           PanelState(phase: .corrected(Correction(clean, replaceable: true)))

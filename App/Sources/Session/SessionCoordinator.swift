@@ -7,12 +7,24 @@ import DictCore
 @MainActor
 protocol SessionPanel: AnyObject {
   var isVisible: Bool { get }
+  /// The correction shown, with the changes the user accepted: the panel keeps that review
+  /// itself (`PanelController.review`). Nil when no correction is shown or the panel cannot
+  /// tell, and then every change counts as accepted.
+  var reviewedCorrection: Correction? { get }
   func show(_ state: PanelState, near anchor: PanelAnchor)
   func update(_ state: PanelState)
   func hide()
 }
 
-extension PanelController: SessionPanel {}
+extension SessionPanel {
+  var reviewedCorrection: Correction? { nil }
+}
+
+extension PanelController: SessionPanel {
+  var reviewedCorrection: Correction? {
+    if case .corrected(let correction) = state.phase { correction } else { nil }
+  }
+}
 
 /// Turns text into panel states; `TranslationEngine` in the app.
 @MainActor
@@ -151,14 +163,25 @@ final class SessionCoordinator {
     read(role)
   }
 
-  /// Return in the panel: replaces the selection with the correction shown. The panel hides
-  /// first, so the app the text came from is key again when the write happens (architecture
-  /// 4.4, 11.2). A later session does not cancel the replacement: once it may have pasted,
-  /// stopping halfway would leave the result on the clipboard.
+  /// Return in the panel: replaces the selection with the changes the user accepted. The
+  /// panel hides first, so the app the text came from is key again when the write happens
+  /// (architecture 4.4, 11.2). A later session does not cancel the replacement: once it may
+  /// have pasted, stopping halfway would leave the result on the clipboard. With every
+  /// change declined nothing is replaced, and the panel stays and says so.
   func confirm() {
-    guard panel.isVisible, let target, case .corrected(let correction) = currentPhase,
-      correction.canReplace
+    guard panel.isVisible, let target, case .corrected(let shown) = currentPhase,
+      shown.canReplace
     else { return }
+    var correction = shown
+    if let reviewed = panel.reviewedCorrection, reviewed.proposed == shown.proposed {
+      correction = reviewed
+    }
+    guard !correction.accepted.isEmpty else {
+      correction.declinedReturn = true
+      show(PanelState(phase: .corrected(correction)), id: id)
+      Log.ui.info("session \(self.id, privacy: .public): every change declined, nothing replaced")
+      return
+    }
     let bounds = targetBounds
     let writer = environment.replaceWriter
     let showToast = environment.showToast
@@ -698,9 +721,9 @@ final class SessionCoordinator {
 }
 
 extension Correction {
-  /// The changes as the vocabulary log stores them: `[{"right": …, "wrong": …}]`.
+  /// The accepted changes as the vocabulary log stores them: `[{"right": …, "wrong": …}]`.
   var editsJSON: String? {
-    let edits = segments.compactMap { segment -> [String: String]? in
+    let edits = result.segments.compactMap { segment -> [String: String]? in
       guard case .changed(let wrong, let right) = segment else { return nil }
       return ["wrong": wrong, "right": right]
     }

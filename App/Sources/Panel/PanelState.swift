@@ -72,21 +72,52 @@ enum PanelPhase: Sendable, Equatable {
   }
 }
 
-/// A finished proofread (architecture 6.7).
+/// A finished proofread and which of its changes the user keeps (architecture 6.7, 11.5).
+/// A change is a `.changed` run of the diff, numbered from 0; every change starts accepted.
+/// The panel changes `accepted` and `current` itself, as the user reviews.
 struct Correction: Sendable, Equatable {
-  /// The original text with each change in place.
-  var segments: [DiffSegment]
-  /// The corrected text.
-  var text: String
-  var changeCount: Int
+  /// Every change the model made, accepted or not.
+  var proposed: AppliedEdits
+  var accepted: Set<Int>
+  /// The change ←, → and Space act on; nil when there are none.
+  var current: Int?
   /// There are changes and the selection's field can be written (architecture 4.3).
   var canReplace: Bool
+  /// Return was pressed with every change declined, so nothing was replaced; the footer
+  /// says why until the next review step.
+  var declinedReturn = false
 
   init(_ applied: AppliedEdits, replaceable: Bool) {
-    segments = applied.segments
-    text = applied.text
-    changeCount = applied.changeCount
+    proposed = applied
+    accepted = Set(0..<applied.changeCount)
+    current = applied.changeCount > 0 ? 0 : nil
     canReplace = replaceable && applied.changeCount > 0
+  }
+
+  var changeCount: Int { proposed.changeCount }
+
+  /// The source with the accepted changes made; replaced, copied and recorded.
+  var result: AppliedEdits { proposed.accepting(accepted) }
+
+  var text: String { result.text }
+
+  /// Accepts a declined change and declines an accepted one, and makes it current.
+  mutating func toggle(_ change: Int) {
+    guard (0..<changeCount).contains(change) else { return }
+    if accepted.contains(change) { accepted.remove(change) } else { accepted.insert(change) }
+    current = change
+    declinedReturn = false
+  }
+
+  mutating func toggleCurrent() {
+    if let current { toggle(current) }
+  }
+
+  /// Moves `current` by `offset` changes, stopping at the first and the last.
+  mutating func moveCurrent(by offset: Int) {
+    guard changeCount > 0 else { return }
+    current = min(max((current ?? 0) + offset, 0), changeCount - 1)
+    declinedReturn = false
   }
 }
 

@@ -13,6 +13,10 @@ enum PanelKeyRoute: Equatable {
   case confirm
   /// Perform a panel action, as its button would: ⌘S and ⌘P on a word card.
   case perform(PanelAction.ID)
+  /// Make the previous (-1) or next (+1) change of a correction current (architecture 11.5).
+  case moveChange(Int)
+  /// Accept the current change of a correction if it is declined, decline it if accepted.
+  case toggleChange
   /// Send an editing action to the first responder. The app has no Edit menu, so nothing
   /// else turns ⌘C, ⌘V and the like into actions.
   case edit(Selector)
@@ -25,6 +29,9 @@ enum PanelKeys {
   static let returnKey: UInt16 = 36
   static let keypadEnter: UInt16 = 76
   static let tab: UInt16 = 48
+  static let space: UInt16 = 49
+  static let leftArrow: UInt16 = 123
+  static let rightArrow: UInt16 = 124
 
   /// - Parameters:
   ///   - hasMarkedText: The focused text field holds uncommitted input-method text. Return,
@@ -32,16 +39,27 @@ enum PanelKeys {
   ///   - hasSelectedText: The focused text view has a non-empty selection.
   ///   - canReplace: The panel shows a correction that Return writes into the app.
   ///   - showsCard: The panel shows a word card, which takes ⌘S and ⌘P.
+  ///   - reviewsChanges: The panel shows a correction with changes and no control has
+  ///     focus, so ← and → move between the changes and Space accepts or declines one. With
+  ///     a button focused through Tab, Space presses the button as usual.
   static func route(
     keyCode: UInt16, characters: String?, modifiers: NSEvent.ModifierFlags,
     hasMarkedText: Bool, hasSelectedText: Bool, hasResult: Bool, canReplace: Bool = false,
-    showsCard: Bool = false
+    showsCard: Bool = false, reviewsChanges: Bool = false
   ) -> PanelKeyRoute {
     if hasMarkedText { return .pass }
     let modifiers = modifiers.intersection([.command, .shift, .option, .control])
     if keyCode == escape && modifiers.isEmpty { return .dismiss }
     if canReplace && modifiers.isEmpty && (keyCode == returnKey || keyCode == keypadEnter) {
       return .confirm
+    }
+    if reviewsChanges && modifiers.isEmpty {
+      switch keyCode {
+      case leftArrow: return .moveChange(-1)
+      case rightArrow: return .moveChange(1)
+      case space: return .toggleChange
+      default: break
+      }
     }
     guard modifiers == .command || modifiers == [.command, .shift] else { return .pass }
 

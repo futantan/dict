@@ -86,6 +86,15 @@ final class PanelController {
     Log.ui.info("panel hidden")
   }
 
+  /// Changes which changes of the correction shown are accepted. The review is the user's
+  /// input, like the text field's draft, so the panel keeps it in its state; the session
+  /// reads it from `state` on Return.
+  func review(_ change: (inout Correction) -> Void) {
+    guard isVisible, case .corrected(var correction) = model.state.phase else { return }
+    change(&correction)
+    model.state.phase = .corrected(correction)
+  }
+
   // MARK: - Window
 
   private func makePanel() -> ResultPanel {
@@ -94,6 +103,7 @@ final class PanelController {
       onSubmit: { [weak self] in self?.onSubmit($0) },
       onAction: { [weak self] in self?.onAction($0) },
       onConfirm: { [weak self] in self?.onConfirm() },
+      onToggleChange: { [weak self] change in self?.review { $0.toggle(change) } },
       onContentHeight: { [weak self] in self?.contentHeightChanged($0) })
     let hosting = NSHostingView(rootView: view)
     hosting.sizingOptions = []
@@ -106,6 +116,15 @@ final class PanelController {
       if case .card = self?.model.state.phase { true } else { false }
     }
     panel.onPerform = { [weak self] in self?.onAction($0) }
+    panel.showsChanges = { [weak self] in
+      if case .corrected(let correction) = self?.model.state.phase {
+        correction.changeCount > 0
+      } else {
+        false
+      }
+    }
+    panel.onMoveChange = { [weak self] offset in self?.review { $0.moveCurrent(by: offset) } }
+    panel.onToggleChange = { [weak self] in self?.review { $0.toggleCurrent() } }
     return panel
   }
 

@@ -74,15 +74,28 @@ private final class FakePanel: SessionPanel {
 
   private(set) var calls: [Call] = []
   private(set) var isVisible = false
+  private var state = PanelState.input
+  var reviewedCorrection: Correction? {
+    if case .corrected(let correction) = state.phase { correction } else { nil }
+  }
 
   func show(_ state: PanelState, near anchor: PanelAnchor) {
     isVisible = true
+    self.state = state
     calls.append(.show(state, anchor))
   }
 
   func update(_ state: PanelState) {
     guard isVisible else { return }
+    self.state = state
     calls.append(.update(state))
+  }
+
+  /// The user accepts or declines changes, as `PanelController.review` does.
+  func review(_ change: (inout Correction) -> Void) {
+    guard case .corrected(var correction) = state.phase else { return }
+    change(&correction)
+    state.phase = .corrected(correction)
   }
 
   func hide() {
@@ -706,6 +719,52 @@ struct WriteSessionTests {
     #expect(sentences?.first?.applied == true)
     #expect(sentences?.first?.editsJSON == #"[{"right":"the","wrong":"teh"}]"#)
     #expect(sentences?.first?.sourceApp == "com.apple.TextEdit")
+  }
+
+  /// Only the accepted changes are written and recorded.
+  @Test func returnReplacesWithTheAcceptedChangesOnly() async {
+    let target = replaceTarget("teh cat sat on teh mat")
+    let harness = Harness(
+      [(.success(selection("teh cat sat on teh mat", target: target)), nil)])
+    harness.proofreader?.result = .success(
+      AppliedEdits(
+        text: "the cat sat on the mat",
+        segments: [
+          .changed(from: "teh", to: "the"), .unchanged(" cat sat on "),
+          .changed(from: "teh", to: "the"), .unchanged(" mat"),
+        ]))
+    await harness.press(.write)
+
+    harness.panel.review { $0.toggle(0) }
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.map(\.result) == ["teh cat sat on the mat"])
+    #expect(harness.toasts == [.replaced])
+    let sentences = try? await harness.vocab?.day(today).sentences
+    #expect(sentences?.first?.result == "teh cat sat on the mat")
+    #expect(sentences?.first?.editsJSON == #"[{"right":"the","wrong":"teh"}]"#)
+  }
+
+  /// Return with every change declined replaces nothing and says so in the panel.
+  @Test func returnWithEveryChangeDeclinedKeepsThePanelAndSaysSo() async {
+    let target = replaceTarget("teh cat")
+    let harness = Harness([(.success(selection("teh cat", target: target)), nil)])
+    await harness.press(.write)
+
+    harness.panel.review { $0.toggle(0) }
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.isEmpty)
+    #expect(harness.toasts.isEmpty)
+    #expect(harness.panel.isVisible)
+    var expected = Correction(fixed, replaceable: true)
+    expected.toggle(0)
+    expected.declinedReturn = true
+    #expect(harness.panel.calls.last == .update(PanelState(phase: .corrected(expected))))
+    let sentences = try? await harness.vocab?.day(today).sentences
+    #expect(sentences?.isEmpty ?? true)
   }
 
   @Test func aStaleTargetIsReportedWithTheResultToCopy() async {

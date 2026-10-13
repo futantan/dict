@@ -16,6 +16,7 @@ struct PanelKeysTests {
     var result = false
     var replaceable = false
     var card = false
+    var changes = false
     let expected: PanelKeyRoute
 
     var testDescription: String { name }
@@ -25,6 +26,25 @@ struct PanelKeysTests {
   private static let shift = NSEvent.ModifierFlags.shift.rawValue
 
   static let cases: [Case] = [
+    Case(
+      name: "← moves to the previous change", keyCode: 123, changes: true, expected: .moveChange(-1)
+    ),
+    Case(name: "→ moves to the next change", keyCode: 124, changes: true, expected: .moveChange(1)),
+    Case(
+      name: "Space accepts or declines", keyCode: 49, characters: " ", changes: true,
+      expected: .toggleChange),
+    Case(
+      name: "Space without changes is left alone", keyCode: 49, characters: " ", expected: .pass),
+    Case(name: "→ without changes is left alone", keyCode: 124, expected: .pass),
+    Case(
+      name: "⇧→ still extends a selection", keyCode: 124, modifiers: shift, changes: true,
+      expected: .pass),
+    Case(
+      name: "Space while composing goes to the input method", keyCode: 49, characters: " ",
+      marked: true, changes: true, expected: .pass),
+    Case(
+      name: "Return still replaces while reviewing", keyCode: 36, characters: "\r",
+      replaceable: true, changes: true, expected: .confirm),
     Case(name: "Esc hides", keyCode: 53, characters: "\u{1b}", expected: .dismiss),
     Case(
       name: "Esc while composing goes to the input method", keyCode: 53, characters: "\u{1b}",
@@ -107,7 +127,7 @@ struct PanelKeysTests {
       keyCode: c.keyCode, characters: c.characters,
       modifiers: NSEvent.ModifierFlags(rawValue: c.modifiers), hasMarkedText: c.marked,
       hasSelectedText: c.selected, hasResult: c.result, canReplace: c.replaceable,
-      showsCard: c.card)
+      showsCard: c.card, reviewsChanges: c.changes)
     #expect(route == c.expected)
   }
 }

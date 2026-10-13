@@ -19,6 +19,26 @@ enum WritingStrings {
       comment: "Panel footer: how many corrections the proofread made")
   }
 
+  /// How many of the changes are accepted; when all are, as `changes(_:)`.
+  static func changes(_ accepted: Int, of count: Int) -> String {
+    guard accepted != count else { return changes(count) }
+    return String(
+      localized: "\(accepted) of \(count) changes", table: "Writing",
+      comment: "Panel footer: how many of the corrections are accepted, when not all are")
+  }
+
+  static let allDeclined = String(
+    localized: "All changes declined", table: "Writing",
+    comment: "Panel footer when the user declined every correction")
+
+  static let nothingReplaced = String(
+    localized: "Nothing replaced: accept a change first", table: "Writing",
+    comment: "Panel footer after Return with every correction declined; nothing was replaced")
+
+  static let reviewHelp = String(
+    localized: "Click a change, or use ← → and Space, to accept or decline it", table: "Writing",
+    comment: "Tooltip of the proofread text")
+
   static let noMistakes = String(
     localized: "No mistakes found", table: "Writing",
     comment: "Panel footer when the proofread changed nothing")

@@ -19,10 +19,12 @@ struct SelectableText: NSViewRepresentable {
   /// 0 shows every line; otherwise the text is cut off with an ellipsis after this many.
   var maximumLines = 0
   var accessibilityLabel: String?
+  /// A click on text that carries `.dictChange`, with its value, instead of selecting.
+  var onClickChange: ((Int) -> Void)?
 
-  func makeNSView(context: Context) -> NSTextView {
+  func makeNSView(context: Context) -> ChangeTextView {
     // TextKit 1, so the height for a width comes straight from the layout manager.
-    let view = NSTextView(usingTextLayoutManager: false)
+    let view = ChangeTextView(usingTextLayoutManager: false)
     view.isEditable = false
     view.isSelectable = true
     view.isRichText = false
@@ -36,7 +38,8 @@ struct SelectableText: NSViewRepresentable {
     return view
   }
 
-  func updateNSView(_ view: NSTextView, context: Context) {
+  func updateNSView(_ view: ChangeTextView, context: Context) {
+    view.onClickChange = onClickChange
     let paragraph = NSMutableParagraphStyle()
     paragraph.lineSpacing = lineSpacing
     let attributed =
@@ -54,7 +57,7 @@ struct SelectableText: NSViewRepresentable {
     view.setAccessibilityLabel(accessibilityLabel)
   }
 
-  func sizeThatFits(_ proposal: ProposedViewSize, nsView view: NSTextView, context: Context)
+  func sizeThatFits(_ proposal: ProposedViewSize, nsView view: ChangeTextView, context: Context)
     -> CGSize?
   {
     guard let width = proposal.width, width.isFinite, width > 0,
@@ -64,5 +67,36 @@ struct SelectableText: NSViewRepresentable {
     layout.ensureLayout(for: container)
     let height = layout.usedRect(for: container).height
     return CGSize(width: width, height: height.rounded(.up))
+  }
+}
+
+/// A text view where a click on a change of a correction toggles it rather than starting a
+/// selection (architecture 11.5).
+final class ChangeTextView: NSTextView {
+  var onClickChange: ((Int) -> Void)?
+
+  override func mouseDown(with event: NSEvent) {
+    if let onClickChange, let change = change(at: convert(event.locationInWindow, from: nil)) {
+      onClickChange(change)
+    } else {
+      super.mouseDown(with: event)
+    }
+  }
+
+  /// The change under `point`, in the view's coordinates; nil beside the text, where the
+  /// layout manager would answer with the nearest character.
+  func change(at point: CGPoint) -> Int? {
+    guard let layout = layoutManager, let container = textContainer, let storage = textStorage,
+      storage.length > 0
+    else { return nil }
+    let origin = textContainerOrigin
+    let local = CGPoint(x: point.x - origin.x, y: point.y - origin.y)
+    let glyph = layout.glyphIndex(for: local, in: container)
+    let bounds = layout.boundingRect(
+      forGlyphRange: NSRange(location: glyph, length: 1), in: container)
+    guard bounds.contains(local) else { return nil }
+    let index = layout.characterIndexForGlyph(at: glyph)
+    guard index < storage.length else { return nil }
+    return storage.attribute(.dictChange, at: index, effectiveRange: nil) as? Int
   }
 }

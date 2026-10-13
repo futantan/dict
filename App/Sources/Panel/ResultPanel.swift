@@ -19,6 +19,11 @@ final class ResultPanel: NSPanel {
   var showsCard: () -> Bool = { false }
   /// Called for a key that stands for a panel action.
   var onPerform: (PanelAction.ID) -> Void = { _ in }
+  /// Whether the panel shows a correction with changes to accept or decline.
+  var showsChanges: () -> Bool = { false }
+  /// Called for ← and → (-1, +1) and for Space while the panel shows changes.
+  var onMoveChange: (Int) -> Void = { _ in }
+  var onToggleChange: () -> Void = {}
 
   /// Corner radius of the panel's background.
   static var cornerRadius: CGFloat {
@@ -56,7 +61,8 @@ final class ResultPanel: NSPanel {
       keyCode: event.keyCode, characters: event.charactersIgnoringModifiers,
       modifiers: event.modifierFlags, hasMarkedText: textView?.hasMarkedText() ?? false,
       hasSelectedText: (textView?.selectedRange().length ?? 0) > 0,
-      hasResult: copyableText() != nil, canReplace: canReplace(), showsCard: showsCard())
+      hasResult: copyableText() != nil, canReplace: canReplace(), showsCard: showsCard(),
+      reviewsChanges: showsChanges() && (firstResponder === self || textView != nil))
   }
 
   override func sendEvent(_ event: NSEvent) {
@@ -69,6 +75,10 @@ final class ResultPanel: NSPanel {
       onConfirm()
     case .perform(let action):
       onPerform(action)
+    case .moveChange(let offset):
+      onMoveChange(offset)
+    case .toggleChange:
+      onToggleChange()
     case .copyResult:
       if let text = copyableText() {
         NSPasteboard.general.clearContents()

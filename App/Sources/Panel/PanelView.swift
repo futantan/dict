@@ -31,15 +31,20 @@ struct PanelView: View {
   var onSubmit: (String) -> Void = { _ in }
   var onAction: (PanelAction.ID) -> Void = { _ in }
   var onConfirm: () -> Void = {}
+  /// A click on a change of the correction shown; the value is its index.
+  var onToggleChange: (Int) -> Void = { _ in }
   /// Reports the height the content wants; the controller sizes the window from it.
   var onContentHeight: (CGFloat) -> Void = { _ in }
 
   var body: some View {
     ScrollView(.vertical) {
-      PanelContent(model: model, onSubmit: onSubmit, onAction: onAction, onConfirm: onConfirm)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: onContentHeight)
+      PanelContent(
+        model: model, onSubmit: onSubmit, onAction: onAction, onConfirm: onConfirm,
+        onToggleChange: onToggleChange
+      )
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .fixedSize(horizontal: false, vertical: true)
+      .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: onContentHeight)
     }
     .scrollDisabled(!model.isScrollable)
     .scrollIndicators(model.isScrollable ? .automatic : .never)
@@ -72,10 +77,12 @@ private struct PanelContent: View {
   let onSubmit: (String) -> Void
   let onAction: (PanelAction.ID) -> Void
   let onConfirm: () -> Void
+  let onToggleChange: (Int) -> Void
 
   var body: some View {
     VStack(spacing: 0) {
-      PanelBody(model: model, onSubmit: onSubmit, onAction: onAction)
+      PanelBody(
+        model: model, onSubmit: onSubmit, onAction: onAction, onToggleChange: onToggleChange)
       switch model.state.phase {
       case .checking:
         Divider()
@@ -105,6 +112,7 @@ private struct PanelBody: View {
   let model: PanelModel
   let onSubmit: (String) -> Void
   let onAction: (PanelAction.ID) -> Void
+  let onToggleChange: (Int) -> Void
 
   var body: some View {
     let state = model.state
@@ -144,9 +152,13 @@ private struct PanelBody: View {
       case .corrected(let correction):
         SelectableText(
           text: correction.text,
-          attributed: diffText(correction.segments),
+          attributed: diffText(
+            correction.proposed.segments, accepted: correction.accepted,
+            current: correction.current),
           font: Metrics.bodyNSFont, lineSpacing: Metrics.bodyLineSpacing,
-          accessibilityLabel: WritingStrings.title)
+          accessibilityLabel: WritingStrings.title, onClickChange: onToggleChange
+        )
+        .help(correction.changeCount > 0 ? WritingStrings.reviewHelp : "")
       case .card(let card):
         CardView(card: card)
       }
@@ -323,10 +335,18 @@ extension PanelPhase {
 
 // MARK: - Write flow
 
-/// The proofread text with each change in place: the removed words struck through in red,
-/// the inserted ones in green, a plain space between the two so they do not run together.
+/// The proofread text with each change in place. An accepted change shows the removed
+/// words struck through in red and the inserted ones in green; a declined one shows the
+/// original words, then the declined suggestion struck through and faint (a declined
+/// deletion, which has none, underlines the kept words with dots). A plain space keeps the two sides from running together. The current change, the
+/// one ← → and Space act on, is underlined in the accent colour. Every character of a change
+/// carries its index (`.dictChange`) for clicks, and the pointing hand.
+///
+/// - Parameter accepted: The accepted changes; nil accepts every one.
 @MainActor
-func diffText(_ segments: [DiffSegment]) -> NSAttributedString {
+func diffText(
+  _ segments: [DiffSegment], accepted: Set<Int>? = nil, current: Int? = nil
+) -> NSAttributedString {
   let red = DiffColor.removed
   let green = DiffColor.inserted
   let paragraph = NSMutableParagraphStyle()
@@ -335,30 +355,60 @@ func diffText(_ segments: [DiffSegment]) -> NSAttributedString {
     .font: Metrics.bodyNSFont, .foregroundColor: NSColor.labelColor, .paragraphStyle: paragraph,
   ]
   let text = NSMutableAttributedString()
+  var change = 0
   for segment in segments {
-    switch segment {
-    case .unchanged(let run):
-      text.append(NSAttributedString(string: run, attributes: base))
-    case .changed(let from, let to):
-      if !from.isEmpty {
-        var removed = base
+    guard case .changed(let from, let to) = segment else {
+      if case .unchanged(let run) = segment {
+        text.append(NSAttributedString(string: run, attributes: base))
+      }
+      continue
+    }
+    let isAccepted = accepted?.contains(change) ?? true
+    let isCurrent = change == current
+    var marked = base
+    marked[.dictChange] = change
+    marked[.cursor] = NSCursor.pointingHand
+    if isCurrent {
+      marked[.underlineStyle] = NSUnderlineStyle.thick.rawValue
+      marked[.underlineColor] = NSColor.controlAccentColor
+    }
+    if !from.isEmpty {
+      var removed = marked
+      if isAccepted {
         removed[.foregroundColor] = red
         removed[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
         removed[.strikethroughColor] = red
-        text.append(NSAttributedString(string: from, attributes: removed))
+      } else if to.isEmpty && !isCurrent {
+        // A declined deletion has no faint suggestion to mark it.
+        removed[.underlineStyle] = NSUnderlineStyle([.single, .patternDot]).rawValue
+        removed[.underlineColor] = NSColor.secondaryLabelColor
       }
-      if !from.isEmpty && !to.isEmpty {
-        text.append(NSAttributedString(string: " ", attributes: base))
-      }
-      if !to.isEmpty {
-        var inserted = base
+      text.append(NSAttributedString(string: from, attributes: removed))
+    }
+    if !from.isEmpty && !to.isEmpty {
+      // Underlined with the change when current, so the change reads as one piece.
+      text.append(NSAttributedString(string: " ", attributes: marked))
+    }
+    if !to.isEmpty {
+      var inserted = marked
+      if isAccepted {
         inserted[.foregroundColor] = green
         inserted[.backgroundColor] = NSColor.systemGreen.withAlphaComponent(0.14)
-        text.append(NSAttributedString(string: to, attributes: inserted))
+      } else {
+        inserted[.foregroundColor] = NSColor.tertiaryLabelColor
+        inserted[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+        inserted[.strikethroughColor] = NSColor.tertiaryLabelColor
       }
+      text.append(NSAttributedString(string: to, attributes: inserted))
     }
+    change += 1
   }
   return text
+}
+
+extension NSAttributedString.Key {
+  /// The index of the change a character of the diff belongs to (`diffText`).
+  static let dictChange = NSAttributedString.Key("DictChange")
 }
 
 /// The diff's text colours. The system red and green are bright enough for dark mode, but
@@ -405,7 +455,8 @@ private struct ActionBar: View {
         .lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
       if case .corrected(let correction) = status {
-        if correction.canReplace {
+        // With every change declined Return only explains that nothing is replaced.
+        if correction.canReplace && !correction.accepted.isEmpty {
           KeyedAction(
             title: WritingStrings.replaceAction, keys: ["↩"], isPrimary: true, perform: onReplace)
           Divider().frame(height: 14)
@@ -454,11 +505,19 @@ private struct ActionBar: View {
       if correction.changeCount == 0 {
         Label(WritingStrings.noMistakes, systemImage: "checkmark.circle.fill")
           .labelStyle(TintedIconLabelStyle(tint: .green))
+      } else if correction.declinedReturn {
+        Label(WritingStrings.nothingReplaced, systemImage: "exclamationmark.circle.fill")
+          .labelStyle(TintedIconLabelStyle(tint: .orange))
       } else if !correction.canReplace {
         Label(WritingStrings.cannotReplace, systemImage: "info.circle")
+      } else if correction.accepted.isEmpty {
+        Label(WritingStrings.allDeclined, systemImage: "arrow.uturn.backward.circle")
       } else {
         Label(
-          "\(WritingStrings.title) · \(WritingStrings.changes(correction.changeCount))",
+          """
+          \(WritingStrings.title) · \
+          \(WritingStrings.changes(correction.accepted.count, of: correction.changeCount))
+          """,
           systemImage: "text.badge.checkmark")
       }
     }

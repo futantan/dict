@@ -1047,6 +1047,9 @@ public struct AppliedEdits: Sendable, Equatable {
 }
 public enum EditError: Error, Sendable, Equatable { case notFound(index: Int), ambiguous(index: Int), overlapping(Int, Int) }
 public func applyEdits(_ edits: [Edit], to source: String) -> Result<AppliedEdits, EditError>
+extension AppliedEdits {
+  public func accepting(_ accepted: Set<Int>) -> AppliedEdits  // 只做被接受的改动
+}
 ```
 
 - 先丢弃被包含的编辑：若编辑 A 的 `wrong` 包含编辑 B 的 `wrong`，且 A 的 `right` 包含 B 的 `right`，B 已被 A 做掉，丢弃 B；完全相同的编辑只留第一条。
@@ -1063,6 +1066,13 @@ public func applyEdits(_ edits: [Edit], to source: String) -> Result<AppliedEdit
 - 两条路径的 `segments` 都由 `textDiff(原文, 结果)` 生成，不直接用错处：模型给的 `wrong` 有时比错处长（例如 `, I think it will be fun.` → `. I think it will be fun.`），直接渲染会把没改的词显示成删掉再加上【实测，真机 TextEdit 面板】。
 - 失败时不替换，面板显示「模型没能纠错」和原因（例如修改和原文对不上），给「重试」；Key 有问题时改为打开设置。
 - 空列表就是「没有需要修改的地方」，不提供替换。
+
+**逐条接受**（`accepting`）：用户可以只接受一部分改动。
+接受和拒绝的单位是 diff 里的一段改动（`segments` 里的 `.changed`，按顺序从 0 编号），不是模型错处列表里的一条。
+理由：错处可能被别的错处吸收、按顺序串联应用、一条包在另一条里，`textDiff` 还会合并相邻改动，所以错处和改动不是一一对应的；拒绝串联里的前一条时后一条的 `wrong` 在原文里根本不存在，按错处重新应用会失败。
+改动是用户在面板上看到的东西，而且任何一个子集都能单独撤回：被拒绝的改动换回 `from`，并入两边的未改动文本；被接受的保持原样。
+全部接受等于 `applyEdits` 的结果，全部拒绝等于原文；不是改动的下标忽略。
+这依赖 `segments` 的不变量：未改动片段加 `from` 拼回原文，加 `to` 拼成改后文；单测对每个子集验证它，包括修整过空白和中文的例子。
 
 **纯文本改写的校验**（润色、译成外语）：
 
@@ -1086,7 +1096,17 @@ public func validate(source: String, result: String, action: RewriteAction, expe
 **diff**（`textDiff`）：拉丁文字按词、汉字和假名按字，连续空白算一个单位，用标准库 `CollectionDifference`。
 相邻的改动合成一段；两段改动之间只隔一段纯空白时也合成一段，空白同时算进两边，例如 `has went` → `have gone`。
 两边单位总数超过 20 000 就不做 diff，整段算一处改动。
-纠错面板渲染 `AppliedEdits.segments`，即 `textDiff` 的结果。
+纠错面板渲染 `AppliedEdits.segments`，即 `textDiff` 的结果，每段改动单独标出接受与否：
+- 接受的改动：删掉的词红色加删除线，加上的词绿色带浅绿底，中间隔一个普通空格。
+- 拒绝的改动：原文照常显示，后面跟着被拒绝的建议，用最淡的文字色加删除线；被拒绝的纯删除没有建议可显示，改为在保留的词下面加点状下划线。
+- 当前改动（← → 和空格作用的那一处）整段加强调色粗下划线；面板出现时第一处就是当前改动，作为键盘可用的提示。
+- 点击某段改动切换它的接受状态，并让它成为当前改动；鼠标在改动上显示为手形。
+- 没有控件获得焦点时（面板出现时的状态，或焦点在文字上），← → 在改动之间移动，到头停住，空格切换当前改动；Tab 照旧进入按钮，按钮获得焦点后空格按按钮。
+  这些键在 `PanelKeys.route` 里判断，修饰键按下时（例如 ⇧→ 扩选）不拦截。
+- 底栏计数只数被接受的改动，例如「纠错 · 已接受 2/4 处修改」；全部拒绝时显示「已拒绝全部修改」并隐藏「替换」。
+- 回车只替换被接受的改动，记入词库的改后文和错处列表都是实际应用的结果；全部拒绝时回车不替换，面板不关，底栏改为橙色的「未替换：请先接受至少一处修改」，下一次切换或移动后恢复。
+  被拒绝的改动本轮不单独记录。
+- 接受状态是用户的输入，和输入框的草稿一样由面板自己保存在状态里（`PanelController.review`），不经过会话协调器和逐帧节流；回车时会话通过 `SessionPanel.reviewedCorrection` 读取，读不到时（例如 e2e 的替身面板）按全部接受处理。
 
 ### 6.8 默认模型与成本
 
@@ -1792,11 +1812,15 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 | M3.5 夹具扩展 | 撒谎控件、迟到粘贴、异步写入、⌘Z 断言；SwiftUI `TextField` 和 `TextEditor`（第 14.3 节）；替换场景 | M1.5 | 是 |
 | M3.6 零配置写作 | 系统拼写检查转错处列表；Apple 翻译的译成外语 | M1.8 | 是 |
 | M3.7 界面串联 | 写键流程、动作切换、diff 视图、校验警告、记录纠正的句子；Chromium 多段的拷贝取原文 | M3.1–M3.6 | 最后 |
+| M3.8 逐条接受 | `AppliedEdits.accepting`；面板里点击或 ← → 加空格逐条接受、拒绝改动；回车只替换被接受的改动，全部拒绝时不替换并提示；画廊 `proofread-partial`、`proofread-all-rejected`（第 6.7 节） | M3.3、M3.7 | 是 |
 
 验收：`make e2e` 替换场景全部通过：原生 `NSTextView` 走无障碍写入；撒谎控件走粘贴且粘贴事件恰好 1 次；异步写入控件不出现两份；确认后剪贴板恢复；⌘Z 恢复原文；只读和密码框不提供替换。
 `make matrix` 替换列：Chrome、Safari、VS Code 走粘贴并确认；终端只读不提供替换。
 `make eval SUITE=proofread RUNS=10`：本来正确的输入原样保留不低于 95%；含逗号连接分句的用例第一遍就改掉不低于 90%；对第一遍结果再纠错，错处列表为空不低于 95%。
 人工：在 Chrome 的 contenteditable 里纠错一段两段落的文字，替换后段落结构不变（不满足就按第 3.9 节降级为只复制）。
+
+现状：M3.8 已做：纠错面板可以逐条接受或拒绝改动，回车只替换被接受的改动，全部拒绝时不替换并在底栏说明；单位是 diff 的改动而不是模型的错处（第 6.7 节）。
+还没有在真机 e2e 里验证点击和键盘切换，e2e 的替身面板按全部接受处理。
 
 ### 15.4 M4：划词图标与截图取词
 

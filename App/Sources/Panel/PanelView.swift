@@ -360,7 +360,10 @@ private struct TranslatedOutView: View {
       } else {
         ResultText(text: translation.text, isStreaming: !translation.isComplete)
       }
-      BackTranslationLine(translation: translation)
+      // A translation left as the original has nothing to translate back.
+      if !(translation.isComplete && translation.issues.contains(.unchanged)) {
+        BackTranslationLine(translation: translation)
+      }
       if translation.isComplete && !translation.shownIssues.isEmpty {
         IssueList(issues: translation.shownIssues)
       }
@@ -614,8 +617,8 @@ private struct ActionBar: View {
     case .translatedOut(let translation):
       // While streaming, the spinner is the text's own, as when reading.
       if translation.isComplete && !translation.issues.isEmpty {
-        Label(WritingStrings.checkBeforeReplacing, systemImage: "exclamationmark.circle.fill")
-          .labelStyle(TintedIconLabelStyle(tint: .orange))
+        // The issues above carry the warning icon; one is enough.
+        Text(WritingStrings.checkBeforeReplacing)
       } else if translation.isComplete && !translation.replaceable {
         Label(WritingStrings.cannotReplace, systemImage: "info.circle")
       } else {

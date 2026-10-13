@@ -137,6 +137,13 @@
               text: Out.source, isComplete: true, backTranslation: .text(Out.source),
               issues: [.languageMismatch, .unchanged]))
         ),
+        // Any other issue keeps the back-translation, which helps to judge it.
+        (
+          "translate-out-issues-link",
+          out(
+            TranslateOut(
+              text: Out.result, isComplete: true, backTranslation: back, issues: [.lostURL]))
+        ),
         (
           "translate-out-read-only",
           PanelState(

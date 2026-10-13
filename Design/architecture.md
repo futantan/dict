@@ -1151,14 +1151,15 @@ Apple 翻译的结果同样过 `cleanUp` 和 `validate`，回译也用 Apple 翻
 
 布局从上到下：原文（次要文字，最多 4 行）、分隔线、译文（主体，可选中复制，流式时带小转圈）、回译行、校验问题、底栏。
 回译行前面是一个「回译」小标识，后面是次要文字；回译到达前这一行就在，写着「译文完成后显示」或「正在回译…」，所以一行的回译到达时面板不跳高（`PanelGalleryTests` 有断言）。
-校验有问题时，回译行下面用橙色三角列出问题，`unchanged` 和 `languageMismatch` 同时出现只说「译文和原文一模一样」一条；底栏左边是橙色的「替换前请检查」。
+校验有问题时，回译行下面用橙色三角列出问题，`unchanged` 和 `languageMismatch` 同时出现只说「译文和原文一模一样」一条；这时不显示回译行，回译原文没有意义，其他问题照常显示回译。
+底栏左边是不带图标的「替换前请检查」，橙色图标只在问题行出现一次。
 底栏右边：没有问题时是「替换 ↩」和「复制 ⌘C」；有问题时「替换」换成「仍要替换 ⌘↩」；字段不可写时只有「复制」，左边说明原因；生成中只在左边显示「译成外语」。
 
 键：回车只在译文完整、字段可写、没有问题时替换（`PanelPhase.canReplace`）；⌘回车在译文完整、字段可写时替换，有没有问题都行（`canReplaceAnyway`）；生成中两者都不做。
 替换走第 4 节的同一条管线：面板先隐藏，原应用重新成为 key 后写入，结果用提示胶囊报告，⌘Z 在原应用里撤销。
 胶囊里「复制结果」和「结果在剪贴板里」的说法对纠错和译成外语通用。
 「再试」重新判定动作并保留替换目标。
-画廊里有 `translate-out-generating-empty`、`translate-out-generating`、`translate-out-done`、`translate-out-back`、`translate-out-back-long`、`translate-out-issues`、`translate-out-read-only`、`translate-out-back-failed`、`translate-out-fallback`、`translate-out-failure`。
+画廊里有 `translate-out-generating-empty`、`translate-out-generating`、`translate-out-done`、`translate-out-back`、`translate-out-back-long`、`translate-out-issues`、`translate-out-issues-link`、`translate-out-read-only`、`translate-out-back-failed`、`translate-out-fallback`、`translate-out-failure`。
 e2e 场景「write shortcut, text view: my language is translated out, replaced and undone」用存根模型走真实面板：回车替换、读回字段、⌘Z 还原；还没有在真机上跑过。
 
 ## 7. 即时词典层

@@ -34,6 +34,7 @@ extension PromptBuilder {
       - Output only the translation: no quotation marks, labels or notes, and no tags \
       except those copied from the text. Never close a tag that the text leaves open.
       """
+    // scripts/fake-model.py recognizes this request by "as the writer's own message".
     let task = """
       Translate the source block into \(learning) as the writer's own message. Output only \
       the translation.

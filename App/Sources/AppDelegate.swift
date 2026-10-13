@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     panel.onDismiss = { [weak coordinator] in coordinator?.panelDismissed($0) }
     panel.onSubmit = { [weak coordinator] in coordinator?.submitted($0) }
     panel.onAction = { [weak coordinator] in coordinator?.perform($0) }
-    panel.onConfirm = { [weak coordinator] in coordinator?.confirm() }
+    panel.onConfirm = { [weak coordinator] in coordinator?.confirm(anyway: $0) }
     hotkeys.onPress = { [weak coordinator] in coordinator?.hotkeyPressed($0) }
     hotkeys.start()
 
@@ -165,6 +165,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         pronounce: { [speaker] text, language, rate in
           speaker.accent = PreferencesStore(defaults: .standard).load().accent
           speaker.say(text, language: language, rate: rate)
+        },
+        makeTranslateOut: {
+          makeTranslateOutEngine(
+            PreferencesStore(defaults: .standard).load().model, presets: presets,
+            secrets: CachedSecretStore.app)
         }))
   }
 

@@ -41,6 +41,17 @@
         }
       }
     },
+    "A link in the original is missing from the translation." : {
+      "comment" : "Translation issue: a link was not kept",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原文里的链接没有保留下来。"
+          }
+        }
+      }
+    },
     "All changes declined" : {
       "comment" : "Panel footer when the user declined every correction",
       "localizations" : {
@@ -48,6 +59,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已拒绝全部修改"
+          }
+        }
+      }
+    },
+    "Back translation" : {
+      "comment" : "Badge before the translation translated back into the user's language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回译"
           }
         }
       }
@@ -70,6 +92,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法在这个应用里替换，请复制使用。"
+          }
+        }
+      }
+    },
+    "Check it first" : {
+      "comment" : "Panel footer when the translation has issues; ⌘Return still replaces",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换前请检查"
           }
         }
       }
@@ -107,13 +140,13 @@
         }
       }
     },
-    "Copy Correction" : {
-      "comment" : "Toast button that copies the correction",
+    "Copy Result" : {
+      "comment" : "Toast button that copies the correction or translation that was not written",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "复制修改结果"
+            "value" : "复制结果"
           }
         }
       }
@@ -129,13 +162,13 @@
         }
       }
     },
-    "Couldn’t confirm the replacement. The correction is on the clipboard." : {
+    "Couldn’t confirm the replacement. The result is on the clipboard." : {
       "comment" : "Toast when the paste could not be confirmed and the clipboard keeps the result",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没能确认替换，修改后的文字在剪贴板里。"
+            "value" : "没能确认替换，结果在剪贴板里。"
           }
         }
       }
@@ -158,6 +191,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dict 用你选择的模型纠错，使用你自己的 API Key。请在「设置 → 模型」里添加 Key，或者使用本机的 Ollama。"
+          }
+        }
+      }
+    },
+    "No back translation this time" : {
+      "comment" : "Shown when translating back failed; the translation can still replace the text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这次没能回译"
           }
         }
       }
@@ -228,6 +272,17 @@
         }
       }
     },
+    "Replace Anyway" : {
+      "comment" : "Panel footer action that replaces the selection although the result has issues",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍要替换"
+          }
+        }
+      }
+    },
     "Replaced · ⌘Z to undo" : {
       "comment" : "Toast after the selection was replaced",
       "localizations" : {
@@ -268,6 +323,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置模型后才能纠错"
+          }
+        }
+      }
+    },
+    "Shown when the translation is done" : {
+      "comment" : "Placeholder of the back translation while the translation streams in",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文完成后显示"
           }
         }
       }
@@ -323,6 +389,94 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "原文已改变，没有替换。"
+          }
+        }
+      }
+    },
+    "The text doesn’t look translated." : {
+      "comment" : "Translation issue: the result is still in the user's language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看起来没有译成外语。"
+          }
+        }
+      }
+    },
+    "The translation contains Dict’s own instructions to the model." : {
+      "comment" : "Translation issue: the model repeated the prompt",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文里混进了 Dict 给模型的指令。"
+          }
+        }
+      }
+    },
+    "The translation has a different number of lines." : {
+      "comment" : "Translation issue: lines were merged or split",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行数和原文不一样。"
+          }
+        }
+      }
+    },
+    "The translation is much longer or shorter than the original." : {
+      "comment" : "Translation issue: the length differs a lot from the original",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文比原文长或短得多。"
+          }
+        }
+      }
+    },
+    "The translation is the same as the original." : {
+      "comment" : "Translation issue: the model returned the text untranslated",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文和原文一模一样，没有翻译。"
+          }
+        }
+      }
+    },
+    "The translation still has formatting the model added around it." : {
+      "comment" : "Translation issue: a code fence or tag around the result",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译文外面还套着模型加的格式标记。"
+          }
+        }
+      }
+    },
+    "Translating back…" : {
+      "comment" : "Placeholder while the translation is translated back into the user's language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在回译…"
+          }
+        }
+      }
+    },
+    "Translation" : {
+      "comment" : "Panel footer title of the Write flow when it translates the user's text out",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译成外语"
           }
         }
       }

@@ -15,6 +15,7 @@ struct PanelKeysTests {
     var selected = false
     var result = false
     var replaceable = false
+    var anyway = false
     var card = false
     var changes = false
     let expected: PanelKeyRoute
@@ -68,6 +69,27 @@ struct PanelKeysTests {
     Case(
       name: "⌘Return is not Return", keyCode: 36, characters: "\r", modifiers: command,
       replaceable: true, expected: .pass),
+    Case(
+      name: "Return replaces with a translation without issues", keyCode: 36, characters: "\r",
+      replaceable: true, anyway: true, expected: .confirm),
+    Case(
+      name: "Return leaves a translation with issues alone", keyCode: 36, characters: "\r",
+      anyway: true, expected: .pass),
+    Case(
+      name: "⌘Return replaces with a translation with issues", keyCode: 36, characters: "\r",
+      modifiers: command, anyway: true, expected: .confirmAnyway),
+    Case(
+      name: "⌘ keypad Enter replaces anyway too", keyCode: 76, characters: "\u{3}",
+      modifiers: command, anyway: true, expected: .confirmAnyway),
+    Case(
+      name: "⌘Return while composing goes to the input method", keyCode: 36, characters: "\r",
+      modifiers: command, marked: true, anyway: true, expected: .pass),
+    Case(
+      name: "⇧⌘Return is not ⌘Return", keyCode: 36, characters: "\r", modifiers: command | shift,
+      anyway: true, expected: .pass),
+    Case(
+      name: "Return while the translation streams does nothing", keyCode: 36, characters: "\r",
+      result: true, expected: .pass),
     Case(
       name: "⌘Esc is not Esc", keyCode: 53, characters: "\u{1b}", modifiers: command,
       expected: .pass),
@@ -127,7 +149,7 @@ struct PanelKeysTests {
       keyCode: c.keyCode, characters: c.characters,
       modifiers: NSEvent.ModifierFlags(rawValue: c.modifiers), hasMarkedText: c.marked,
       hasSelectedText: c.selected, hasResult: c.result, canReplace: c.replaceable,
-      showsCard: c.card, reviewsChanges: c.changes)
+      canReplaceAnyway: c.anyway, showsCard: c.card, reviewsChanges: c.changes)
     #expect(route == c.expected)
   }
 }

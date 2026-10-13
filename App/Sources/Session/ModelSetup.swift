@@ -78,6 +78,20 @@ func makeTranslationEngine(
   return TranslationEngine(model: model)
 }
 
+/// The translate-out engine for the saved model preferences: the model when one is usable,
+/// otherwise Apple Translation alone.
+@MainActor
+func makeTranslateOutEngine(
+  _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore
+) -> TranslateOutEngine {
+  let model = configuredModel(preferences, presets: presets, secrets: secrets).map {
+    ModelTranslator(
+      model: ChatCompletionsModel(
+        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+  }
+  return TranslateOutEngine(model: model)
+}
+
 /// The proofreader for the saved model preferences; nil without a usable model, since
 /// proofreading has no fallback.
 func makeProofreader(

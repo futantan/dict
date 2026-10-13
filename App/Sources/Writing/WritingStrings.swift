@@ -54,6 +54,72 @@ enum WritingStrings {
   static let copyAction = String(
     localized: "Copy", table: "Writing", comment: "Panel footer action that copies the correction")
 
+  // MARK: Translate out
+
+  static let translateOutTitle = String(
+    localized: "Translation", table: "Writing",
+    comment: "Panel footer title of the Write flow when it translates the user's text out")
+
+  static let backTranslation = String(
+    localized: "Back translation", table: "Writing",
+    comment: "Badge before the translation translated back into the user's language")
+
+  static let backTranslationWaiting = String(
+    localized: "Shown when the translation is done", table: "Writing",
+    comment: "Placeholder of the back translation while the translation streams in")
+
+  static let backTranslating = String(
+    localized: "Translating back…", table: "Writing",
+    comment: "Placeholder while the translation is translated back into the user's language")
+
+  static let backTranslationUnavailable = String(
+    localized: "No back translation this time", table: "Writing",
+    comment: "Shown when translating back failed; the translation can still replace the text")
+
+  static let checkBeforeReplacing = String(
+    localized: "Check it first", table: "Writing",
+    comment: "Panel footer when the translation has issues; ⌘Return still replaces")
+
+  static let replaceAnywayAction = String(
+    localized: "Replace Anyway", table: "Writing",
+    comment: "Panel footer action that replaces the selection although the result has issues")
+
+  /// Why the translation should be checked before it replaces the text (architecture 6.7).
+  static func issue(_ issue: RewriteIssue) -> String {
+    switch issue {
+    case .wrapped:
+      String(
+        localized: "The translation still has formatting the model added around it.",
+        table: "Writing",
+        comment: "Translation issue: a code fence or tag around the result")
+    case .echoedPrompt:
+      String(
+        localized: "The translation contains Dict’s own instructions to the model.",
+        table: "Writing",
+        comment: "Translation issue: the model repeated the prompt")
+    case .languageMismatch:
+      String(
+        localized: "The text doesn’t look translated.", table: "Writing",
+        comment: "Translation issue: the result is still in the user's language")
+    case .lengthRatio:
+      String(
+        localized: "The translation is much longer or shorter than the original.", table: "Writing",
+        comment: "Translation issue: the length differs a lot from the original")
+    case .lostURL:
+      String(
+        localized: "A link in the original is missing from the translation.", table: "Writing",
+        comment: "Translation issue: a link was not kept")
+    case .lineCountChanged:
+      String(
+        localized: "The translation has a different number of lines.", table: "Writing",
+        comment: "Translation issue: lines were merged or split")
+    case .unchanged:
+      String(
+        localized: "The translation is the same as the original.", table: "Writing",
+        comment: "Translation issue: the model returned the text untranslated")
+    }
+  }
+
   static let nothingToCheck = PanelNotice(
     symbol: "text.cursor",
     title: String(
@@ -143,7 +209,7 @@ enum WritingStrings {
     comment: "Toast when the field changed in an unexpected way")
 
   static let clipboardHoldsResult = String(
-    localized: "Couldn’t confirm the replacement. The correction is on the clipboard.",
+    localized: "Couldn’t confirm the replacement. The result is on the clipboard.",
     table: "Writing",
     comment: "Toast when the paste could not be confirmed and the clipboard keeps the result")
 
@@ -152,6 +218,6 @@ enum WritingStrings {
     comment: "Toast when the paste did not change the field")
 
   static let copyResult = String(
-    localized: "Copy Correction", table: "Writing",
-    comment: "Toast button that copies the correction")
+    localized: "Copy Result", table: "Writing",
+    comment: "Toast button that copies the correction or translation that was not written")
 }

@@ -30,7 +30,8 @@ struct PanelView: View {
   let model: PanelModel
   var onSubmit: (String) -> Void = { _ in }
   var onAction: (PanelAction.ID) -> Void = { _ in }
-  var onConfirm: () -> Void = {}
+  /// Return, ⌘Return (true) or a click on Replace.
+  var onConfirm: (_ anyway: Bool) -> Void = { _ in }
   /// A click on a change of the correction shown; the value is its index.
   var onToggleChange: (Int) -> Void = { _ in }
   /// Reports the height the content wants; the controller sizes the window from it.
@@ -76,7 +77,7 @@ private struct PanelContent: View {
   let model: PanelModel
   let onSubmit: (String) -> Void
   let onAction: (PanelAction.ID) -> Void
-  let onConfirm: () -> Void
+  let onConfirm: (_ anyway: Bool) -> Void
   let onToggleChange: (Int) -> Void
 
   var body: some View {
@@ -93,6 +94,12 @@ private struct PanelContent: View {
           status: .corrected(correction),
           onReplace: onConfirm,
           onCopy: { copyToClipboard(correction.text) })
+      case .translatedOut(let translation):
+        Divider()
+        ActionBar(
+          status: .translatedOut(translation),
+          onReplace: onConfirm,
+          onCopy: { copyToClipboard(translation.text) })
       case .card(let card):
         Divider()
         ActionBar(status: .card(card), onAction: onAction)
@@ -161,6 +168,8 @@ private struct PanelBody: View {
         .help(correction.changeCount > 0 ? WritingStrings.reviewHelp : "")
       case .card(let card):
         CardView(card: card)
+      case .translatedOut(let translation):
+        TranslatedOutView(translation: translation)
       }
       if let note = state.note, state.phase.showsNote {
         NoteLine(note: note, onAction: onAction)
@@ -327,13 +336,97 @@ extension PanelPhase {
   /// Only a result, streaming, finished or partial, carries a note.
   fileprivate var showsNote: Bool {
     switch self {
-    case .generating, .result, .partial, .card: true
+    case .generating, .result, .partial, .card, .translatedOut: true
     case .input, .reading, .failure, .needsSetup, .checking, .corrected: false
     }
   }
 }
 
 // MARK: - Write flow
+
+/// A translate-out: the translation as the main text, then one line with the
+/// back-translation, then what to check before replacing (architecture 11.6). The
+/// back-translation line is there from the start, so the panel does not grow when it arrives.
+private struct TranslatedOutView: View {
+  let translation: TranslateOut
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Metrics.sectionSpacing) {
+      if translation.text.isEmpty && !translation.isComplete {
+        ProgressLine(
+          text: String(
+            localized: "Translating…", table: "Panel",
+            comment: "Shown until the first words of the result arrive"))
+      } else {
+        ResultText(text: translation.text, isStreaming: !translation.isComplete)
+      }
+      BackTranslationLine(translation: translation)
+      if translation.isComplete && !translation.shownIssues.isEmpty {
+        IssueList(issues: translation.shownIssues)
+      }
+    }
+  }
+}
+
+/// The badge, then the back-translation or what stands in for it.
+private struct BackTranslationLine: View {
+  let translation: TranslateOut
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: 8) {
+      Text(WritingStrings.backTranslation)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+        .fixedSize()
+      content
+        .font(Metrics.sourceFont)
+        .lineSpacing(2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .accessibilityElement(children: .combine)
+  }
+
+  @ViewBuilder private var content: some View {
+    switch translation.backTranslation {
+    case .text(let text):
+      Text(text)
+        .foregroundStyle(.secondary)
+        .textSelection(.enabled)
+    case .pending where translation.isComplete:
+      Text(WritingStrings.backTranslating).foregroundStyle(.tertiary)
+    case .pending:
+      Text(WritingStrings.backTranslationWaiting).foregroundStyle(.tertiary)
+    case .unavailable:
+      Text(WritingStrings.backTranslationUnavailable).foregroundStyle(.tertiary)
+    }
+  }
+}
+
+/// The validation's issues, in the warning colour of the panel's notices.
+private struct IssueList: View {
+  let issues: [RewriteIssue]
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: 6) {
+      Image(systemName: "exclamationmark.triangle.fill")
+        .foregroundStyle(.orange)
+        .accessibilityHidden(true)
+      VStack(alignment: .leading, spacing: 2) {
+        ForEach(issues, id: \.self) { issue in
+          Text(WritingStrings.issue(issue))
+        }
+      }
+      .foregroundStyle(.secondary)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .fixedSize(horizontal: false, vertical: true)
+    }
+    .font(Metrics.sourceFont)
+  }
+}
 
 /// The proofread text with each change in place. An accepted change shows the removed
 /// words struck through in red and the inserted ones in green; a declined one shows the
@@ -440,10 +533,11 @@ private struct ActionBar: View {
     case card(CardState)
     /// A translation of a word or phrase, which can be looked up instead.
     case translation
+    case translatedOut(TranslateOut)
   }
 
   let status: Status
-  var onReplace: () -> Void = {}
+  var onReplace: (_ anyway: Bool) -> Void = { _ in }
   var onCopy: () -> Void = {}
   var onAction: (PanelAction.ID) -> Void = { _ in }
 
@@ -458,7 +552,23 @@ private struct ActionBar: View {
         // With every change declined Return only explains that nothing is replaced.
         if correction.canReplace && !correction.accepted.isEmpty {
           KeyedAction(
-            title: WritingStrings.replaceAction, keys: ["↩"], isPrimary: true, perform: onReplace)
+            title: WritingStrings.replaceAction, keys: ["↩"], isPrimary: true
+          ) { onReplace(false) }
+          Divider().frame(height: 14)
+        }
+        KeyedAction(
+          title: WritingStrings.copyAction, keys: ["⌘", "C"], isPrimary: false, perform: onCopy)
+      }
+      if case .translatedOut(let translation) = status, translation.isComplete {
+        if translation.replacesOnReturn {
+          KeyedAction(
+            title: WritingStrings.replaceAction, keys: ["↩"], isPrimary: true
+          ) { onReplace(false) }
+          Divider().frame(height: 14)
+        } else if translation.canReplace {
+          KeyedAction(
+            title: WritingStrings.replaceAnywayAction, keys: ["⌘", "↩"], isPrimary: false
+          ) { onReplace(true) }
           Divider().frame(height: 14)
         }
         KeyedAction(
@@ -501,6 +611,16 @@ private struct ActionBar: View {
     case .card, .translation:
       // Keeps the actions at the trailing edge, as in the Write panel.
       Color.clear.frame(height: 1)
+    case .translatedOut(let translation):
+      // While streaming, the spinner is the text's own, as when reading.
+      if translation.isComplete && !translation.issues.isEmpty {
+        Label(WritingStrings.checkBeforeReplacing, systemImage: "exclamationmark.circle.fill")
+          .labelStyle(TintedIconLabelStyle(tint: .orange))
+      } else if translation.isComplete && !translation.replaceable {
+        Label(WritingStrings.cannotReplace, systemImage: "info.circle")
+      } else {
+        Label(WritingStrings.translateOutTitle, systemImage: "globe")
+      }
     case .corrected(let correction):
       if correction.changeCount == 0 {
         Label(WritingStrings.noMistakes, systemImage: "checkmark.circle.fill")

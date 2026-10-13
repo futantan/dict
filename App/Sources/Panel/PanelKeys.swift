@@ -9,8 +9,10 @@ enum PanelKeyRoute: Equatable {
   case dismiss
   /// Copy the panel's result.
   case copyResult
-  /// Replace the selection with the correction shown (architecture 11.5).
+  /// Replace the selection with the correction or translation shown (architecture 11.5).
   case confirm
+  /// ⌘Return: replace the selection with a translation although it has issues.
+  case confirmAnyway
   /// Perform a panel action, as its button would: ⌘S and ⌘P on a word card.
   case perform(PanelAction.ID)
   /// Make the previous (-1) or next (+1) change of a correction current (architecture 11.5).
@@ -37,7 +39,10 @@ enum PanelKeys {
   ///   - hasMarkedText: The focused text field holds uncommitted input-method text. Return,
   ///     Esc and Tab then belong to the input method.
   ///   - hasSelectedText: The focused text view has a non-empty selection.
-  ///   - canReplace: The panel shows a correction that Return writes into the app.
+  ///   - canReplace: The panel shows a correction or translation that Return writes into
+  ///     the app.
+  ///   - canReplaceAnyway: The panel shows a translation that ⌘Return writes into the app,
+  ///     with or without issues.
   ///   - showsCard: The panel shows a word card, which takes ⌘S and ⌘P.
   ///   - reviewsChanges: The panel shows a correction with changes and no control has
   ///     focus, so ← and → move between the changes and Space accepts or declines one. With
@@ -45,14 +50,14 @@ enum PanelKeys {
   static func route(
     keyCode: UInt16, characters: String?, modifiers: NSEvent.ModifierFlags,
     hasMarkedText: Bool, hasSelectedText: Bool, hasResult: Bool, canReplace: Bool = false,
-    showsCard: Bool = false, reviewsChanges: Bool = false
+    canReplaceAnyway: Bool = false, showsCard: Bool = false, reviewsChanges: Bool = false
   ) -> PanelKeyRoute {
     if hasMarkedText { return .pass }
     let modifiers = modifiers.intersection([.command, .shift, .option, .control])
     if keyCode == escape && modifiers.isEmpty { return .dismiss }
-    if canReplace && modifiers.isEmpty && (keyCode == returnKey || keyCode == keypadEnter) {
-      return .confirm
-    }
+    let isReturn = keyCode == returnKey || keyCode == keypadEnter
+    if canReplace && modifiers.isEmpty && isReturn { return .confirm }
+    if canReplaceAnyway && modifiers == .command && isReturn { return .confirmAnyway }
     if reviewsChanges && modifiers.isEmpty {
       switch keyCode {
       case leftArrow: return .moveChange(-1)

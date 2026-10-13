@@ -154,6 +154,26 @@ private final class StubProofreader: SessionProofreader {
   }
 }
 
+/// Reports scripted translate-out states, optionally waiting at a gate after the first one.
+@MainActor
+private final class StubTranslateOut: SessionTranslateOut {
+  var phases: [PanelPhase]
+  var gate: Gate?
+  private(set) var requests: [(text: String, context: AppContext)] = []
+
+  init(_ phases: [PanelPhase]) { self.phases = phases }
+
+  func translateOut(
+    _ text: String, pair: LanguagePair, context: AppContext, update: (PanelState) -> Void
+  ) async {
+    requests.append((text, context))
+    for (index, phase) in phases.enumerated() {
+      if index == 1, let gate { await gate.wait() }
+      update(PanelState(source: text, phase: phase))
+    }
+  }
+}
+
 /// Records replacements and answers with a scripted outcome.
 @MainActor
 private final class StubWriter: ReplaceWriter {
@@ -197,6 +217,7 @@ private final class Harness {
   let panel = FakePanel()
   let translator: StubTranslator
   var proofreader: StubProofreader? = StubProofreader(.success(fixed))
+  var translateOut: StubTranslateOut? = StubTranslateOut(translatedOutPhases)
   let writer = StubWriter()
   var toasts: [ToastMessage] = []
   var status = granted
@@ -241,7 +262,8 @@ private final class Harness {
       pronounce: { [unowned self] text, language, rate in
         spoken.append("\(text) \(language.minimalIdentifier) \(rate)")
       },
-      today: { today }))
+      today: { today },
+      makeTranslateOut: { [unowned self] in translateOut }))
 
   init(
     _ results: [(Result<Selection, CaptureFailure>, Gate?)],
@@ -810,6 +832,172 @@ struct WriteSessionTests {
     await harness.coordinator.settle()
     #expect(!harness.panel.isVisible)
     #expect(harness.panel.calls.last == .hide)
+  }
+}
+
+// MARK: - Translating out
+
+private let meeting = "我们明天下午三点开会。"
+private let meetingInEnglish = "We have a meeting at three tomorrow afternoon."
+
+/// What the engine reports for `meeting`: streaming, complete, then the back-translation.
+private let translatedOutPhases: [PanelPhase] = [
+  .translatedOut(TranslateOut()),
+  .translatedOut(TranslateOut(text: "We have a meeting")),
+  .translatedOut(TranslateOut(text: meetingInEnglish, isComplete: true)),
+  .translatedOut(
+    TranslateOut(text: meetingInEnglish, isComplete: true, backTranslation: .text(meeting))),
+]
+
+private func translatedOut(_ translation: TranslateOut, replaceable: Bool = true) -> PanelState {
+  var translation = translation
+  translation.replaceable = replaceable
+  return PanelState(source: meeting, phase: .translatedOut(translation))
+}
+
+@MainActor
+struct TranslateOutSessionTests {
+  /// My language goes to translate-out, with the app's context; nothing is proofread.
+  @Test func theWriteKeyTranslatesMyLanguageOut() async {
+    let harness = Harness([(.success(selection(meeting, target: replaceTarget(meeting))), nil)])
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls.first
+        == .show(translatedOut(TranslateOut()), .selection(bounds)))
+    #expect(
+      harness.panel.calls.last
+        == .update(
+          translatedOut(
+            TranslateOut(
+              text: meetingInEnglish, isComplete: true, backTranslation: .text(meeting)))))
+    #expect(harness.translateOut?.requests.map(\.text) == [meeting])
+    #expect(harness.translateOut?.requests.map(\.context) == [.document])
+    #expect(harness.proofreader?.requests.isEmpty == true)
+  }
+
+  @Test func returnReplacesWithTheTranslationAndRecordsIt() async throws {
+    let target = replaceTarget(meeting)
+    let harness = Harness([(.success(selection(meeting, target: target)), nil)])
+    await harness.press(.write)
+
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.panel.calls.last == .hide)
+    #expect(harness.writer.writes.map(\.result) == [meetingInEnglish])
+    #expect(harness.writer.writes.first?.target.selectedText == meeting)
+    #expect(harness.toasts == [.replaced])
+    let sentence = try #require(try await harness.vocab?.day(today).sentences.first)
+    #expect(sentence.kind == .translatedOut)
+    #expect(sentence.source == meeting)
+    #expect(sentence.result == meetingInEnglish)
+    #expect(sentence.applied)
+    #expect(sentence.editsJSON == nil)
+    #expect(sentence.sourceLanguage == "zh")
+    #expect(sentence.resultLanguage == "en")
+    #expect(sentence.sourceApp == "com.apple.TextEdit")
+  }
+
+  /// The back-translation is a check, not a gate: Return replaces before it arrives.
+  @Test func returnDoesNotWaitForTheBackTranslation() async {
+    let harness = Harness([(.success(selection(meeting, target: replaceTarget(meeting))), nil)])
+    harness.translateOut?.phases = Array(translatedOutPhases.prefix(3))
+    await harness.press(.write)
+
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.map(\.result) == [meetingInEnglish])
+  }
+
+  @Test func returnWhileTheTranslationStreamsDoesNothing() async {
+    let gate = Gate()
+    let harness = Harness([(.success(selection(meeting, target: replaceTarget(meeting))), nil)])
+    harness.translateOut?.phases = Array(translatedOutPhases.prefix(2))
+    harness.translateOut?.gate = gate
+    harness.coordinator.hotkeyPressed(.write)
+    for _ in 0..<5 { await Task.yield() }
+
+    harness.coordinator.confirm()
+    harness.coordinator.confirm(anyway: true)
+    gate.open()
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.isEmpty)
+    #expect(harness.panel.isVisible)
+  }
+
+  /// A translation with issues replaces only on ⌘Return.
+  @Test func issuesNeedCommandReturn() async {
+    let harness = Harness([(.success(selection(meeting, target: replaceTarget(meeting))), nil)])
+    harness.translateOut?.phases = [
+      .translatedOut(TranslateOut(text: meeting, isComplete: true, issues: [.unchanged]))
+    ]
+    await harness.press(.write)
+
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.isEmpty)
+    #expect(harness.panel.isVisible)
+
+    harness.coordinator.confirm(anyway: true)
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.map(\.result) == [meeting])
+  }
+
+  @Test func withoutAFieldToWriteTheTranslationCanOnlyBeCopied() async {
+    let harness = Harness([(.success(selection(meeting)), nil)])
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls.last
+        == .update(
+          translatedOut(
+            TranslateOut(text: meetingInEnglish, isComplete: true, backTranslation: .text(meeting)),
+            replaceable: false)))
+    harness.coordinator.confirm(anyway: true)
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.isEmpty)
+  }
+
+  @Test func withoutAnEngineAModelIsNeeded() async {
+    let harness = Harness([(.success(selection(meeting)), nil)])
+    harness.translateOut = nil
+    await harness.press(.write)
+
+    #expect(
+      harness.panel.calls.last
+        == .update(PanelState(phase: .needsSetup(TranslationStrings.needsModel))))
+  }
+
+  /// "Try Again" translates out again and keeps the field to write.
+  @Test func retryTranslatesOutAgain() async {
+    let target = replaceTarget(meeting)
+    let harness = Harness([(.success(selection(meeting, target: target)), nil)])
+    let failure = TranslationStrings.modelFailure(ModelError.network(code: -1009))
+    harness.translateOut?.phases = [.translatedOut(TranslateOut()), .failure(failure)]
+    await harness.press(.write)
+    #expect(
+      harness.panel.calls.last == .update(PanelState(source: meeting, phase: .failure(failure))))
+
+    harness.translateOut?.phases = translatedOutPhases
+    harness.coordinator.perform(TranslationStrings.retryAction)
+    await harness.coordinator.settle()
+    #expect(harness.translateOut?.requests.map(\.context) == [.document, .document])
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+    #expect(harness.writer.writes.map(\.result) == [meetingInEnglish])
+  }
+
+  /// Closing the panel without replacing records nothing, as for a correction.
+  @Test func closingWithoutReplacingRecordsNothing() async {
+    let harness = Harness([(.success(selection(meeting, target: replaceTarget(meeting))), nil)])
+    await harness.press(.write)
+    harness.panel.dismissByUser()
+    harness.coordinator.panelDismissed(.escape)
+    await harness.coordinator.settle()
+
+    let sentences = try? await harness.vocab?.day(today).sentences
+    #expect(sentences?.isEmpty ?? true)
   }
 }
 

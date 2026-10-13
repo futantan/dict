@@ -12,9 +12,11 @@ final class ResultPanel: NSPanel {
   var onEscape: () -> Void = {}
   /// The text ⌘C copies when nothing in the panel is selected.
   var copyableText: () -> String? = { nil }
-  /// Called for Return while the panel shows a correction that can replace the selection.
-  var onConfirm: () -> Void = {}
+  /// Called for Return while the panel shows a result that can replace the selection, with
+  /// true for ⌘Return, which replaces a translation with issues too.
+  var onConfirm: (_ anyway: Bool) -> Void = { _ in }
   var canReplace: () -> Bool = { false }
+  var canReplaceAnyway: () -> Bool = { false }
   /// Whether the panel shows a word card, whose actions answer ⌘S and ⌘P.
   var showsCard: () -> Bool = { false }
   /// Called for a key that stands for a panel action.
@@ -61,7 +63,8 @@ final class ResultPanel: NSPanel {
       keyCode: event.keyCode, characters: event.charactersIgnoringModifiers,
       modifiers: event.modifierFlags, hasMarkedText: textView?.hasMarkedText() ?? false,
       hasSelectedText: (textView?.selectedRange().length ?? 0) > 0,
-      hasResult: copyableText() != nil, canReplace: canReplace(), showsCard: showsCard(),
+      hasResult: copyableText() != nil, canReplace: canReplace(),
+      canReplaceAnyway: canReplaceAnyway(), showsCard: showsCard(),
       reviewsChanges: showsChanges() && (firstResponder === self || textView != nil))
   }
 
@@ -72,7 +75,9 @@ final class ResultPanel: NSPanel {
     case .dismiss:
       onEscape()
     case .confirm:
-      onConfirm()
+      onConfirm(false)
+    case .confirmAnyway:
+      onConfirm(true)
     case .perform(let action):
       onPerform(action)
     case .moveChange(let offset):

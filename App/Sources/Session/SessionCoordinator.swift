@@ -45,8 +45,10 @@ protocol SessionProofreader {
 extension Proofreader: SessionProofreader {}
 
 /// Runs one operation at a time: the "read" shortcut captures the selection, shows the panel
-/// and translates (architecture 2.1, 15.1); the "write" shortcut proofreads the selection,
-/// shows the corrections as a diff, and Return replaces the selection (architecture 4.4).
+/// and translates (architecture 2.1, 15.1); the "write" shortcut translates a selection in my
+/// language into the learning language and translates it back for checking, or proofreads
+/// anything else and shows the corrections as a diff (`writeAction`); Return replaces the
+/// selection (architecture 4.4).
 ///
 /// Every operation gets a new session id. Hiding the panel (also by pressing the shortcut
 /// again) and opening a window cancel the running task, and anything that arrives for an
@@ -87,6 +89,9 @@ final class SessionCoordinator {
     var pronounce: (String, Locale.Language, SpeechRate) -> Void = { _, _, _ in }
     /// Today in the user's time zone, for the vocabulary log.
     var today: () -> LocalDay = { LocalDay(.now, in: .current) }
+    /// A translate-out engine for the current settings; nil when there is none, which the
+    /// panel shows as a model to set up.
+    var makeTranslateOut: () -> (any SessionTranslateOut)? = { nil }
   }
 
   /// Where the session's text came from, for the vocabulary log (architecture 8.1).
@@ -163,15 +168,30 @@ final class SessionCoordinator {
     read(role)
   }
 
-  /// Return in the panel: replaces the selection with the changes the user accepted. The
-  /// panel hides first, so the app the text came from is key again when the write happens
-  /// (architecture 4.4, 11.2). A later session does not cancel the replacement: once it may
-  /// have pasted, stopping halfway would leave the result on the clipboard. With every
-  /// change declined nothing is replaced, and the panel stays and says so.
-  func confirm() {
-    guard panel.isVisible, let target, case .corrected(let shown) = currentPhase,
-      shown.canReplace
-    else { return }
+  /// Return in the panel: replaces the selection with the changes the user accepted, or with
+  /// the translation. The panel hides first, so the app the text came from is key again when
+  /// the write happens (architecture 4.4, 11.2). A later session does not cancel the
+  /// replacement: once it may have pasted, stopping halfway would leave the result on the
+  /// clipboard. With every change declined nothing is replaced, and the panel stays and says
+  /// so. A translation with issues is replaced only `anyway`, on ⌘Return.
+  func confirm(anyway: Bool = false) {
+    guard panel.isVisible, let target else { return }
+    switch currentPhase {
+    case .corrected(let shown) where shown.canReplace:
+      confirm(shown, target: target)
+    case .translatedOut(let shown) where anyway ? shown.canReplace : shown.replacesOnReturn:
+      let pair = environment.languagePair()
+      replace(target, with: shown.text, why: "translation") { source, applied in
+        await self.recordSentence(
+          .translatedOut, source: source, result: shown.text, applied: applied,
+          app: target.app.bundleID, languages: (pair.mine, pair.learning))
+      }
+    default:
+      break
+    }
+  }
+
+  private func confirm(_ shown: Correction, target: ReplaceTarget) {
     var correction = shown
     if let reviewed = panel.reviewedCorrection, reviewed.proposed == shown.proposed {
       correction = reviewed
@@ -182,6 +202,19 @@ final class SessionCoordinator {
       Log.ui.info("session \(self.id, privacy: .public): every change declined, nothing replaced")
       return
     }
+    replace(target, with: correction.text, why: "correction") { source, applied in
+      await self.recordSentence(
+        .corrected, source: source, result: correction.text, edits: correction.editsJSON,
+        applied: applied, app: target.app.bundleID)
+    }
+  }
+
+  /// Hides the panel, ends the session, writes `result`, reports the outcome with a toast,
+  /// then records the session's text with whether it was replaced.
+  private func replace(
+    _ target: ReplaceTarget, with result: String, why: String,
+    record: @escaping (_ source: String, _ applied: Bool) async -> Void
+  ) {
     let bounds = targetBounds
     let writer = environment.replaceWriter
     let showToast = environment.showToast
@@ -189,17 +222,15 @@ final class SessionCoordinator {
     let source = text
     cancel()
     panel.hide()
-    Log.ui.info("session \(id, privacy: .public): replacing")
+    Log.ui.info("session \(id, privacy: .public): replacing with the \(why, privacy: .public)")
     replacement = Task {
-      let outcome = await writer.replace(target, with: correction.text)
+      let outcome = await writer.replace(target, with: result)
       Log.replace.info(
         "session \(id, privacy: .public): \(String(describing: outcome), privacy: .public)")
-      showToast(ToastMessage(outcome, result: correction.text), bounds)
+      showToast(ToastMessage(outcome, result: result), bounds)
       if let source {
         let applied = if case .replaced = outcome { true } else { false }
-        await self.recordSentence(
-          .corrected, source: source, result: correction.text, edits: correction.editsJSON,
-          applied: applied, app: target.app.bundleID)
+        await record(source, applied)
       }
     }
   }
@@ -235,7 +266,7 @@ final class SessionCoordinator {
     case TranslationStrings.retryAction:
       if let text {
         if role == .write {
-          proofreadAgain(text)
+          writeAgain(text)
         } else {
           start(
             text, as: showsCard ? .lookUp : .translate, origin: origin, why: "retry",
@@ -352,14 +383,17 @@ final class SessionCoordinator {
       if role == .write {
         target = selection.target
         targetBounds = selection.bounds
-        currentPhase = .checking(selection.text)
-        present(PanelState(phase: .checking(selection.text)), anchor)
+        let action = writeAction(for: selection.text, pair: environment.languagePair())
+        let first = firstWriteState(selection.text, action: action)
+        currentPhase = first.phase
+        present(first, anchor)
         Log.ui.info(
           """
           session \(id, privacy: .public): capture \(milliseconds(captured), format: .fixed(precision: 1), privacy: .public)ms \
-          via \(selection.source.caseName, privacy: .public), replaceable \(selection.target != nil, privacy: .public)
+          via \(selection.source.caseName, privacy: .public), \(String(describing: action), privacy: .public), \
+          replaceable \(selection.target != nil, privacy: .public)
           """)
-        await proofread(selection.text, id: id)
+        await write(selection.text, action: action, id: id)
         return
       }
       let route = readRoute(selection.text, pair: environment.languagePair())
@@ -415,6 +449,59 @@ final class SessionCoordinator {
       """)
   }
 
+  /// The Write key's first state: the translation about to stream in, or the text being
+  /// proofread.
+  private func firstWriteState(_ text: String, action: Capability) -> PanelState {
+    action == .translateOut
+      ? PanelState(source: text, phase: .translatedOut(TranslateOut(replaceable: target != nil)))
+      : PanelState(phase: .checking(text))
+  }
+
+  private func write(_ text: String, action: Capability, id: Int) async {
+    if action == .translateOut {
+      await translateOut(text, id: id)
+    } else {
+      await proofread(text, id: id)
+    }
+  }
+
+  /// Translates out in the visible panel, then translates back (architecture 6.6). Every
+  /// state goes through `show(_:id:)`, so Return sees the latest.
+  private func translateOut(_ text: String, id: Int) async {
+    self.text = text
+    guard let engine = environment.makeTranslateOut() else {
+      show(PanelState(phase: .needsSetup(TranslationStrings.needsModel)), id: id)
+      return
+    }
+    let clock = ContinuousClock()
+    let start = clock.now
+    let pair = environment.languagePair()
+    let context = appContext(bundleID: origin?.app)
+    let replaceable = target != nil
+    var last: PanelPhase?
+    await engine.translateOut(text, pair: pair, context: context) { state in
+      guard id == self.id else { return }
+      var state = state
+      if case .translatedOut(var translation) = state.phase {
+        translation.replaceable = replaceable
+        state.phase = .translatedOut(translation)
+      }
+      last = state.phase
+      show(state, id: id)
+    }
+    guard id == self.id, !Task.isCancelled else { return }
+    var issues = "-"
+    if case .translatedOut(let translation) = last {
+      issues = translation.issues.map { "\($0)" }.joined(separator: ",")
+    }
+    Log.ui.info(
+      """
+      session \(id, privacy: .public): translate-out (\(context.rawValue, privacy: .public)) ended \
+      in \(last?.name ?? "-", privacy: .public), issues [\(issues, privacy: .public)], after \
+      \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms
+      """)
+  }
+
   /// Proofreads in the visible panel and shows the diff.
   private func proofread(_ text: String, id: Int) async {
     self.text = text
@@ -442,17 +529,21 @@ final class SessionCoordinator {
     }
   }
 
-  /// "Try Again" after a failed proofread, keeping the session's target.
-  private func proofreadAgain(_ text: String) {
+  /// "Try Again" after a failed proofread or translate-out, keeping the session's target and
+  /// where the text came from.
+  private func writeAgain(_ text: String) {
     guard panel.isVisible else { return }
     let target = target
     let bounds = targetBounds
+    let origin = origin
     cancel()
     self.target = target
     targetBounds = bounds
+    self.origin = origin
     let id = id
-    show(PanelState(phase: .checking(text)), id: id)
-    task = Task { await self.proofread(text, id: id) }
+    let action = writeAction(for: text, pair: environment.languagePair())
+    show(firstWriteState(text, action: action), id: id)
+    task = Task { await self.write(text, action: action, id: id) }
   }
 
   private func show(_ state: PanelState, id: Int) {

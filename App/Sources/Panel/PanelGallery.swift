@@ -40,7 +40,7 @@
             source: text.source, phase: .partial(text.partial),
             note: TranslationStrings.incompleteNote(ModelTranslationError.interrupted))
         ),
-      ] + writeStates + cardStates
+      ] + writeStates + translateOutStates + cardStates
     }
 
     /// The Write key's states. The text is English in either UI language: it is the
@@ -105,6 +105,77 @@
           PanelState(phase: .corrected(Correction(clean, replaceable: true)))
         ),
       ]
+    }
+
+    /// The Write key translating Chinese out into English (architecture 6.6). The text is the
+    /// same in either UI language: the user writes in their own language.
+    static var translateOutStates: [(name: String, state: PanelState)] {
+      func out(_ translation: TranslateOut, note: PanelNote? = nil) -> PanelState {
+        var translation = translation
+        translation.replaceable = true
+        return PanelState(source: Out.source, phase: .translatedOut(translation), note: note)
+      }
+      let back = TranslateOut.BackTranslation.text(Out.back)
+      return [
+        ("translate-out-generating-empty", out(TranslateOut())),
+        ("translate-out-generating", out(TranslateOut(text: Out.partial))),
+        ("translate-out-done", out(TranslateOut(text: Out.result, isComplete: true))),
+        (
+          "translate-out-back",
+          out(TranslateOut(text: Out.result, isComplete: true, backTranslation: back))
+        ),
+        (
+          "translate-out-back-long",
+          out(
+            TranslateOut(
+              text: Out.longResult, isComplete: true, backTranslation: .text(Out.longBack)))
+        ),
+        (
+          "translate-out-issues",
+          out(
+            TranslateOut(
+              text: Out.source, isComplete: true, backTranslation: .text(Out.source),
+              issues: [.languageMismatch, .unchanged]))
+        ),
+        (
+          "translate-out-read-only",
+          PanelState(
+            source: Out.source,
+            phase: .translatedOut(
+              TranslateOut(text: Out.result, isComplete: true, backTranslation: back)))
+        ),
+        (
+          "translate-out-back-failed",
+          out(TranslateOut(text: Out.result, isComplete: true, backTranslation: .unavailable))
+        ),
+        (
+          "translate-out-fallback",
+          out(
+            TranslateOut(text: Out.result, isComplete: true, backTranslation: back),
+            note: TranslationStrings.fallbackNote(ModelError.network(code: -1009)))
+        ),
+        (
+          "translate-out-failure",
+          PanelState(
+            source: Out.source,
+            phase: .failure(TranslationStrings.modelFailure(ModelError.network(code: -1009))))
+        ),
+      ]
+    }
+
+    private enum Out {
+      static let source = "这个 PR 我已经 review 过了，没问题就合了吧"
+      static let partial = "I've already reviewed this PR, so"
+      static let result =
+        "I've already reviewed this PR, so go ahead and merge it if it looks fine."
+      static let back = "这个 PR 我已经审查过了，如果看起来没问题就合并吧。"
+      static let longResult =
+        "Thanks for the update. I've gone through the draft and left a few comments on the "
+        + "pricing section; the rest looks good to me. Could you send the final version by "
+        + "Friday so we can share it with the client next week?"
+      static let longBack =
+        "谢谢你的更新。我看过草稿了，在定价部分留了几条评论，其余部分我觉得都不错。"
+        + "你能在周五之前把最终版本发过来吗？这样我们下周就可以分享给客户了。"
     }
 
     private enum Write {

@@ -55,6 +55,9 @@ enum PanelPhase: Sendable, Equatable {
   /// The word card of a looked-up word or phrase: the dictionary layer, then the model's
   /// card as it streams in (architecture 6.6).
   case card(CardState)
+  /// The Write key is translating my language out, or has: the translation streams in, then
+  /// the back-translation under it (architecture 6.6, 11.6).
+  case translatedOut(TranslateOut)
 
   /// The text ⌘C copies when nothing in the panel is selected.
   var copyableText: String? {
@@ -62,13 +65,72 @@ enum PanelPhase: Sendable, Equatable {
     case .generating(let text), .result(let text), .partial(let text): text.isEmpty ? nil : text
     case .corrected(let correction): correction.text
     case .card(let card): card.copyableText
+    case .translatedOut(let translation): translation.text.isEmpty ? nil : translation.text
     case .input, .reading, .failure, .needsSetup, .checking: nil
     }
   }
 
   /// Return replaces the selection.
   var canReplace: Bool {
-    if case .corrected(let correction) = self { correction.canReplace } else { false }
+    switch self {
+    case .corrected(let correction): correction.canReplace
+    case .translatedOut(let translation): translation.replacesOnReturn
+    default: false
+    }
+  }
+
+  /// ⌘Return replaces the selection, also when the result has issues (architecture 11.5).
+  var canReplaceAnyway: Bool {
+    if case .translatedOut(let translation) = self { translation.canReplace } else { false }
+  }
+}
+
+/// A translate-out and its back-translation (architecture 6.6, 6.7). The translation is
+/// `cleanUp`'s result; once complete it has been validated, and it is what replaces the
+/// selection. The back-translation only helps the user check it: pending or failed, it never
+/// keeps the translation from replacing.
+struct TranslateOut: Sendable, Equatable {
+  enum BackTranslation: Sendable, Equatable {
+    /// Not asked for yet, or no text has arrived.
+    case pending
+    /// The back-translation so far, on one line.
+    case text(String)
+    /// It failed, or there is no engine for it.
+    case unavailable
+  }
+
+  /// The translation so far; the whole result once `isComplete`.
+  var text: String
+  /// The forward stream ended normally, and `issues` are the validation's.
+  var isComplete: Bool
+  var backTranslation: BackTranslation
+  var issues: [RewriteIssue]
+  /// The selection's field can be written (architecture 4.3).
+  var replaceable: Bool
+
+  init(
+    text: String = "", isComplete: Bool = false, backTranslation: BackTranslation = .pending,
+    issues: [RewriteIssue] = [], replaceable: Bool = false
+  ) {
+    self.text = text
+    self.isComplete = isComplete
+    self.backTranslation = backTranslation
+    self.issues = issues
+    self.replaceable = replaceable
+  }
+
+  /// A complete, non-blank translation for a field that can be written; ⌘Return replaces.
+  var canReplace: Bool {
+    isComplete && replaceable && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  /// Return replaces only a translation without issues.
+  var replacesOnReturn: Bool { canReplace && issues.isEmpty }
+
+  /// The issues the panel names, one line each: a translation left unchanged also reads as
+  /// my language, and saying both would say the same thing twice.
+  var shownIssues: [RewriteIssue] {
+    issues.contains(.unchanged) ? issues.filter { $0 != .languageMismatch } : issues
   }
 }
 

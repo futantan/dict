@@ -61,6 +61,33 @@ struct PanelGalleryTests {
     }
   }
 
+  /// The back-translation line is there before the back-translation arrives, so a one-line
+  /// back-translation, or none, leaves the panel's height as it was; in Latin and Chinese.
+  @Test func theBackTranslationKeepsThePanelHeight() {
+    let text = "I've already reviewed this PR."
+    func height(_ back: TranslateOut.BackTranslation) -> CGFloat {
+      Self.layOut(
+        PanelState(
+          source: "这个 PR 我已经 review 过了",
+          phase: .translatedOut(
+            TranslateOut(text: text, isComplete: true, backTranslation: back, replaceable: true))),
+        appearance: .aqua
+      ).height
+    }
+    let waiting = height(.pending)
+    #expect(height(.text("这个 PR 我已经看过了。")) == waiting)
+    #expect(height(.text("I have already looked at it.")) == waiting)
+    #expect(height(.unavailable) == waiting)
+    // Nor does the translation's completion move it.
+    let streaming = Self.layOut(
+      PanelState(
+        source: "这个 PR 我已经 review 过了",
+        phase: .translatedOut(TranslateOut(text: text, replaceable: true))),
+      appearance: .aqua
+    ).height
+    #expect(streaming == waiting)
+  }
+
   /// The content lies on a nearly opaque fill, not on the bare material, so a window behind
   /// the panel neither shows through nor darkens its text.
   @Test func theContentLiesOnANearlyOpaqueFill() throws {

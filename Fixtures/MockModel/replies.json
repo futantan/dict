@@ -2,7 +2,15 @@
   "translations": {
     "The quick brown fox jumps over the lazy dog.": "敏捷的棕色狐狸跳过了那只懒狗。",
     "five dozen liquor jugs": "五打酒壶",
-    "我们明天下午三点开会。": "We have a meeting at three tomorrow afternoon."
+    "我们明天下午三点开会。": "We have a meeting at three tomorrow afternoon.",
+    "We have a meeting at three tomorrow afternoon.": "我们明天下午三点开会。",
+    "I've already reviewed this PR, so go ahead and merge it if it looks fine.": "这个 PR 我已经看过了，没问题就合并吧。",
+    "Sorry, I'm stuck in traffic and will be ten minutes late.": "抱歉，我堵在路上了，会晚到十分钟。"
+  },
+  "translateOuts": {
+    "我们明天下午三点开会。": "We have a meeting at three tomorrow afternoon.",
+    "这个 PR 我已经 review 过了，没问题就合了吧": "I've already reviewed this PR, so go ahead and merge it if it looks fine.",
+    "不好意思，路上堵车，我要晚到十分钟": "Sorry, I'm stuck in traffic and will be ten minutes late."
   },
   "proofreads": {
     "Their going to the park tomorow, I think it will be fun.": {

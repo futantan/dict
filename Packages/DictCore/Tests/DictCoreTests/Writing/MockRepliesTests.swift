@@ -78,6 +78,23 @@ struct MockRepliesTests {
       String(data: try JSONSerialization.data(withJSONObject: fallback), encoding: .utf8))
   }
 
+  /// Every translate-out reply, as the app receives it from the mock (behind its mark), passes
+  /// `validate`, is a Write-key default, and has its back-translation in the table.
+  @Test func everyTranslateOutReplyValidatesAndTranslatesBack() throws {
+    let replies = try mockReplies()
+    let outs = try #require(replies["translateOuts"] as? [String: String])
+    let translations = try #require(replies["translations"] as? [String: String])
+    #expect(outs.count >= 3)
+    for (source, result) in outs {
+      let shown = cleanUp("[mock] " + result, source: source)
+      #expect(writeAction(for: source, pair: LanguagePair()) == .translateOut, "\(source)")
+      #expect(
+        validate(source: source, result: shown, action: .translateOut, pair: LanguagePair())
+          == [], "\(source)")
+      #expect(translations[result] != nil, "\(source)")
+    }
+  }
+
   @Test func everyTranslationReplyIsText() throws {
     let translations = try #require(try mockReplies()["translations"] as? [String: String])
     #expect(!translations.isEmpty)

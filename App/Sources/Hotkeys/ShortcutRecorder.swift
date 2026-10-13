@@ -20,7 +20,7 @@ struct ShortcutRecorder: View {
         Button(action: toggleRecording) {
           Text(label)
             .monospacedDigit()
-            .foregroundStyle(isRecording || center.combos[role] == nil ? .secondary : .primary)
+            .foregroundStyle(isRecording || center.shortcuts[role] == nil ? .secondary : .primary)
             .frame(minWidth: 140)
         }
         .background(
@@ -36,7 +36,7 @@ struct ShortcutRecorder: View {
         .accessibilityLabel(Text(role.title))
         .accessibilityValue(Text(label))
 
-        if center.combos[role] != nil && !isRecording {
+        if center.shortcuts[role] != nil && !isRecording {
           Button {
             rejection = nil
             center.clear(role)
@@ -55,7 +55,7 @@ struct ShortcutRecorder: View {
           .font(.callout)
           .foregroundStyle(.red)
           .fixedSize(horizontal: false, vertical: true)
-      } else if !isRecording, let hotkey = center.combos[role],
+      } else if !isRecording, let hotkey = center.shortcuts[role],
         let notice = HotkeyRules.notice(for: hotkey)
       {
         Text(notice.message)
@@ -75,7 +75,7 @@ struct ShortcutRecorder: View {
           comment: "Shown in the shortcut field while waiting for a key press")
         : HotkeyRules.displayString(KeyCombo(keyCode: 0, modifiers: heldModifiers), keyName: "")
     }
-    guard let combo = center.combos[role] else {
+    guard let combo = center.shortcuts[role] else {
       return String(
         localized: "Record Shortcut", table: "Hotkeys",
         comment: "Shortcut field with no shortcut; clicking it starts recording")
@@ -147,7 +147,7 @@ private struct KeyCaptureView: NSViewRepresentable {
       handlers?.onModifiers(KeyCombo.Modifiers(event.modifierFlags))
       let (input, time) = DoubleTapMonitor.input(for: event)
       if isActive, let key = doubleTaps.handle(input, at: time) {
-        handlers?.onKey(.doubleTap(key))
+        handlers?.onKey(.doubleTap(DoubleTap(key)))
       }
     }
 

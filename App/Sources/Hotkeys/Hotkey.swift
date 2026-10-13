@@ -7,11 +7,52 @@ import Carbon.HIToolbox
 /// pressed twice, seen by an event monitor (architecture 10.1).
 ///
 /// A combination is persisted exactly as `KeyCombo` always was, so v0.1.0 reads it.
-/// A double press is persisted as `{"doubleTap": "rightCommand"}`; v0.1.0 cannot decode
-/// that and treats the role as having no shortcut.
+/// A double press is persisted as `{"doubleTap": "option"}` (either side) or
+/// `{"doubleTap": "rightOption"}` (right-hand key only); v0.1.0 cannot decode that and
+/// treats the role as having no shortcut.
 enum Hotkey: Hashable, Sendable {
   case combo(KeyCombo)
-  case doubleTap(ModifierKey)
+  case doubleTap(DoubleTap)
+}
+
+/// A modifier key pressed twice. As in Raycast, recording it with the left-hand key means
+/// either side; recording it with the right-hand key means only that key. Both presses
+/// must be on the same physical key.
+struct DoubleTap: Hashable, Sendable {
+  /// The left-hand key stands for either side.
+  private let key: ModifierKey
+
+  /// The double press recorded by pressing `key` twice.
+  init(_ key: ModifierKey) {
+    self.key = key
+  }
+
+  var modifier: KeyCombo.Modifiers { key.modifier }
+  var isRightOnly: Bool { key.isRight }
+
+  /// Whether a double press of the physical `pressed` key triggers this one.
+  func matches(_ pressed: ModifierKey) -> Bool {
+    isRightOnly ? pressed == key : pressed.modifier == key.modifier
+  }
+
+  /// "option" for either side, "rightOption" for the right-hand key.
+  fileprivate var persistedName: String {
+    guard !isRightOnly, let entry = KeyCombo.Modifiers.all.first(where: { $0.modifier == modifier })
+    else { return key.rawValue }
+    return entry.name
+  }
+
+  fileprivate init?(persistedName name: String) {
+    if let key = ModifierKey(rawValue: name), key.isRight {
+      self.init(key)
+    } else if let entry = KeyCombo.Modifiers.all.first(where: { $0.name == name }),
+      let left = ModifierKey.allCases.first(where: { $0.modifier == entry.modifier && !$0.isRight })
+    {
+      self.init(left)
+    } else {
+      return nil
+    }
+  }
 }
 
 extension Hotkey: Codable {
@@ -21,26 +62,31 @@ extension Hotkey: Codable {
 
   init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    if container.contains(.doubleTap) {
-      self = .doubleTap(try container.decode(ModifierKey.self, forKey: .doubleTap))
-    } else {
+    guard container.contains(.doubleTap) else {
       self = .combo(try KeyCombo(from: decoder))
+      return
     }
+    let name = try container.decode(String.self, forKey: .doubleTap)
+    guard let doubleTap = DoubleTap(persistedName: name) else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .doubleTap, in: container, debugDescription: "Unknown modifier key \(name)")
+    }
+    self = .doubleTap(doubleTap)
   }
 
   func encode(to encoder: any Encoder) throws {
     switch self {
     case .combo(let combo):
       try combo.encode(to: encoder)
-    case .doubleTap(let key):
+    case .doubleTap(let doubleTap):
       var container = encoder.container(keyedBy: CodingKeys.self)
-      try container.encode(key, forKey: .doubleTap)
+      try container.encode(doubleTap.persistedName, forKey: .doubleTap)
     }
   }
 }
 
-/// One physical modifier key. Left and right are different keys, as in Raycast.
-enum ModifierKey: String, CaseIterable, Sendable, Codable {
+/// One physical modifier key. Left and right are different keys.
+enum ModifierKey: String, CaseIterable, Sendable {
   case leftControl
   case rightControl
   case leftOption

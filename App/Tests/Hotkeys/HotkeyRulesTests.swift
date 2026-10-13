@@ -81,35 +81,68 @@ struct HotkeyRulesTests {
     for key in ModifierKey.allCases {
       #expect(
         HotkeyRules.problem(
-          for: .doubleTap(key), role: .read, assigned: [:], reserved: [combo(Self.keyA, [])]) == nil
+          for: .doubleTap(DoubleTap(key)), role: .read, assigned: [:],
+          reserved: [combo(Self.keyA, [])]) == nil
       )
     }
   }
 
   @Test func theOtherRolesDoublePressIsRejected() {
-    let assigned: [HotkeyRole: Hotkey] = [.write: .doubleTap(.leftOption)]
+    let assigned: [HotkeyRole: Hotkey] = [.write: .doubleTap(DoubleTap(.leftOption))]
     let problem = { (hotkey: Hotkey) in
       HotkeyRules.problem(for: hotkey, role: .read, assigned: assigned, reserved: [])
     }
-    #expect(problem(.doubleTap(.leftOption)) == .usedBy(.write))
-    #expect(problem(.doubleTap(.rightOption)) == nil)
+    #expect(problem(.doubleTap(DoubleTap(.leftOption))) == .usedBy(.write))
+    // Either-side ⌥ ⌥ covers the right-hand key too.
+    #expect(problem(.doubleTap(DoubleTap(.rightOption))) == .usedBy(.write))
+    #expect(problem(.doubleTap(DoubleTap(.leftCommand))) == nil)
     #expect(problem(.combo(combo(Self.keyA, .option))) == nil)
   }
 
+  @Test func twoRightHandDoublePressesOfDifferentModifiersCoexist() {
+    let assigned: [HotkeyRole: Hotkey] = [.write: .doubleTap(DoubleTap(.rightCommand))]
+    #expect(
+      HotkeyRules.problem(
+        for: .doubleTap(DoubleTap(.rightOption)), role: .read, assigned: assigned, reserved: [])
+        == nil)
+    #expect(
+      HotkeyRules.problem(
+        for: .doubleTap(DoubleTap(.leftCommand)), role: .read, assigned: assigned, reserved: [])
+        == .usedBy(.write))
+  }
+
   @Test func doublePressesOfCommandAndControlComeWithANotice() {
-    #expect(HotkeyRules.notice(for: .doubleTap(.leftCommand)) == .systemDoublePress)
-    #expect(HotkeyRules.notice(for: .doubleTap(.rightCommand)) == .systemDoublePress)
-    #expect(HotkeyRules.notice(for: .doubleTap(.rightControl)) == .systemDoublePress)
-    #expect(HotkeyRules.notice(for: .doubleTap(.leftOption)) == nil)
-    #expect(HotkeyRules.notice(for: .doubleTap(.leftShift)) == nil)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.leftCommand))) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.rightCommand))) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.rightControl))) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.leftOption))) == nil)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.leftShift))) == nil)
     #expect(HotkeyRules.notice(for: .combo(combo(Self.keyA, [.control, .command]))) == nil)
   }
 
-  @Test func aDoublePressShowsTheKeyTwice() {
-    #expect(HotkeyRules.displayString(doubleTap: .leftOption) == "⌥ ⌥")
-    #expect(HotkeyRules.displayString(doubleTap: .leftControl) == "⌃ ⌃")
-    #expect(HotkeyRules.displayString(doubleTap: .leftShift) == "⇧ ⇧")
-    #expect(HotkeyRules.displayString(doubleTap: .rightCommand).hasSuffix("⌘ ⌘"))
-    #expect(HotkeyRules.displayString(doubleTap: .rightCommand) != "⌘ ⌘")
+  @Test func aDoublePressShowsTheKeyTwiceAndMarksRightHandOnly() {
+    #expect(HotkeyRules.displayString(DoubleTap(.leftOption)) == "⌥ ⌥")
+    #expect(HotkeyRules.displayString(DoubleTap(.leftControl)) == "⌃ ⌃")
+    #expect(HotkeyRules.displayString(DoubleTap(.leftShift)) == "⇧ ⇧")
+    // "Right ⌘ ⌘" or "右 ⌘ ⌘" depending on the host's language (HotkeyStringsTests).
+    let right = HotkeyRules.displayString(DoubleTap(.rightCommand))
+    #expect(right.hasSuffix(" ⌘ ⌘"))
+    #expect(["Right ⌘ ⌘", "右 ⌘ ⌘"].contains(right))
+  }
+
+  @Test func aLeftHandRecordingMeansEitherSide() {
+    let either = DoubleTap(.leftOption)
+    #expect(!either.isRightOnly)
+    #expect(either.matches(.leftOption))
+    #expect(either.matches(.rightOption))
+    #expect(!either.matches(.leftCommand))
+  }
+
+  @Test func aRightHandRecordingMeansOnlyThatKey() {
+    let right = DoubleTap(.rightCommand)
+    #expect(right.isRightOnly)
+    #expect(right.matches(.rightCommand))
+    #expect(!right.matches(.leftCommand))
+    #expect(!right.matches(.rightOption))
   }
 }

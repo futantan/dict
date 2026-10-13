@@ -28,7 +28,8 @@ enum HotkeyNotice: Equatable, Sendable {
 enum HotkeyRules {
   /// Checks `hotkey` for `role`. ⌥ with a letter is allowed even though it types a
   /// character such as "å": the user chose it, as they would in Raycast or macOS itself.
-  /// A double press only has to differ from the other role's.
+  /// A double press only has to differ from the other role's: two double presses of the
+  /// same modifier clash even if one is right-hand only, since either side covers it.
   static func problem(
     for hotkey: Hotkey,
     role: HotkeyRole,
@@ -38,17 +39,22 @@ enum HotkeyRules {
     if case .combo(let combo) = hotkey, let problem = comboProblem(combo, reserved: reserved) {
       return problem
     }
-    if let other = assigned.first(where: { $0.key != role && $0.value == hotkey })?.key {
+    if let other = assigned.first(where: { $0.key != role && clash($0.value, hotkey) })?.key {
       return .usedBy(other)
     }
     return nil
   }
 
   static func notice(for hotkey: Hotkey) -> HotkeyNotice? {
-    guard case .doubleTap(let key) = hotkey, [.command, .control].contains(key.modifier) else {
-      return nil
-    }
+    guard case .doubleTap(let doubleTap) = hotkey,
+      [.command, .control].contains(doubleTap.modifier)
+    else { return nil }
     return .systemDoublePress
+  }
+
+  private static func clash(_ a: Hotkey, _ b: Hotkey) -> Bool {
+    if case .doubleTap(let x) = a, case .doubleTap(let y) = b { return x.modifier == y.modifier }
+    return a == b
   }
 
   private static func comboProblem(_ combo: KeyCombo, reserved: Set<KeyCombo>) -> HotkeyProblem? {
@@ -71,11 +77,11 @@ enum HotkeyRules {
     symbols(combo.modifiers) + keyName
   }
 
-  /// The key twice, for example "⌥ ⌥"; a right-hand key is marked as such.
-  static func displayString(doubleTap key: ModifierKey) -> String {
-    let symbol = symbols(key.modifier)
+  /// The key twice, for example "⌥ ⌥" for either side; right-hand only is marked as such.
+  static func displayString(_ doubleTap: DoubleTap) -> String {
+    let symbol = symbols(doubleTap.modifier)
     let pair = "\(symbol) \(symbol)"
-    guard key.isRight else { return pair }
+    guard doubleTap.isRightOnly else { return pair }
     return String(
       localized: "Right \(pair)", table: "Hotkeys",
       comment: "A shortcut that is the right-hand modifier key pressed twice, for example ⌘ ⌘")

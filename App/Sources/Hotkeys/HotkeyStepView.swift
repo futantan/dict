@@ -9,7 +9,7 @@ struct HotkeyStepView: View {
   let center: HotkeyCenter
 
   static func isComplete(_ center: HotkeyCenter) -> Bool {
-    center.combos[.read] != nil
+    center.shortcuts[.read] != nil
   }
 
   var body: some View {

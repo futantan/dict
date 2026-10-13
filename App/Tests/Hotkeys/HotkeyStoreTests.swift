@@ -37,19 +37,41 @@ final class HotkeyStoreTests {
     #expect(try JSONDecoder().decode(KeyCombo.self, from: data) == combo)
   }
 
-  @Test func aDoublePressRoundTrips() throws {
+  @Test func doublePressesRoundTripAsEitherSideOrRightHandOnly() throws {
     let store = HotkeyStore(defaults: defaults)
-    store.save([.read: .doubleTap(.leftOption), .write: .doubleTap(.rightCommand)])
+    let saved: [HotkeyRole: Hotkey] = [
+      .read: .doubleTap(DoubleTap(.leftOption)), .write: .doubleTap(DoubleTap(.rightCommand)),
+    ]
+    store.save(saved)
 
-    #expect(store.load() == [.read: .doubleTap(.leftOption), .write: .doubleTap(.rightCommand)])
-    let data = try #require(defaults.data(forKey: "hotkey.write"))
-    #expect(String(decoding: data, as: UTF8.self) == #"{"doubleTap":"rightCommand"}"#)
+    #expect(store.load() == saved)
+    let read = try #require(defaults.data(forKey: "hotkey.read"))
+    let write = try #require(defaults.data(forKey: "hotkey.write"))
+    #expect(String(decoding: read, as: UTF8.self) == #"{"doubleTap":"option"}"#)
+    #expect(String(decoding: write, as: UTF8.self) == #"{"doubleTap":"rightCommand"}"#)
+  }
+
+  @Test(arguments: ["control", "option", "shift", "command"])
+  func everyEitherSideNameLoads(name: String) throws {
+    defaults.set(Data(#"{"doubleTap":"\#(name)"}"#.utf8), forKey: "hotkey.read")
+    let loaded = try #require(HotkeyStore(defaults: defaults).load()[.read])
+    guard case .doubleTap(let doubleTap) = loaded else {
+      Issue.record("Not a double press: \(loaded)")
+      return
+    }
+    #expect(!doubleTap.isRightOnly)
+  }
+
+  /// "leftOption" is never written: a left-hand recording means either side.
+  @Test func leftHandNamesAreNotAccepted() {
+    defaults.set(Data(#"{"doubleTap":"leftOption"}"#.utf8), forKey: "hotkey.read")
+    #expect(HotkeyStore(defaults: defaults).load().isEmpty)
   }
 
   /// v0.1.0 decodes with `try?` into `KeyCombo`: a double press fails, so that version
   /// shows the role as having no shortcut, without crashing.
   @Test func v010CannotReadADoublePress() throws {
-    HotkeyStore(defaults: defaults).save([.read: Hotkey.doubleTap(.leftOption)])
+    HotkeyStore(defaults: defaults).save([.read: Hotkey.doubleTap(DoubleTap(.leftOption))])
 
     let data = try #require(defaults.data(forKey: "hotkey.read"))
     #expect(throws: DecodingError.self) { try JSONDecoder().decode(KeyCombo.self, from: data) }

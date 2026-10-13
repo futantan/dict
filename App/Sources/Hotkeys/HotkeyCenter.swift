@@ -15,7 +15,7 @@ import Observation
 final class HotkeyCenter {
   /// The saved shortcuts, combinations and double presses alike, including ones that
   /// failed to register.
-  private(set) var combos: [HotkeyRole: Hotkey]
+  private(set) var shortcuts: [HotkeyRole: Hotkey]
   /// Saved shortcuts that are not registered or now clash with a system shortcut.
   /// The status menu shows these.
   private(set) var problems: [HotkeyRole: HotkeyProblem] = [:]
@@ -33,14 +33,14 @@ final class HotkeyCenter {
 
   @ObservationIgnored var onPress: (@MainActor (HotkeyRole) -> Void)?
   @ObservationIgnored private(set) var registrations: [HotkeyRole: CarbonHotkey] = [:]
-  @ObservationIgnored private var doubleTapMonitor: DoubleTapMonitor?
+  @ObservationIgnored private(set) var doubleTapMonitor: DoubleTapMonitor?
   @ObservationIgnored private let store: HotkeyStore
   @ObservationIgnored private var observers: [any NSObjectProtocol] = []
   @ObservationIgnored private var isStarted = false
 
   init(defaults: UserDefaults = .standard) {
     store = HotkeyStore(defaults: defaults)
-    combos = store.load()
+    shortcuts = store.load()
   }
 
   /// Whether the double-press monitor is installed.
@@ -50,7 +50,7 @@ final class HotkeyCenter {
   func start() {
     guard !isStarted else { return }
     isStarted = true
-    combos = store.load()
+    shortcuts = store.load()
     registerAll()
     let center = DistributedNotificationCenter.default()
     observers = [
@@ -73,8 +73,9 @@ final class HotkeyCenter {
     observers = []
   }
 
-  /// Reinstalls the double-press monitor. Call after Accessibility is granted, in case a
-  /// monitor installed without it never receives other apps' events.
+  /// Reinstalls the double-press monitor, in case one installed without Accessibility
+  /// never receives other apps' events. `AppDelegate` calls it from
+  /// `PermissionMonitor.onChange` when Accessibility is newly granted.
   func accessibilityGranted() {
     guard doubleTapMonitor != nil else { return }
     doubleTapMonitor?.stop()
@@ -86,7 +87,7 @@ final class HotkeyCenter {
   /// are now.
   func problem(for hotkey: Hotkey, role: HotkeyRole) -> HotkeyProblem? {
     HotkeyRules.problem(
-      for: hotkey, role: role, assigned: combos, reserved: SystemShortcuts.reserved())
+      for: hotkey, role: role, assigned: shortcuts, reserved: SystemShortcuts.reserved())
   }
 
   /// Validates, swaps the registration and saves. On failure the previous shortcut stays
@@ -102,15 +103,15 @@ final class HotkeyCenter {
         Log.ui.error(
           "Hotkey registration failed for \(role.rawValue, privacy: .public): \(error.status, privacy: .public)"
         )
-        if previous != nil, case .combo(let old) = combos[role] {
+        if previous != nil, case .combo(let old) = shortcuts[role] {
           registrations[role] = try? register(old, for: role)
         }
         return .registrationFailed(error.status)
       }
     }
-    combos[role] = hotkey
+    shortcuts[role] = hotkey
     problems[role] = nil
-    store.save(combos)
+    store.save(shortcuts)
     updateDoubleTapMonitor()
     Log.ui.info("Hotkey set for \(role.rawValue, privacy: .public)")
     return nil
@@ -118,9 +119,9 @@ final class HotkeyCenter {
 
   func clear(_ role: HotkeyRole) {
     registrations.removeValue(forKey: role)?.unregister()
-    combos[role] = nil
+    shortcuts[role] = nil
     problems[role] = nil
-    store.save(combos)
+    store.save(shortcuts)
     updateDoubleTapMonitor()
   }
 
@@ -133,14 +134,17 @@ final class HotkeyCenter {
       let typed = KeyboardLayout.current()?.character(keyCode: combo.keyCode)
       return HotkeyRules.displayString(
         combo, keyName: HotkeyRules.keyName(keyCode: combo.keyCode, typed: typed))
-    case .doubleTap(let key):
-      return HotkeyRules.displayString(doubleTap: key)
+    case .doubleTap(let doubleTap):
+      return HotkeyRules.displayString(doubleTap)
     }
   }
 
-  /// A double press seen by the monitor.
+  /// A double press of the physical `key`, seen by the monitor.
   func doubleTapped(_ key: ModifierKey) {
-    guard let role = combos.first(where: { $0.value == .doubleTap(key) })?.key else { return }
+    let role = shortcuts.first { _, hotkey in
+      if case .doubleTap(let doubleTap) = hotkey { doubleTap.matches(key) } else { false }
+    }?.key
+    guard let role else { return }
     onPress?(role)
   }
 
@@ -152,7 +156,7 @@ final class HotkeyCenter {
 
   private func registerAll() {
     guard !isPaused else { return }
-    for (role, hotkey) in combos where registrations[role] == nil {
+    for (role, hotkey) in shortcuts where registrations[role] == nil {
       guard case .combo(let combo) = hotkey else { continue }
       do {
         registrations[role] = try register(combo, for: role)
@@ -180,7 +184,7 @@ final class HotkeyCenter {
   private func updateDoubleTapMonitor() {
     let wanted =
       isStarted && !isPaused
-      && combos.values.contains {
+      && shortcuts.values.contains {
         if case .doubleTap = $0 { true } else { false }
       }
     if wanted, doubleTapMonitor == nil {
@@ -200,7 +204,7 @@ final class HotkeyCenter {
   /// Flags registered combinations that macOS has since reserved; they stay registered so
   /// the user keeps a working shortcut while they pick another.
   private func recheckRegistered() {
-    for (role, hotkey) in combos where registrations[role] != nil {
+    for (role, hotkey) in shortcuts where registrations[role] != nil {
       problems[role] = problem(for: hotkey, role: role)
     }
   }

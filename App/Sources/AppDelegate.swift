@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
       Log.model.notice("mock model at \(mock, privacy: .public)")
     }
     Log.ui.info(
-      "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.combos.count, privacy: .public)"
+      "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.shortcuts.count, privacy: .public)"
     )
   }
 

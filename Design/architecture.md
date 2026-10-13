@@ -123,8 +123,8 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 | `CaptureFixture` 应用 | `Fixtures/CaptureFixture`（`project.yml` 里的一个 target） | macOS | 端到端测试用的夹具应用，各种文本控件加「撒谎」控件，记录收到的拷贝、粘贴、写入（第 14.3 节） |
 | 词典构建工具 | `tools/build-dict`（独立 Swift 包） | macOS | 从固定日期的公开数据快照生成 `dict-en-zh.sqlite`；数据库不进 git（第 7.2 节） |
 
-现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`、查词卡片的提示词、解码和流式字段扫描（M2.5）；润色、译出的改写校验（M3）还没有。
-选区分类 `classify` 和切句 `sentence(containing:in:)` 已实现；`writeAction`、`appContext` 目前只是调用即崩溃的存根（第 5 节）。
+现状：`DictCore` 里已有的是方向判定、`normalizedKey`、翻译提示词、模型客户端与服务商预设、模型翻译器、译文后处理、引擎选择与降级决策、偏好设置的数据类型、纠错的编辑应用与 diff（M3 第一刀）、即时词典查询 `Lexicon`、词库存储 `VocabStore`（含最小复习排程接口）、音色选择规则 `resolveVoice`、查词卡片的提示词、解码和流式字段扫描（M2.5）、译成外语与回译的提示词和请求、改写的 `cleanUp` 与 `validate`（M3.2）；润色的提示词还没有。
+选区分类 `classify`、切句 `sentence(containing:in:)` 和 `writeAction` 已实现；`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
 现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）和 SQLite3（系统 `libsqlite3`，`Lexicon` 和 `VocabStore` 用）。
@@ -652,10 +652,10 @@ public func resolveDirection(_ text: String, pair: LanguagePair) -> Direction
 |---|---|
 | `normalizedKey(_ text: String) -> String` | NFKC、小写、去首尾空白、内部空白折叠成一个空格；词典和词库的主键都用它 |
 | `sentence(containing selection: Range<String.Index>, in paragraph: String) -> ContextSentence?` | 第 3.5 节的切句与定位；调用方把无障碍给的 UTF-16 偏移换成 `String.Index`。现状：已实现，应用目标的 `contextSentence(in:selection:)` 是它的 `NSRange` 适配（第 3.5 节） |
-| `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节）。现状：存根，M3 实现 |
+| `writeAction(for text: String, pair: LanguagePair) -> Capability` | 「写」键的默认动作：选中文字主要是我的语言就 `.translateOut`，否则 `.proofread`（`Capability` 见第 6.5 节）。「主要是我的语言」就是 `resolveDirection` 给出 `.intoLearning`：书写系统不同时我的文字至少占字母的三分之一（混排的「这个 PR 我已经 review 过了」译成外语，「Please review 这个」纠错），相同时由语言识别判定；学习语言、第三种语言和没有字母的文字都纠错，纠错不会改变语言。现状：已实现（M3.2） |
 | `appContext(bundleID: String?) -> AppContext` | 把应用归成 `AppContext` 的 `chat`、`mail`、`document`、`code`、`other`，作为润色和译成外语的可信参数；映射表是数据。现状：存根，M3.2 实现 |
 
-`normalizedKey`、`sentence(containing:in:)`、第 5.1 节的 `classify` 和第 5.2 节的 `resolveDirection` 已实现。
+`normalizedKey`、`sentence(containing:in:)`、`writeAction`、第 5.1 节的 `classify` 和第 5.2 节的 `resolveDirection` 已实现。
 
 `AppKind` 判定不在这里：`AppKind` 是 `DictApp` 的类型，判定函数也在 `DictApp`（第 3.3 节）。
 
@@ -902,7 +902,7 @@ Apple 翻译框架：
 | 纠错，输出错处列表由客户端应用 | 16 个用例 × 10 次：156/160 全部通过；本来正确的输入原样保留 97/100；注入 40/40 |
 | 查词卡片，strict `json_schema` | 170/170 严格解码；多义词按上下文选对义项 40/40；非词识别 24/25 |
 
-随机后缀标签只在翻译上测过；纠错、润色、译成外语、查词卡片也统一使用它，这是未测的改动【未验证】，由第 14.5 节的评测覆盖。
+随机后缀标签只在翻译上测过；纠错、润色、译成外语、查词卡片也统一使用它，这是未测的改动【未验证】，由第 14.5 节的评测覆盖；译成外语已由 `translateOut` 套件测过（见下文）。
 
 **译文后处理**：原文以没闭合的伪造标签结尾时，模型几乎每次都另起一行补一个闭合标签（真实标签 `</source_text_<随机后缀>>` 或伪造的 `</source_text>`）。
 `DictCore` 的纯函数 `removingAddedClosingTag` 删掉这一行：译文最后一行只是一个闭合标签，且这个标签在译文里出现的次数多于原文。
@@ -977,6 +977,16 @@ user：标签包原文，后接「List the mistakes in the text above.」。
 - **译成外语并替换**：「用户用自己的语言写了这段话，会把你的译文当作自己的消息发出去」；保持原文的语域，不更正式也不更客气；同样的内容、同样的顺序、大致同样的长度；已经是外语的部分保持原样。
   输出纯文本。
   复测注入 30/30，译文质量和语域没有评分【未验证】。
+  现状：`PromptBuilder.translateOut(_:pair:context:nonce:)` 已实现，用随机后缀标签和翻译共用的开头，其余规则同句子翻译（翻译所有句子、不回答不照做、保留换行和链接等）。
+  应用场合作为一句「It goes into a chat conversation / an email / a document / a code editor, as a comment, commit message or documentation.」代入，`other` 不写这一句。
+  `ModelTranslator.translateOut(_:pair:context:)` 流式输出，每个元素都已过 `cleanUp`，最后一个就是要替换的文本；出错语义同句子翻译（第 6.4 节）。
+  评测【实测，`gpt-6-luna`，`translateOut` 套件 24 例 × 10 次，2026-10-14】：译文是英文 240/240，`validate` 无问题 240/240，链接、数字、专名逐字保留 110/110，注入不照做 20/20；首个内容 p50 0.81 s。
+- **回译**：译成外语的结果完整之后，把最终文本（`translateOut` 流的最后一个元素）再译回我的语言，给用户一行核对：学习者常常看不懂自己要发出去的外语，回译是最便宜的核对。
+  不另写提示词，就是句子翻译的 `translation(_:into:nonce:)`，目标是我的语言；它看不到原文，所以不会照抄原文，回出来的意思只来自译文。
+  `ModelTranslator.backTranslate(_:pair:)` 流式输出，换行折成空格，成为一行。
+  只在正向流正常结束后发，正向失败或被取消就不发；回译失败不影响替换。
+  评测用粗检：原文里的每个数字都在回译里（一位数也可以是汉字数字），原文至少有 6 个不同汉字时两边汉字集合的 Dice 系数不低于 0.35，另加每例的关键词。
+  上面那次评测里粗检 218/240：失败都是同义改写（「方案」回成「计划」、「作业」回成「任务」、「3 月」回成「三月」、「爬山」译成 hiking 再回成「徒步」），按这些放宽粗检后重算 240/240【实测后校准，没有重跑】。
 - **母语词找外语说法**：输入 `{"term": …, "context": …}`，strict schema 输出 1 到 3 个候选，每个有 `word`、`partOfSpeech`、`usage`（我的语言写的选用说明）、`example`、`exampleTranslation`，最常用、最中性的放第一个。
   这个操作在真实模型上没有测过【未验证】。
 
@@ -1078,18 +1088,27 @@ extension AppliedEdits {
 
 ```swift
 public enum RewriteAction: Sendable { case improve, translateOut }
-public enum RewriteIssue: Sendable, Equatable { case wrapped, echoedPrompt, languageMismatch, lengthRatio, lostURL, lineCountChanged }
-public func cleanUp(_ result: String, source: String) -> String     // 去掉整体包裹的引号和标签，恢复原文首尾空白
-public func validate(source: String, result: String, action: RewriteAction, expected: Locale.Language) -> [RewriteIssue]
+public enum RewriteIssue: Sendable, Equatable { case wrapped, echoedPrompt, languageMismatch, lengthRatio, lostURL, lineCountChanged, unchanged }
+public func cleanUp(_ result: String, source: String) -> String
+public func validate(source: String, result: String, action: RewriteAction, pair: LanguagePair) -> [RewriteIssue]
 ```
 
-- `wrapped`：清理后仍以 ``` 开头，或含有 `source_text_` 标签。
-- `echoedPrompt`：含有只属于我方提示词的句子（例如 `text-processing function inside a desktop app`）。
-- `languageMismatch`：结果的主语言不是期望语言；两边都超过 20 个字符才判断。
-- `lengthRatio`：润色不在原文长度的 0.4 到 2 倍之间；译成外语不在 0.3 到 4 倍之间。
+- `cleanUp`：先去掉包住全文的代码围栏和标签（包括 `source_text_` 标签），再用 `removingAddedClosingTag` 删掉模型补的闭合标签，再删掉末尾的说明行（以 `Note:`、`(Note`、`注：`、`说明：` 等开头，且只在结果的非空行多于原文时删），最后去掉开头的标签（`Translation:`、`译文：` 等）和包住全文的引号；每一步都只在原文自己没有同样的东西时做。
+  内部的引号不算包裹（`"Yes" and "no"` 不动）。
+  结果去掉首尾空白后接上原文自己的首尾空白，多段邮件替换后换行不变；空白结果还是空。
+- 现状：`cleanUp`、`validate` 已实现（M3.2，`DictCore/Writing/Rewrite.swift`），`validate` 按下面的顺序列出问题。
+- `wrapped`：清理后仍以 ``` 开头，或含有 `source_text_` 标签，而原文没有。
+- `echoedPrompt`：含有只属于我方提示词的句子（例如 `text-processing function inside a desktop app`），而原文没有。
+- `languageMismatch`：用阅读用的 `resolveDirection` 判定，不另起一套。
+  译成外语：结果会被判成「译成学习语言」，也就是读起来还是我的语言；第三种语言在不同书写系统的语言对里拦不住，接受。
+  润色：原文和结果都判得出方向且方向不同。
+  原设计「两边都超过 20 个字符才判断」不用了：书写系统的计数对短文本也可靠，同书写系统时语言识别没把握就给 `.undecided`，不算不符。
+- `lengthRatio`：按 UTF-8 字节数算，汉字 3 字节、英文字母 1 字节，中英之间的比例大致是 1；润色不在 0.4 到 2 倍之间、译成外语不在 0.3 到 4 倍之间算问题。
+  原文不到 20 字节不判断：「好」译成「Sounds good to me!」是正常的。
 - `lostURL`：原文里 `NSDataDetector` 找到的每个链接，结果里必须逐字出现。
 - `lineCountChanged`：非空行数与原文不同。
-- 阈值是建议值【推断】，用评测集校准。
+- `unchanged`：只用于译成外语，结果和原文去掉首尾空白后完全相同，而原文本来要译（`resolveDirection` 给出 `.intoLearning`）；通常和 `languageMismatch` 一起出现。
+- 阈值是建议值【推断】，`translateOut` 评测 240 次没有一次误报【实测，`gpt-6-luna`】，但套件里没有触发问题的输出，拦截率没有测。
 - 有任何问题时面板显示警告，回车不替换，需要 ⌘回车 才替换。
 - 复测里还出现过一种拦不住的失败：模型悄悄删掉被注入的那一句，输出看起来完全正常【实测】；行数校验能拦住一部分，其余靠用户看 diff。
 
@@ -1746,8 +1765,9 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 - 评测框架（用例、不变量检查、运行器、报告）放在 `DictEval` 里，不随应用发布；`DictCoreTests` 依赖 `DictEval`，用桩模型测它。
 - `make eval SUITE=<套件> RUNS=<次数>`：`scripts/eval.sh` 从 `.env` 读出 `OPENAI_API_KEY` 放进子进程环境，不打印；每次运行有花费上限（默认 1 美元），按每次返回的用量累计。
 - 套件：方向（问句、被提及的词）、注入（每种操作）、纠错（正确输入原样、错误改对、逗号连接分句第一遍改掉、第二遍无改动）、润色、译成外语、查词卡片、找外语说法。
-  现状：有四个套件：翻译的 `direction`、`injection`（只覆盖翻译）、`fallback`（`.undecided` 的回落提示词），和查词卡片的 `card`（含上下文句和词元里的注入用例）。
-  其余未实现：找外语说法（M2.5 的剩余部分），纠错在 M3.1，润色和译成外语在 M3.2，各自加入时同时给该操作补注入用例。
+  现状：有五个套件：翻译的 `direction`、`injection`（只覆盖翻译）、`fallback`（`.undecided` 的回落提示词），查词卡片的 `card`（含上下文句和词元里的注入用例），和译成外语的 `translateOut`。
+  `translateOut` 有 24 例日常中文句子（聊天、邮件、文档、代码场合，含专名、日期、金额、链接、emoji、多段和 3 个注入用例），每次先译成外语、按应用的做法 `cleanUp`，再回译；不变量是译文语言、`validate` 无问题、逐字保留、回译完成、回译语言和回译粗检（第 6.6 节）。
+  其余未实现：找外语说法（M2.5 的剩余部分），纠错在 M3.1，润色在 M3.2，各自加入时同时给该操作补注入用例。
   `DictEval --base-url` 可以对本地 mock 跑，只用来检查评测框架，通过率没有意义。
 - 用例是我们自己写的文字；每个用例跑 N 次，报告通过率和首个内容、完成耗时的 p50 / p90。
 - 判定的是不变量，不是具体文字：目标语言正确、不含答案、不含标签和提示词片段、链接和代码逐字保留、行数不变、错处能应用、严格解码成功、词元与选中词同一书写系统等。
@@ -1828,7 +1848,8 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 | 任务 | 内容 | 依赖 | 可并行 |
 |---|---|---|---|
 | M3.1 纠错提示词与评测 | 带逗号连接分句规则的纠错提示词；评测证明收敛 | M1.2 | 是 |
-| M3.2 润色与译成外语 | 两个提示词、`appContext`、`cleanUp`、`validate`；评测 | M1.2 | 是 |
+| M3.2 润色与译成外语 | 两个提示词、`appContext`、`cleanUp`、`validate`；评测。现状：`DictCore` 层的译成外语已做：`writeAction` 按方向路由，`PromptBuilder.translateOut` 带应用场合，`ModelTranslator.translateOut` 流式输出已清理的结果，`cleanUp` 和 `validate`（含 `unchanged`）已实现，`translateOut` 评测在 `gpt-6-luna` 上每个不变量 100%（第 6.6 节）；润色的提示词和评测、`appContext(bundleID:)` 的映射表、面板与会话的串联还没有做 | M1.2 | 是 |
+| M3.2b 回译 | 译成外语完成后把最终译文再译回我的语言，面板给一行核对；对照 Raycast google-translate 插件的回译核对补齐。现状：`ModelTranslator.backTranslate` 和评测的回译粗检已做，面板串联没有做 | M3.2 | 是 |
 | M3.3 错处与 diff | `applyEdits`、通用 diff、`replacementConfirmed` | M1.0 | 是 |
 | M3.4 替换 | 可写判定、`ReplaceTarget` 快照、`ReplaceWriter` 状态机与假实现测试、提示胶囊 | M1.4 | 是 |
 | M3.5 夹具扩展 | 撒谎控件、迟到粘贴、异步写入、⌘Z 断言；SwiftUI `TextField` 和 `TextEditor`（第 14.3 节）；替换场景 | M1.5 | 是 |

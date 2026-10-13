@@ -76,16 +76,45 @@ public struct ModelTranslator: Translator {
       source: text)
   }
 
-  private func run(_ request: ModelRequest, source: String) -> AsyncThrowingStream<String, Error> {
+  /// Translates what the user wrote in their own language into the learning language, to
+  /// replace it (architecture 6.6). Each element is already `cleanUp`'s result, so the last
+  /// one is what goes into the text field once the stream ends normally; the caller then runs
+  /// `validate` on it and asks for the back-translation.
+  public func translateOut(_ text: String, pair: LanguagePair, context: AppContext)
+    -> AsyncThrowingStream<String, Error>
+  {
+    run(
+      PromptBuilder.translateOut(text, pair: pair, context: context, nonce: makeNonce()),
+      source: text, present: { cleanUp($0, source: text) })
+  }
+
+  /// Translates a finished translate-out result back into my language, on one line, so the
+  /// user can check what they are about to send. It is a plain translation that never sees
+  /// the original, so it cannot copy it. Send it only after the forward stream ended
+  /// normally, with its last element.
+  public func backTranslate(_ translation: String, pair: LanguagePair)
+    -> AsyncThrowingStream<String, Error>
+  {
+    run(
+      PromptBuilder.translation(translation, into: pair.mine, nonce: makeNonce()),
+      source: translation, present: oneLine)
+  }
+
+  /// `present` turns the translation so far into the element shown.
+  private func run(
+    _ request: ModelRequest, source: String,
+    present: @escaping @Sendable (String) -> String = { $0 }
+  ) -> AsyncThrowingStream<String, Error> {
     let model = model
     return AsyncThrowingStream { continuation in
       let task = Task {
         var translation = ModelTranslation(source: source)
         var shown: String?
         func show() {
-          guard translation.text != shown else { return }
-          shown = translation.text
-          continuation.yield(translation.text)
+          let text = present(translation.text)
+          guard text != shown else { return }
+          shown = text
+          continuation.yield(text)
         }
         do {
           for try await event in model.stream(request) {
@@ -113,4 +142,9 @@ public struct ModelTranslator: Translator {
     case .unknown, nil: ModelTranslationError.interrupted
     }
   }
+}
+
+/// `text` on one line: each line break, with the whitespace around it, becomes one space.
+func oneLine(_ text: String) -> String {
+  text.trimmingCharacters(in: .whitespacesAndNewlines).replacing(/\s*\R\s*/, with: " ")
 }

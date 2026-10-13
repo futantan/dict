@@ -10,7 +10,11 @@
 #   - with one named "card", the card of the term in the {"term", "context"} object of the
 #     source block: the `cards` entry of that term (also matched lowercased), else
 #     `cardFallback` with {term} filled in; a non-empty definition is always behind MARK;
+#   - with the translate-out task sentence in the user message, the `translateOuts` entry
+#     whose text occurs in it, else the source text echoed; always behind MARK;
 #   - otherwise a translation: the table's, else the source text echoed; always behind MARK.
+#     The back-translation of a translate-out result is such a translation: `translations`
+#     has the reverse of every `translateOuts` entry.
 #   It streams the reply as a few deltas, a "stop" chunk, a usage chunk when the request
 #   asks for one, and [DONE]. Every request field is accepted, so the client never drops
 #   fields to retry.
@@ -42,6 +46,8 @@ import time
 MARK = "[mock] "
 REPLIES = pathlib.Path(__file__).resolve().parent.parent / "Fixtures/MockModel/replies.json"
 SOURCE = re.compile(r"<(source_text_\w+)>\n(.*)\n</\1>", re.DOTALL)
+# The task sentence of PromptBuilder.translateOut, after the source block.
+TRANSLATE_OUT = "as the writer's own message"
 FAILURES = ("hang", "cut", "slow")
 MODEL_LISTS = {
     "/v1/models": {
@@ -122,6 +128,11 @@ def reply(request):
     if schema.get("name") == "card":
         text, found = card(table, user)
         return text, "card", found
+    if TRANSLATE_OUT in user:
+        found = lookup(table["translateOuts"], user)
+        match = SOURCE.search(user)
+        text = found or (match.group(2) if match else user)
+        return MARK + text, "translateOut", bool(found)
     found = lookup(table["translations"], user)
     if found:
         return MARK + found, "translation", True

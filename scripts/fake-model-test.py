@@ -40,8 +40,12 @@ def card_body(term, context=""):
     return body(json.dumps({"term": term, "context": context}, ensure_ascii=False), CARD_SCHEMA)
 
 
-def body(text, response_format=None):
-    user = f"<source_text_0a1b2c3d>\n{text}\n</source_text_0a1b2c3d>\n\nDo the task."
+TRANSLATE_OUT_TASK = ("Translate the source block into English as the writer's own message. "
+                      "Output only the translation.")
+
+
+def body(text, response_format=None, task="Do the task."):
+    user = f"<source_text_0a1b2c3d>\n{text}\n</source_text_0a1b2c3d>\n\n{task}"
     request = {
         "model": "mock",
         "messages": [{"role": "system", "content": "sys"}, {"role": "user", "content": user}],
@@ -140,6 +144,26 @@ class AnsweringModeTests(unittest.TestCase):
     def test_translation_fallback_echoes_the_source(self):
         self.assertEqual(self.stream(body("an unknown sentence")),
                          fake_model.MARK + "an unknown sentence")
+
+    def test_translate_out_from_the_table_is_marked(self):
+        text = self.stream(body("我们明天下午三点开会。", task=TRANSLATE_OUT_TASK))
+        self.assertEqual(text, fake_model.MARK + "We have a meeting at three tomorrow afternoon.")
+
+    def test_translate_out_fallback_echoes_the_source(self):
+        self.assertEqual(self.stream(body("一句没有的话", task=TRANSLATE_OUT_TASK)),
+                         fake_model.MARK + "一句没有的话")
+
+    def test_back_translation_of_a_translate_out_result(self):
+        forward = self.stream(body("不好意思，路上堵车，我要晚到十分钟", task=TRANSLATE_OUT_TASK))
+        # The app back-translates the result as the mock gave it, MARK included.
+        back = self.stream(body(forward))
+        self.assertEqual(back, fake_model.MARK + "抱歉，我堵在路上了，会晚到十分钟。")
+
+    def test_every_translate_out_has_its_back_translation(self):
+        table = json.loads(fake_model.REPLIES.read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(table["translateOuts"]), 3)
+        for source, result in table["translateOuts"].items():
+            self.assertIn(result, table["translations"], source)
 
     def test_without_include_usage_there_is_no_usage_chunk(self):
         payload = body("five dozen liquor jugs")

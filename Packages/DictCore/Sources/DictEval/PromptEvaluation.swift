@@ -15,6 +15,9 @@ enum EvalTask: Sendable, Equatable {
   case translation(source: String, direction: Direction)
   /// The dictionary card of `term` in `context`.
   case card(term: String, context: String?)
+  /// Translate what the user wrote in their own language out into the learning language for
+  /// `context`, then back-translate the cleaned result.
+  case translateOut(source: String, context: AppContext)
 }
 
 /// One evaluation input: the task and the invariants its output must keep.
@@ -29,6 +32,10 @@ struct EvalCase: Sendable {
 
   init(id: String, term: String, context: String?, checks: [EvalCheck]) {
     self.init(id: id, task: .card(term: term, context: context), checks: checks)
+  }
+
+  init(id: String, translateOut source: String, context: AppContext, checks: [EvalCheck]) {
+    self.init(id: id, task: .translateOut(source: source, context: context), checks: checks)
   }
 
   init(id: String, task: EvalTask, checks: [EvalCheck]) {
@@ -68,6 +75,18 @@ enum EvalInvariant: String, Sendable, CaseIterable {
   case status
   case lemma
   case contextSense
+  /// Translating out: `validate` finds no issue in the cleaned result. Always checked.
+  case validates
+  /// Translating out: the back-translation of the cleaned result completed. Always checked;
+  /// when it fails, no other back-translation invariant is checked.
+  case backCompleted
+  /// Translating out: the back-translation is in my language's script. Always checked.
+  case backLanguage
+  /// Translating out: a rough check that the back-translation says what the source said.
+  /// Always checked: every number of the source is in it and, for sources with at least six
+  /// distinct Han characters, the two sets of distinct Han characters overlap with a Dice
+  /// coefficient of at least 0.35. `backKeeps` adds key words.
+  case backMeaning
 }
 
 /// The writing system the output must be in.
@@ -102,6 +121,9 @@ enum EvalCheck: Sendable, Equatable {
   /// one of `expected` (fragments of a gloss of that sense in the user's language) and none of
   /// `wrong` (fragments that only a gloss of another sense of the term would contain).
   case contextSense(expected: [String], wrong: [String])
+  /// Translating out: the back-translation contains at least one of these; counted under
+  /// `backMeaning`.
+  case backKeeps([String])
 }
 
 /// The outcome of one invariant on one output.
@@ -147,6 +169,8 @@ private func check(_ output: String, source: String, _ check: EvalCheck) -> Eval
     return EvalResult(invariant: .lemma, failure: "only for cards")
   case .contextSense:
     return EvalResult(invariant: .contextSense, failure: "only for cards")
+  case .backKeeps:
+    return EvalResult(invariant: .backMeaning, failure: "only for translating out")
   }
 }
 
@@ -245,7 +269,8 @@ private func reusedContext(_ card: WordCard, _ context: String) -> String? {
 /// Prompt text that must never reach the output unless the source itself contains it.
 private let promptFragments = [
   "source_text", "source block", "text-processing function", "not a chat assistant",
-  "Output only the translation", "源块", "源文本块", "只输出译文", "仅输出译文",
+  "Output only the translation", "as the writer's own message",
+  "send your translation as their own message", "源块", "源文本块", "只输出译文", "仅输出译文",
 ]
 
 private func promptLeak(_ output: String, source: String) -> String? {
@@ -343,6 +368,9 @@ struct EvalRun: Sendable {
   var definitionFirst: Bool?
   /// Cards: whether the top-level keys came exactly in the schema's order, `status` first.
   var schemaOrder: Bool?
+  /// Translating out: the back-translation of the cleaned result; nil when it did not
+  /// complete.
+  var backTranslation: String?
   var results: [EvalResult]
 }
 
@@ -397,10 +425,15 @@ struct EvalRunner: Sendable {
     case .card(let term, let context):
       PromptBuilder.card(
         term: term, context: context, pair: pair, accent: accent, nonce: makeNonce())
+    case .translateOut(let source, let context):
+      PromptBuilder.translateOut(source, pair: pair, context: context, nonce: makeNonce())
     }
   }
 
   private func run(_ evalCase: EvalCase, attempt: Int) async -> EvalRun {
+    if case .translateOut(let source, _) = evalCase.task {
+      return await runTranslateOut(evalCase, source: source, attempt: attempt)
+    }
     let request = request(for: evalCase.task)
     var scanner = TopLevelFieldScanner()
     let clock = ContinuousClock()
@@ -461,8 +494,148 @@ struct EvalRunner: Sendable {
       let mine: ExpectedScript? = pair.mine.languageCode == .chinese ? .han : nil
       return evaluateCard(
         run.output, term: term, context: context, mine: mine, checks: evalCase.checks)
+    case .translateOut(let source, _):
+      return evaluateTranslateOut(
+        run.output, back: run.backTranslation, source: source, pair: pair,
+        checks: evalCase.checks)
     }
   }
+
+  /// The forward call, cleaned up the way the app does, then the back-translation of that
+  /// result when the forward call completed. Latencies are the forward call's; the usage is
+  /// both calls'.
+  private func runTranslateOut(_ evalCase: EvalCase, source: String, attempt: Int) async
+    -> EvalRun
+  {
+    let forward = await collect(request(for: evalCase.task))
+    var run = EvalRun(
+      caseID: evalCase.id, attempt: attempt, output: cleanUp(forward.text, source: source),
+      finish: forward.finish, error: forward.error, usage: forward.usage,
+      firstContent: forward.firstContent, completion: forward.completion, results: [])
+    guard forward.error == nil, forward.finish == .complete else {
+      let reason = forward.error ?? forward.finish.map { "finished \($0)" } ?? "no finish reason"
+      run.results = [EvalResult(invariant: .completed, failure: reason)]
+      return run
+    }
+    let back = await collect(
+      PromptBuilder.translation(run.output, into: pair.mine, nonce: makeNonce()))
+    if let usage = back.usage {
+      run.usage = Usage(
+        inputTokens: (run.usage?.inputTokens ?? 0) + usage.inputTokens,
+        outputTokens: (run.usage?.outputTokens ?? 0) + usage.outputTokens)
+    }
+    if back.error == nil, back.finish == .complete {
+      run.backTranslation = removingAddedClosingTag(back.text, source: run.output)
+    }
+    run.results = [EvalResult(invariant: .completed, failure: nil)] + evaluate(run, evalCase)
+    return run
+  }
+
+  /// One streamed call, as text.
+  private func collect(_ request: ModelRequest) async -> StreamedText {
+    let clock = ContinuousClock()
+    let start = clock.now
+    var streamed = StreamedText()
+    do {
+      for try await event in model.stream(request) {
+        switch event {
+        case .thinking:
+          break
+        case .text(let delta):
+          if streamed.firstContent == nil && !delta.isEmpty {
+            streamed.firstContent = start.duration(to: clock.now)
+          }
+          streamed.text += delta
+        case .discardText:
+          streamed.text = ""
+          streamed.firstContent = nil
+        case .finished(let reason, let usage):
+          streamed.finish = reason
+          streamed.usage = usage
+        }
+      }
+      streamed.completion = start.duration(to: clock.now)
+    } catch {
+      streamed.error = String(describing: error)
+    }
+    return streamed
+  }
+}
+
+/// What one streamed call produced.
+private struct StreamedText {
+  var text = ""
+  var finish: FinishReason?
+  var error: String?
+  var usage: Usage?
+  var firstContent: Duration?
+  var completion: Duration?
+}
+
+/// Checks a cleaned translate-out result and its back-translation (nil when that call did not
+/// complete): the invariants every output gets, `validate`, then the back-translation's
+/// invariants, then `checks`.
+func evaluateTranslateOut(
+  _ output: String, back: String?, source: String, pair: LanguagePair, checks: [EvalCheck]
+) -> [EvalResult] {
+  let backKeeps = checks.flatMap { check -> [[String]] in
+    if case .backKeeps(let words) = check { [words] } else { [] }
+  }
+  let forwardChecks = checks.filter { if case .backKeeps = $0 { false } else { true } }
+  let issues = validate(source: source, result: output, action: .translateOut, pair: pair)
+  var results =
+    evaluate(output, source: source, checks: forwardChecks) + [
+      EvalResult(
+        invariant: .validates,
+        failure: issues.isEmpty ? nil : issues.map { "\($0)" }.joined(separator: ", "))
+    ]
+  guard let back else {
+    results.append(EvalResult(invariant: .backCompleted, failure: "did not complete"))
+    return results
+  }
+  let mine: ExpectedScript = pair.mine.languageCode == .chinese ? .han : .latin
+  results += [
+    EvalResult(invariant: .backCompleted, failure: nil),
+    EvalResult(invariant: .backLanguage, failure: scriptMismatch(back, mine)),
+    EvalResult(
+      invariant: .backMeaning, failure: meaningLoss(back, source: source, keeps: backKeeps)),
+  ]
+  return results
+}
+
+/// Why `back` does not look like it says what `source` said, or nil: a number of the source
+/// is missing, too few of the source's distinct Han characters are in it, or none of a group
+/// of key words is. A single digit may come back as its Chinese numeral: "3月" goes out as
+/// "March" and comes back as "三月" (measured with gpt-6-luna).
+private func meaningLoss(_ back: String, source: String, keeps: [[String]]) -> String? {
+  let backDigits = back.filter { !$0.isWhitespace && $0 != "," }
+  let numerals: [String: [String]] = [
+    "0": ["零"], "1": ["一"], "2": ["二", "两"], "3": ["三"], "4": ["四"], "5": ["五"],
+    "6": ["六"], "7": ["七"], "8": ["八"], "9": ["九"],
+  ]
+  if let number = source.matches(of: /[0-9]+/).map({ String($0.output) }).first(where: {
+    number in
+    !backDigits.contains(number) && !(numerals[number] ?? []).contains { back.contains($0) }
+  }) {
+    return "missing \(quoted(number))"
+  }
+  func han(_ text: String) -> Set<Unicode.Scalar> {
+    Set(text.unicodeScalars.filter(\.properties.isIdeographic))
+  }
+  let sourceHan = han(source)
+  if sourceHan.count >= 6 {
+    let backHan = han(back)
+    let dice =
+      2 * Double(sourceHan.intersection(backHan).count)
+      / Double(sourceHan.count + backHan.count)
+    if dice < 0.35 { return "Han overlap \(String(format: "%.2f", dice))" }
+  }
+  if let group = keeps.first(where: { group in
+    !group.contains { back.localizedCaseInsensitiveContains($0) }
+  }) {
+    return "none of \(group.map(quoted).joined(separator: ", "))"
+  }
+  return nil
 }
 
 /// Whether `definition` is among `keys` and comes before every array of the card.
@@ -531,6 +704,9 @@ struct EvalReport: Sendable {
       guard !failed.isEmpty else { continue }
       lines.append("  \(run.caseID) #\(run.attempt): \(failed.joined(separator: ", "))")
       lines.append("    → \(run.output.replacingOccurrences(of: "\n", with: "⏎"))")
+      if let back = run.backTranslation {
+        lines.append("    ← \(back.replacingOccurrences(of: "\n", with: "⏎"))")
+      }
     }
     return lines.joined(separator: "\n")
   }

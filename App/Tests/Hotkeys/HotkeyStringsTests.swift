@@ -17,6 +17,15 @@ struct HotkeyStringsTests {
     #expect(try chinese("Write") == "写")
   }
 
+  @Test func doublePressStringsHaveChinese() throws {
+    #expect(try chinese("Right %@") == "右 %@")
+    #expect(
+      try chinese(
+        "Siri and Dictation can also be set to a double press of ⌘ or ⌃. If one is, both respond."
+      ).hasPrefix("Siri 和听写"))
+    #expect(!HotkeyNotice.systemDoublePress.message.isEmpty)
+  }
+
   @Test func everyProblemHasAMessage() {
     let problems: [HotkeyProblem] = [
       .needsModifier, .appShortcut, .reserved, .usedBy(.read), .usedBy(.write),

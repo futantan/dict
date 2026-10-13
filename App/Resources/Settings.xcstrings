@@ -144,13 +144,13 @@
         }
       }
     },
-    "Click a shortcut and press the new keys. Press Delete to remove it, or Esc to cancel." : {
+    "Click a shortcut and press the new keys, or press a modifier key twice. Press Delete to remove it, or Esc to cancel." : {
       "comment" : "Footer under the shortcut fields",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点按快捷键，然后按下新的组合键。按 Delete 删除，按 Esc 取消。"
+            "value" : "点按快捷键，然后按下新的组合键，或者连按两次一个修饰键。按 Delete 删除，按 Esc 取消。"
           }
         }
       }

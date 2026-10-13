@@ -98,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     permissions.onChange = { [weak self] status, granted in
       self?.coordinator?.permissionsChanged(granted: granted)
+      if granted.contains(.accessibility) { self?.hotkeys.accessibilityGranted() }
       // The grant happened in System Settings; bring the window back to show it worked.
       if self?.onboarding?.model.permissionsChanged(status) == true {
         self?.onboarding?.show()

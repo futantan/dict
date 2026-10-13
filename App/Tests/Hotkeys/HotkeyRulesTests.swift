@@ -20,7 +20,9 @@ struct HotkeyRulesTests {
     assigned: [HotkeyRole: KeyCombo] = [:],
     reserved: Set<KeyCombo> = []
   ) -> HotkeyProblem? {
-    HotkeyRules.problem(for: combo, role: role, assigned: assigned, reserved: reserved)
+    HotkeyRules.problem(
+      for: .combo(combo), role: role, assigned: assigned.mapValues(Hotkey.combo), reserved: reserved
+    )
   }
 
   @Test func plainOrShiftedCharacterKeysNeedAModifier() {
@@ -73,5 +75,41 @@ struct HotkeyRulesTests {
     #expect(HotkeyRules.keyName(keyCode: Self.keyA, typed: "q") == "Q")
     #expect(HotkeyRules.keyName(keyCode: UInt16(kVK_ANSI_Grave), typed: "`") == "`")
     #expect(HotkeyRules.keyName(keyCode: Self.keyA, typed: nil) == "#0")
+  }
+
+  @Test func aDoublePressNeedsNoOtherKeyAndIsNeverReserved() {
+    for key in ModifierKey.allCases {
+      #expect(
+        HotkeyRules.problem(
+          for: .doubleTap(key), role: .read, assigned: [:], reserved: [combo(Self.keyA, [])]) == nil
+      )
+    }
+  }
+
+  @Test func theOtherRolesDoublePressIsRejected() {
+    let assigned: [HotkeyRole: Hotkey] = [.write: .doubleTap(.leftOption)]
+    let problem = { (hotkey: Hotkey) in
+      HotkeyRules.problem(for: hotkey, role: .read, assigned: assigned, reserved: [])
+    }
+    #expect(problem(.doubleTap(.leftOption)) == .usedBy(.write))
+    #expect(problem(.doubleTap(.rightOption)) == nil)
+    #expect(problem(.combo(combo(Self.keyA, .option))) == nil)
+  }
+
+  @Test func doublePressesOfCommandAndControlComeWithANotice() {
+    #expect(HotkeyRules.notice(for: .doubleTap(.leftCommand)) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(.rightCommand)) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(.rightControl)) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(.leftOption)) == nil)
+    #expect(HotkeyRules.notice(for: .doubleTap(.leftShift)) == nil)
+    #expect(HotkeyRules.notice(for: .combo(combo(Self.keyA, [.control, .command]))) == nil)
+  }
+
+  @Test func aDoublePressShowsTheKeyTwice() {
+    #expect(HotkeyRules.displayString(doubleTap: .leftOption) == "⌥ ⌥")
+    #expect(HotkeyRules.displayString(doubleTap: .leftControl) == "⌃ ⌃")
+    #expect(HotkeyRules.displayString(doubleTap: .leftShift) == "⇧ ⇧")
+    #expect(HotkeyRules.displayString(doubleTap: .rightCommand).hasSuffix("⌘ ⌘"))
+    #expect(HotkeyRules.displayString(doubleTap: .rightCommand) != "⌘ ⌘")
   }
 }

@@ -17,17 +17,41 @@ enum HotkeyProblem: Equatable, Sendable {
   case registrationFailed(OSStatus)
 }
 
-/// Pure rules for choosing and showing combinations; the system queries live in
+/// A shortcut that works but may also trigger something in macOS. Shown, not refused.
+enum HotkeyNotice: Equatable, Sendable {
+  /// Siri and Dictation can be set to a double press of ⌘ or ⌃.
+  case systemDoublePress
+}
+
+/// Pure rules for choosing and showing shortcuts; the system queries live in
 /// `KeyboardLayout` and `SystemShortcuts`.
 enum HotkeyRules {
-  /// Checks `combo` for `role`. ⌥ with a letter is allowed even though it types a
+  /// Checks `hotkey` for `role`. ⌥ with a letter is allowed even though it types a
   /// character such as "å": the user chose it, as they would in Raycast or macOS itself.
+  /// A double press only has to differ from the other role's.
   static func problem(
-    for combo: KeyCombo,
+    for hotkey: Hotkey,
     role: HotkeyRole,
-    assigned: [HotkeyRole: KeyCombo],
+    assigned: [HotkeyRole: Hotkey],
     reserved: Set<KeyCombo>
   ) -> HotkeyProblem? {
+    if case .combo(let combo) = hotkey, let problem = comboProblem(combo, reserved: reserved) {
+      return problem
+    }
+    if let other = assigned.first(where: { $0.key != role && $0.value == hotkey })?.key {
+      return .usedBy(other)
+    }
+    return nil
+  }
+
+  static func notice(for hotkey: Hotkey) -> HotkeyNotice? {
+    guard case .doubleTap(let key) = hotkey, [.command, .control].contains(key.modifier) else {
+      return nil
+    }
+    return .systemDoublePress
+  }
+
+  private static func comboProblem(_ combo: KeyCombo, reserved: Set<KeyCombo>) -> HotkeyProblem? {
     let modifiers = combo.modifiers
     let isFunctionKey = functionKeyNames[combo.keyCode] != nil
     if !isFunctionKey && modifiers.isDisjoint(with: [.control, .option, .command]) {
@@ -39,18 +63,29 @@ enum HotkeyRules {
       return .appShortcut
     }
     if reserved.contains(combo) { return .reserved }
-    if let other = assigned.first(where: { $0.key != role && $0.value == combo })?.key {
-      return .usedBy(other)
-    }
     return nil
   }
 
   /// Modifiers in menu order followed by the key name, for example "⌃⌥D".
   static func displayString(_ combo: KeyCombo, keyName: String) -> String {
+    symbols(combo.modifiers) + keyName
+  }
+
+  /// The key twice, for example "⌥ ⌥"; a right-hand key is marked as such.
+  static func displayString(doubleTap key: ModifierKey) -> String {
+    let symbol = symbols(key.modifier)
+    let pair = "\(symbol) \(symbol)"
+    guard key.isRight else { return pair }
+    return String(
+      localized: "Right \(pair)", table: "Hotkeys",
+      comment: "A shortcut that is the right-hand modifier key pressed twice, for example ⌘ ⌘")
+  }
+
+  private static func symbols(_ modifiers: KeyCombo.Modifiers) -> String {
     let symbols: [(KeyCombo.Modifiers, String)] = [
       (.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘"),
     ]
-    return symbols.filter { combo.modifiers.contains($0.0) }.map(\.1).joined() + keyName
+    return symbols.filter { modifiers.contains($0.0) }.map(\.1).joined()
   }
 
   /// The name printed on the key: a fixed symbol for non-character keys, otherwise what

@@ -24,7 +24,7 @@ struct HotkeyStepView: View {
         Text(
           String(
             localized:
-              "Select text in any app and press a shortcut. Pick combinations you do not use elsewhere, such as ⌃⌥ with a letter.",
+              "Select text in any app and press a shortcut. Pick one you do not use elsewhere, such as ⌃⌥ with a letter, or press a modifier key such as ⌥ twice.",
             table: "Hotkeys",
             comment: "Explanation in the onboarding step that picks the two shortcuts")
         )

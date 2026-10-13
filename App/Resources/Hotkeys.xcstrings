@@ -111,13 +111,24 @@
         }
       }
     },
-    "Select text in any app and press a shortcut. Pick combinations you do not use elsewhere, such as ⌃⌥ with a letter." : {
+    "Right %@" : {
+      "comment" : "A shortcut that is the right-hand modifier key pressed twice, for example ⌘ ⌘",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右 %@"
+          }
+        }
+      }
+    },
+    "Select text in any app and press a shortcut. Pick one you do not use elsewhere, such as ⌃⌥ with a letter, or press a modifier key such as ⌥ twice." : {
       "comment" : "Explanation in the onboarding step that picks the two shortcuts",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在任意应用里选中文字，然后按快捷键。请选择别处没有用到的组合，例如 ⌃⌥ 加一个字母。"
+            "value" : "在任意应用里选中文字，然后按快捷键。请选择别处没有用到的，例如 ⌃⌥ 加一个字母，或者连按两次 ⌥ 这样的修饰键。"
           }
         }
       }
@@ -129,6 +140,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "只带 ⌘ 的快捷键会与应用菜单冲突，请加上 ⌃ 或 ⌥。"
+          }
+        }
+      }
+    },
+    "Siri and Dictation can also be set to a double press of ⌘ or ⌃. If one is, both respond." : {
+      "comment" : "Shown under a shortcut that is ⌘ or ⌃ pressed twice; the shortcut is still saved",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siri 和听写也可以设成连按两次 ⌘ 或 ⌃。如果设了，两边都会响应。"
           }
         }
       }

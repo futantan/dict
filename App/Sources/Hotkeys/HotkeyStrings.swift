@@ -30,6 +30,19 @@ extension HotkeyRole {
   }
 }
 
+extension HotkeyNotice {
+  var message: String {
+    switch self {
+    case .systemDoublePress:
+      String(
+        localized:
+          "Siri and Dictation can also be set to a double press of ⌘ or ⌃. If one is, both respond.",
+        table: "Hotkeys",
+        comment: "Shown under a shortcut that is ⌘ or ⌃ pressed twice; the shortcut is still saved")
+    }
+  }
+}
+
 extension HotkeyProblem {
   var message: String {
     switch self {

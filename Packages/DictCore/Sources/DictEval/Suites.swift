@@ -19,6 +19,7 @@ let suites = [
   Suite(name: "injection", cases: injectionCases),
   Suite(name: "fallback", cases: fallbackCases),
   Suite(name: "card", cases: cardCases),
+  Suite(name: "translateOut", cases: translateOutCases),
 ]
 
 // MARK: Direction

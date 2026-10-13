@@ -16,10 +16,10 @@ private let applied = AppliedEdits(
 
 /// Accepting and declining a correction's changes one by one (architecture 11.5).
 struct CorrectionReviewTests {
-  @Test func everyChangeStartsAcceptedWithTheFirstCurrent() {
+  @Test func everyChangeStartsAcceptedWithNoneCurrent() {
     let correction = Correction(applied, replaceable: true)
     #expect(correction.accepted == [0, 1])
-    #expect(correction.current == 0)
+    #expect(correction.current == nil)
     #expect(correction.text == "the cat sat on a mat")
     #expect(correction.canReplace)
   }
@@ -48,6 +48,8 @@ struct CorrectionReviewTests {
 
   @Test func movingStopsAtTheFirstAndTheLastChange() {
     var correction = Correction(applied, replaceable: true)
+    correction.moveCurrent(by: 1)
+    #expect(correction.current == 0)
     correction.moveCurrent(by: -1)
     #expect(correction.current == 0)
     correction.moveCurrent(by: 1)
@@ -55,6 +57,29 @@ struct CorrectionReviewTests {
     #expect(correction.current == 1)
     correction.toggleCurrent()
     #expect(correction.accepted == [0])
+  }
+
+  /// The first ← marks the last change; the first Space only marks the first change.
+  @Test func theFirstStepOnlyMarksAChange() {
+    var backwards = Correction(applied, replaceable: true)
+    backwards.moveCurrent(by: -1)
+    #expect(backwards.current == 1)
+    var space = Correction(applied, replaceable: true)
+    space.toggleCurrent()
+    #expect(space.current == 0)
+    #expect(space.accepted == [0, 1])
+  }
+
+  /// A correction appears with no change underlined.
+  @MainActor @Test func aNewCorrectionShowsNoMark() {
+    let correction = Correction(applied, replaceable: true)
+    let text = diffText(
+      correction.proposed.segments, accepted: correction.accepted, current: correction.current)
+    var underlined = false
+    text.enumerateAttribute(.underlineStyle, in: NSRange(location: 0, length: text.length)) {
+      value, _, _ in if value != nil { underlined = true }
+    }
+    #expect(!underlined)
   }
 
   @Test func withoutChangesThereIsNothingToReview() {

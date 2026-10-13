@@ -79,7 +79,9 @@ struct Correction: Sendable, Equatable {
   /// Every change the model made, accepted or not.
   var proposed: AppliedEdits
   var accepted: Set<Int>
-  /// The change ←, → and Space act on; nil when there are none.
+  /// The change ←, → and Space act on, marked in the panel; nil until the first of those
+  /// keys or a click, so a correction appears without a mark, as the panel appears without
+  /// a focus ring.
   var current: Int?
   /// There are changes and the selection's field can be written (architecture 4.3).
   var canReplace: Bool
@@ -90,7 +92,7 @@ struct Correction: Sendable, Equatable {
   init(_ applied: AppliedEdits, replaceable: Bool) {
     proposed = applied
     accepted = Set(0..<applied.changeCount)
-    current = applied.changeCount > 0 ? 0 : nil
+    current = nil
     canReplace = replaceable && applied.changeCount > 0
   }
 
@@ -109,14 +111,26 @@ struct Correction: Sendable, Equatable {
     declinedReturn = false
   }
 
+  /// Toggles the current change; before there is one, only makes the first change current,
+  /// so Space never changes what the user has not seen marked.
   mutating func toggleCurrent() {
-    if let current { toggle(current) }
+    if let current {
+      toggle(current)
+    } else if changeCount > 0 {
+      current = 0
+      declinedReturn = false
+    }
   }
 
-  /// Moves `current` by `offset` changes, stopping at the first and the last.
+  /// Moves `current` by `offset` changes, stopping at the first and the last. Before there
+  /// is a current change, → makes the first one current and ← the last.
   mutating func moveCurrent(by offset: Int) {
     guard changeCount > 0 else { return }
-    current = min(max((current ?? 0) + offset, 0), changeCount - 1)
+    if let current {
+      self.current = min(max(current + offset, 0), changeCount - 1)
+    } else {
+      current = offset < 0 ? changeCount - 1 : 0
+    }
     declinedReturn = false
   }
 }

@@ -93,6 +93,11 @@
           "corrected-read-only",
           PanelState(phase: .corrected(Correction(changed, replaceable: false)))
         ),
+        // As the panel appears: no change is current yet, so none is marked.
+        (
+          "proofread-appeared",
+          PanelState(phase: .corrected(Correction(changed, replaceable: true)))
+        ),
         ("proofread-partial", PanelState(phase: .corrected(partial))),
         ("proofread-all-rejected", PanelState(phase: .corrected(declined))),
         (

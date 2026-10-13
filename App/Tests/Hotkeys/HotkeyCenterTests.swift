@@ -54,15 +54,15 @@ final class HotkeyCenterTests {
     defer { stopAll() }
     let center = makeCenter()
 
-    #expect(center.assign(f18, to: .read) == nil)
-    #expect(center.combos[.read] == f18)
+    #expect(center.assign(.combo(f18), to: .read) == nil)
+    #expect(center.shortcuts[.read] == .combo(f18))
     #expect(isHeld(f18))
 
     center.stop()
     #expect(!isHeld(f18))
 
     let restored = makeCenter()
-    #expect(restored.combos[.read] == f18)
+    #expect(restored.shortcuts[.read] == .combo(f18))
     #expect(restored.problems.isEmpty)
     #expect(isHeld(f18))
   }
@@ -71,8 +71,8 @@ final class HotkeyCenterTests {
     defer { stopAll() }
     let center = makeCenter()
 
-    #expect(center.assign(f18, to: .write) == nil)
-    #expect(center.assign(f19, to: .write) == nil)
+    #expect(center.assign(.combo(f18), to: .write) == nil)
+    #expect(center.assign(.combo(f19), to: .write) == nil)
 
     #expect(!isHeld(f18))
     #expect(isHeld(f19))
@@ -82,35 +82,36 @@ final class HotkeyCenterTests {
     defer { stopAll() }
     let center = makeCenter()
 
-    #expect(center.assign(f18, to: .read) == nil)
-    #expect(center.assign(f18, to: .write) == .usedBy(.read))
-    #expect(center.combos[.write] == nil)
+    #expect(center.assign(.combo(f18), to: .read) == nil)
+    #expect(center.assign(.combo(f18), to: .write) == .usedBy(.read))
+    #expect(center.shortcuts[.write] == nil)
   }
 
   @Test func failedRegistrationRollsBackToTheOldCombo() throws {
     defer { stopAll() }
     let center = makeCenter()
-    #expect(center.assign(f16, to: .read) == nil)
+    #expect(center.assign(.combo(f16), to: .read) == nil)
 
     let squatter = try CarbonHotkey.register(f17) {}
     defer { squatter.unregister() }
 
-    #expect(center.assign(f17, to: .read) == .registrationFailed(OSStatus(eventHotKeyExistsErr)))
-    #expect(center.combos[.read] == f16)
+    #expect(
+      center.assign(.combo(f17), to: .read) == .registrationFailed(OSStatus(eventHotKeyExistsErr)))
+    #expect(center.shortcuts[.read] == .combo(f16))
     #expect(isHeld(f16))
 
     let reloaded = HotkeyStore(defaults: defaults).load()
-    #expect(reloaded[.read] == f16)
+    #expect(reloaded[.read] == .combo(f16))
   }
 
   @Test func clearingUnregistersAndForgets() {
     defer { stopAll() }
     let center = makeCenter()
-    #expect(center.assign(f18, to: .read) == nil)
+    #expect(center.assign(.combo(f18), to: .read) == nil)
 
     center.clear(.read)
 
-    #expect(center.combos[.read] == nil)
+    #expect(center.shortcuts[.read] == nil)
     #expect(!isHeld(f18))
     #expect(HotkeyStore(defaults: defaults).load().isEmpty)
   }
@@ -118,7 +119,7 @@ final class HotkeyCenterTests {
   @Test func pausingReleasesTheCombosUntilResumed() {
     defer { stopAll() }
     let center = makeCenter()
-    #expect(center.assign(f18, to: .read) == nil)
+    #expect(center.assign(.combo(f18), to: .read) == nil)
 
     center.isPaused = true
     #expect(!isHeld(f18))
@@ -135,7 +136,7 @@ final class HotkeyCenterTests {
 
     let center = makeCenter()
 
-    #expect(center.combos[.read] == f18)
+    #expect(center.shortcuts[.read] == .combo(f18))
     #expect(center.problems[.read] == .registrationFailed(OSStatus(eventHotKeyExistsErr)))
   }
 
@@ -147,7 +148,7 @@ final class HotkeyCenterTests {
     let center = makeCenter()
     var pressed: [HotkeyRole] = []
     center.onPress = { pressed.append($0) }
-    #expect(center.assign(f18, to: .write) == nil)
+    #expect(center.assign(.combo(f18), to: .write) == nil)
     let id = try #require(center.registrations[.write]).id
 
     var event: EventRef?
@@ -165,5 +166,94 @@ final class HotkeyCenterTests {
 
     #expect(SendEventToEventTarget(created, GetApplicationEventTarget()) == noErr)
     #expect(pressed == [.write])
+  }
+
+  @Test func theMonitorRunsOnlyWhileADoublePressIsAssigned() {
+    defer { stopAll() }
+    let center = makeCenter()
+    #expect(center.assign(.combo(f18), to: .read) == nil)
+    #expect(!center.isMonitoringDoubleTaps)
+
+    #expect(center.assign(.doubleTap(DoubleTap(.rightCommand)), to: .write) == nil)
+    #expect(center.isMonitoringDoubleTaps)
+    #expect(isHeld(f18))
+
+    center.isPaused = true
+    #expect(!center.isMonitoringDoubleTaps)
+    center.isPaused = false
+    #expect(center.isMonitoringDoubleTaps)
+
+    center.clear(.write)
+    #expect(!center.isMonitoringDoubleTaps)
+  }
+
+  @Test func aDoublePressReplacesACombinationAndReleasesIt() {
+    defer { stopAll() }
+    let center = makeCenter()
+    #expect(center.assign(.combo(f18), to: .read) == nil)
+
+    #expect(center.assign(.doubleTap(DoubleTap(.leftOption)), to: .read) == nil)
+
+    #expect(!isHeld(f18))
+    #expect(center.registrations[.read] == nil)
+    #expect(center.shortcuts[.read] == .doubleTap(DoubleTap(.leftOption)))
+  }
+
+  @Test func aSavedDoublePressStartsTheMonitorAtLaunch() {
+    defer { stopAll() }
+    HotkeyStore(defaults: defaults).save([.read: Hotkey.doubleTap(DoubleTap(.leftOption))])
+
+    let center = makeCenter()
+
+    #expect(center.shortcuts[.read] == .doubleTap(DoubleTap(.leftOption)))
+    #expect(center.isMonitoringDoubleTaps)
+    center.stop()
+    #expect(!center.isMonitoringDoubleTaps)
+  }
+
+  @Test func theTwoRolesCannotShareADoublePress() {
+    defer { stopAll() }
+    let center = makeCenter()
+    #expect(center.assign(.doubleTap(DoubleTap(.leftOption)), to: .read) == nil)
+    #expect(center.assign(.doubleTap(DoubleTap(.leftOption)), to: .write) == .usedBy(.read))
+    #expect(center.assign(.doubleTap(DoubleTap(.rightOption)), to: .write) == .usedBy(.read))
+    #expect(center.assign(.doubleTap(DoubleTap(.rightCommand)), to: .write) == nil)
+  }
+
+  /// The monitor's output, without pressing keys: either-side ⌥ ⌥ answers both ⌥ keys,
+  /// right-hand ⌘ ⌘ only the right ⌘.
+  @Test func aDoublePressDispatchesItsRole() {
+    defer { stopAll() }
+    let center = makeCenter()
+    var pressed: [HotkeyRole] = []
+    center.onPress = { pressed.append($0) }
+    #expect(center.assign(.doubleTap(DoubleTap(.leftOption)), to: .read) == nil)
+    #expect(center.assign(.doubleTap(DoubleTap(.rightCommand)), to: .write) == nil)
+
+    center.doubleTapped(.rightCommand)
+    center.doubleTapped(.leftCommand)
+    center.doubleTapped(.leftOption)
+    center.doubleTapped(.rightOption)
+    center.doubleTapped(.leftShift)
+
+    #expect(pressed == [.write, .read, .read])
+  }
+
+  /// `AppDelegate` calls `accessibilityGranted()` from `PermissionMonitor.onChange`.
+  @Test func grantingAccessibilityReinstallsTheMonitor() throws {
+    defer { stopAll() }
+    let center = makeCenter()
+    center.accessibilityGranted()
+    #expect(!center.isMonitoringDoubleTaps)
+
+    #expect(center.assign(.doubleTap(DoubleTap(.leftOption)), to: .read) == nil)
+    let before = try #require(center.doubleTapMonitor)
+
+    center.accessibilityGranted()
+
+    let after = try #require(center.doubleTapMonitor)
+    #expect(after !== before)
+    #expect(!before.isRunning)
+    #expect(after.isRunning)
   }
 }

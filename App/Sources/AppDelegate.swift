@@ -98,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     permissions.onChange = { [weak self] status, granted in
       self?.coordinator?.permissionsChanged(granted: granted)
+      if granted.contains(.accessibility) { self?.hotkeys.accessibilityGranted() }
       // The grant happened in System Settings; bring the window back to show it worked.
       if self?.onboarding?.model.permissionsChanged(status) == true {
         self?.onboarding?.show()
@@ -122,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
       Log.model.notice("mock model at \(mock, privacy: .public)")
     }
     Log.ui.info(
-      "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.combos.count, privacy: .public)"
+      "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.shortcuts.count, privacy: .public)"
     )
   }
 

@@ -20,7 +20,9 @@ struct HotkeyRulesTests {
     assigned: [HotkeyRole: KeyCombo] = [:],
     reserved: Set<KeyCombo> = []
   ) -> HotkeyProblem? {
-    HotkeyRules.problem(for: combo, role: role, assigned: assigned, reserved: reserved)
+    HotkeyRules.problem(
+      for: .combo(combo), role: role, assigned: assigned.mapValues(Hotkey.combo), reserved: reserved
+    )
   }
 
   @Test func plainOrShiftedCharacterKeysNeedAModifier() {
@@ -73,5 +75,74 @@ struct HotkeyRulesTests {
     #expect(HotkeyRules.keyName(keyCode: Self.keyA, typed: "q") == "Q")
     #expect(HotkeyRules.keyName(keyCode: UInt16(kVK_ANSI_Grave), typed: "`") == "`")
     #expect(HotkeyRules.keyName(keyCode: Self.keyA, typed: nil) == "#0")
+  }
+
+  @Test func aDoublePressNeedsNoOtherKeyAndIsNeverReserved() {
+    for key in ModifierKey.allCases {
+      #expect(
+        HotkeyRules.problem(
+          for: .doubleTap(DoubleTap(key)), role: .read, assigned: [:],
+          reserved: [combo(Self.keyA, [])]) == nil
+      )
+    }
+  }
+
+  @Test func theOtherRolesDoublePressIsRejected() {
+    let assigned: [HotkeyRole: Hotkey] = [.write: .doubleTap(DoubleTap(.leftOption))]
+    let problem = { (hotkey: Hotkey) in
+      HotkeyRules.problem(for: hotkey, role: .read, assigned: assigned, reserved: [])
+    }
+    #expect(problem(.doubleTap(DoubleTap(.leftOption))) == .usedBy(.write))
+    // Either-side ⌥ ⌥ covers the right-hand key too.
+    #expect(problem(.doubleTap(DoubleTap(.rightOption))) == .usedBy(.write))
+    #expect(problem(.doubleTap(DoubleTap(.leftCommand))) == nil)
+    #expect(problem(.combo(combo(Self.keyA, .option))) == nil)
+  }
+
+  @Test func twoRightHandDoublePressesOfDifferentModifiersCoexist() {
+    let assigned: [HotkeyRole: Hotkey] = [.write: .doubleTap(DoubleTap(.rightCommand))]
+    #expect(
+      HotkeyRules.problem(
+        for: .doubleTap(DoubleTap(.rightOption)), role: .read, assigned: assigned, reserved: [])
+        == nil)
+    #expect(
+      HotkeyRules.problem(
+        for: .doubleTap(DoubleTap(.leftCommand)), role: .read, assigned: assigned, reserved: [])
+        == .usedBy(.write))
+  }
+
+  @Test func doublePressesOfCommandAndControlComeWithANotice() {
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.leftCommand))) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.rightCommand))) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.rightControl))) == .systemDoublePress)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.leftOption))) == nil)
+    #expect(HotkeyRules.notice(for: .doubleTap(DoubleTap(.leftShift))) == nil)
+    #expect(HotkeyRules.notice(for: .combo(combo(Self.keyA, [.control, .command]))) == nil)
+  }
+
+  @Test func aDoublePressShowsTheKeyTwiceAndMarksRightHandOnly() {
+    #expect(HotkeyRules.displayString(DoubleTap(.leftOption)) == "⌥ ⌥")
+    #expect(HotkeyRules.displayString(DoubleTap(.leftControl)) == "⌃ ⌃")
+    #expect(HotkeyRules.displayString(DoubleTap(.leftShift)) == "⇧ ⇧")
+    // "Right ⌘ ⌘" or "右 ⌘ ⌘" depending on the host's language (HotkeyStringsTests).
+    let right = HotkeyRules.displayString(DoubleTap(.rightCommand))
+    #expect(right.hasSuffix(" ⌘ ⌘"))
+    #expect(["Right ⌘ ⌘", "右 ⌘ ⌘"].contains(right))
+  }
+
+  @Test func aLeftHandRecordingMeansEitherSide() {
+    let either = DoubleTap(.leftOption)
+    #expect(!either.isRightOnly)
+    #expect(either.matches(.leftOption))
+    #expect(either.matches(.rightOption))
+    #expect(!either.matches(.leftCommand))
+  }
+
+  @Test func aRightHandRecordingMeansOnlyThatKey() {
+    let right = DoubleTap(.rightCommand)
+    #expect(right.isRightOnly)
+    #expect(right.matches(.rightCommand))
+    #expect(!right.matches(.leftCommand))
+    #expect(!right.matches(.rightOption))
   }
 }

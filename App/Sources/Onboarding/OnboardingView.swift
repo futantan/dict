@@ -175,7 +175,7 @@ private struct TryItStep: View {
   }
 
   private var message: String {
-    guard let combo = model.hotkeys.combos[.read] else {
+    guard let combo = model.hotkeys.shortcuts[.read] else {
       return String(
         localized: "See a translation in the panel before you start.",
         comment: "Onboarding sample explanation when no Read shortcut is set")

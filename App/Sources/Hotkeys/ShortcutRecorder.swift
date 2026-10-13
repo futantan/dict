@@ -4,8 +4,8 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-/// Records the combination for one role. Click, then press the keys; Esc cancels and
-/// Delete clears. Used by the onboarding step and by Settings.
+/// Records the shortcut for one role. Click, then press the keys or press a modifier key
+/// twice; Esc cancels and Delete clears. Used by the onboarding step and by Settings.
 struct ShortcutRecorder: View {
   let role: HotkeyRole
   let center: HotkeyCenter
@@ -20,7 +20,7 @@ struct ShortcutRecorder: View {
         Button(action: toggleRecording) {
           Text(label)
             .monospacedDigit()
-            .foregroundStyle(isRecording || center.combos[role] == nil ? .secondary : .primary)
+            .foregroundStyle(isRecording || center.shortcuts[role] == nil ? .secondary : .primary)
             .frame(minWidth: 140)
         }
         .background(
@@ -36,7 +36,7 @@ struct ShortcutRecorder: View {
         .accessibilityLabel(Text(role.title))
         .accessibilityValue(Text(label))
 
-        if center.combos[role] != nil && !isRecording {
+        if center.shortcuts[role] != nil && !isRecording {
           Button {
             rejection = nil
             center.clear(role)
@@ -55,6 +55,13 @@ struct ShortcutRecorder: View {
           .font(.callout)
           .foregroundStyle(.red)
           .fixedSize(horizontal: false, vertical: true)
+      } else if !isRecording, let hotkey = center.shortcuts[role],
+        let notice = HotkeyRules.notice(for: hotkey)
+      {
+        Text(notice.message)
+          .font(.callout)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
     }
     .onDisappear { if isRecording { stopRecording() } }
@@ -68,7 +75,7 @@ struct ShortcutRecorder: View {
           comment: "Shown in the shortcut field while waiting for a key press")
         : HotkeyRules.displayString(KeyCombo(keyCode: 0, modifiers: heldModifiers), keyName: "")
     }
-    guard let combo = center.combos[role] else {
+    guard let combo = center.shortcuts[role] else {
       return String(
         localized: "Record Shortcut", table: "Hotkeys",
         comment: "Shortcut field with no shortcut; clicking it starts recording")
@@ -93,18 +100,19 @@ struct ShortcutRecorder: View {
     center.isPaused = false
   }
 
-  private func finish(_ combo: KeyCombo) {
+  private func finish(_ hotkey: Hotkey) {
     stopRecording()
-    rejection = center.assign(combo, to: role)
+    rejection = center.assign(hotkey, to: role)
   }
 }
 
 /// An invisible view that takes keyboard focus while recording and reports key presses,
-/// including ones that would otherwise be menu key equivalents.
+/// including ones that would otherwise be menu key equivalents, and double presses of a
+/// modifier key.
 private struct KeyCaptureView: NSViewRepresentable {
   let isActive: Bool
   let onModifiers: (KeyCombo.Modifiers) -> Void
-  let onKey: (KeyCombo) -> Void
+  let onKey: (Hotkey) -> Void
   let onClear: () -> Void
   let onCancel: () -> Void
 
@@ -114,6 +122,7 @@ private struct KeyCaptureView: NSViewRepresentable {
     view.handlers = self
     guard isActive != view.isActive else { return }
     view.isActive = isActive
+    view.doubleTaps = DoubleTapDetector()
     if isActive {
       // Wait for the button click to finish, or it takes focus back.
       Task { view.window?.makeFirstResponder(view) }
@@ -125,6 +134,7 @@ private struct KeyCaptureView: NSViewRepresentable {
   final class CaptureView: NSView {
     var handlers: KeyCaptureView?
     var isActive = false
+    var doubleTaps = DoubleTapDetector()
 
     override var acceptsFirstResponder: Bool { isActive }
 
@@ -135,6 +145,10 @@ private struct KeyCaptureView: NSViewRepresentable {
 
     override func flagsChanged(with event: NSEvent) {
       handlers?.onModifiers(KeyCombo.Modifiers(event.modifierFlags))
+      let (input, time) = DoubleTapMonitor.input(for: event)
+      if isActive, let key = doubleTaps.handle(input, at: time) {
+        handlers?.onKey(.doubleTap(DoubleTap(key)))
+      }
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -147,11 +161,12 @@ private struct KeyCaptureView: NSViewRepresentable {
 
     override func keyDown(with event: NSEvent) {
       guard isActive, !event.isARepeat else { return }
+      _ = doubleTaps.handle(.otherInput, at: event.timestamp)
       let modifiers = KeyCombo.Modifiers(event.modifierFlags)
       switch (Int(event.keyCode), modifiers.isEmpty) {
       case (kVK_Escape, true): handlers?.onCancel()
       case (kVK_Delete, true), (kVK_ForwardDelete, true): handlers?.onClear()
-      default: handlers?.onKey(KeyCombo(keyCode: event.keyCode, modifiers: modifiers))
+      default: handlers?.onKey(.combo(KeyCombo(keyCode: event.keyCode, modifiers: modifiers)))
       }
     }
   }

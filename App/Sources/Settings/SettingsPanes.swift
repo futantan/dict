@@ -623,7 +623,7 @@ struct ShortcutsPane: View {
         footnote(
           String(
             localized:
-              "Click a shortcut and press the new keys. Press Delete to remove it, or Esc to cancel.",
+              "Click a shortcut and press the new keys, or press a modifier key twice. Press Delete to remove it, or Esc to cancel.",
             table: "Settings", comment: "Footer under the shortcut fields"))
       }
     }

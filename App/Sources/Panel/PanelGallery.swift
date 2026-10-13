@@ -59,11 +59,25 @@
           .changed(from: "", to: "a "),
           .unchanged("bakery."),
         ])
-      // Two changes declined, one of them a pure insertion, and the current one accepted.
-      var partial = Correction(changed, replaceable: true)
-      partial.toggle(1)
-      partial.toggle(3)
-      partial.current = 2
+      // A replacement, a deletion and an insertion declined; the current change accepted.
+      var partial = Correction(
+        AppliedEdits(
+          text: "She has lived here since 2019 and works at a bakery.",
+          segments: [
+            .unchanged("She "),
+            .changed(from: "have", to: "has"),
+            .unchanged(" lived "),
+            .changed(from: "right ", to: ""),
+            .unchanged("here "),
+            .changed(from: "for", to: "since"),
+            .unchanged(" 2019 and "),
+            .changed(from: "work", to: "works"),
+            .unchanged(" at "),
+            .changed(from: "", to: "a "),
+            .unchanged("bakery."),
+          ]), replaceable: true)
+      for change in [1, 2, 4] { partial.toggle(change) }
+      partial.current = 3
       // Return was pressed with every change declined.
       var declined = Correction(changed, replaceable: true)
       for change in 0..<declined.changeCount { declined.toggle(change) }

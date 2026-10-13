@@ -91,6 +91,8 @@ final class PanelController {
   /// reads it from `state` on Return.
   func review(_ change: (inout Correction) -> Void) {
     guard isVisible, case .corrected(var correction) = model.state.phase else { return }
+    // A state still waiting for the next frame would undo this step.
+    throttle.cancel()
     change(&correction)
     model.state.phase = .corrected(correction)
   }

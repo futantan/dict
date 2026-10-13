@@ -338,7 +338,7 @@ extension PanelPhase {
 /// The proofread text with each change in place. An accepted change shows the removed
 /// words struck through in red and the inserted ones in green; a declined one shows the
 /// original words, then the declined suggestion struck through and faint (a declined
-/// deletion, which has none, underlines the kept words with dots). A plain space keeps the two sides from running together. The current change, the
+/// deletion, which has none, underlines the kept words thinly). A plain space keeps the two sides from running together. The current change, the
 /// one ← → and Space act on, is underlined in the accent colour. Every character of a change
 /// carries its index (`.dictChange`) for clicks, and the pointing hand.
 ///
@@ -380,7 +380,7 @@ func diffText(
         removed[.strikethroughColor] = red
       } else if to.isEmpty && !isCurrent {
         // A declined deletion has no faint suggestion to mark it.
-        removed[.underlineStyle] = NSUnderlineStyle([.single, .patternDot]).rawValue
+        removed[.underlineStyle] = NSUnderlineStyle.single.rawValue
         removed[.underlineColor] = NSColor.secondaryLabelColor
       }
       text.append(NSAttributedString(string: from, attributes: removed))

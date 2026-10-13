@@ -387,7 +387,11 @@
       coordinator.hotkeyPressed(.write)
       await coordinator.settle()
       record.endedMs = elapsed
-      record.stateBeforeReturn = record.lastState
+      // The panel applies states once per frame; Return is routed by the state it shows.
+      for _ in 0..<40 where !controller.state.phase.canReplace {
+        try? await Task.sleep(for: .milliseconds(25))
+      }
+      record.stateBeforeReturn = controller.state
       record.panelStates = controller.shownStates - statesBefore
       guard case .success(let selection) = record.result, let target = selection.target,
         controller.isVisible

@@ -68,7 +68,7 @@ final class TranslateOutEngine: SessionTranslateOut {
       show(.translatedOut(translation), note: note)
       guard !Task.isCancelled else { return }
       do {
-        for try await element in back() {
+        for try await element in back() where !element.isEmpty {
           translation.backTranslation = .text(element)
           show(.translatedOut(translation), note: note)
         }

@@ -212,6 +212,15 @@
       "policy": "allowed",
       "step": "read",
       "expect": { "source": "accessibility", "text": "fox", "copyEvents": 0, "readingPanel": false, "context": "The quick brown fox jumps over the lazy dog.", "kind": "card", "lemma": "fox" }
+    },
+    {
+      "name": "write shortcut, text view: my language is translated out, replaced and undone",
+      "control": "textView.plain",
+      "text": "我们明天下午三点开会。",
+      "content": "我们明天下午三点开会。",
+      "policy": "allowed",
+      "step": "write",
+      "expect": { "source": "accessibility", "text": "我们明天下午三点开会。", "copyEvents": 0, "phase": "translatedOut", "backTranslation": true, "replaced": "We have a meeting at three tomorrow afternoon.", "undone": "我们明天下午三点开会。" }
     }
   ]
 }

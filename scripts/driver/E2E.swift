@@ -3,7 +3,9 @@
 // `make e2e` (architecture 14.3, acceptance 15.1 item 2): for each scenario the fixture is
 // brought to the front, the app under test runs `select` then `capture` through its `--e2e`
 // entry point, and the driver checks the captured text, source or failure, the fixture's
-// copy and paste events, and that the clipboard hash is unchanged.
+// copy and paste events, and that the clipboard hash is unchanged. A `write` scenario presses
+// the write shortcut instead, confirms with Return and undoes with ⌘Z, and is checked on the
+// panel's last state, the field's value after each, and the fixture's accessibility write.
 
 import Foundation
 
@@ -23,6 +25,13 @@ struct E2EScenario: Decodable {
     var kind: String?
     /// `read` scenarios with `kind` "card": the card's title.
     var lemma: String?
+    /// `write` scenarios: the panel's phase before Return, e.g. "translatedOut".
+    var phase: String?
+    /// `write` scenarios: whether a back-translation showed before Return.
+    var backTranslation: Bool?
+    /// `write` scenarios: the field's whole value after Return, and after ⌘Z.
+    var replaced: String?
+    var undone: String?
   }
 
   var name: String
@@ -31,7 +40,7 @@ struct E2EScenario: Decodable {
   var content: String?
   var policy: String
   /// "capture" (default) calls the reader; "read" presses the shortcut through the
-  /// coordinator and the real panel.
+  /// coordinator and the real panel; "write" presses the write shortcut, then Return and ⌘Z.
   var step: String?
   /// For "read": "menu" or "key" forces that copy path.
   var force: String?
@@ -134,9 +143,11 @@ struct E2E {
     var select: [String: Any] = ["control": scenario.control, "text": scenario.text]
     select["content"] = scenario.content
     let action: [String: Any] =
-      scenario.step == "read"
-      ? ["read": scenario.force.map { ["force": $0] } ?? [:]]
-      : ["capture": ["policy": scenario.policy]]
+      switch scenario.step {
+      case "read": ["read": scenario.force.map { ["force": $0] } ?? [:]]
+      case "write": ["write": [String: Any]()]
+      default: ["capture": ["policy": scenario.policy]]
+      }
     let outcome = runner.run([["select": select], action], name: scenario.name)
     let events = fixture.entries(since: mark)
     var notes: [String] = []
@@ -165,7 +176,7 @@ struct E2E {
     case .noResult(let reason):
       notes.append(reason)
     case .finished(let steps):
-      if let capture = steps.last(where: { $0.step == "capture" || $0.step == "read" }) {
+      if let capture = steps.last(where: { ["capture", "read", "write"].contains($0.step) }) {
         // A `read` step's own ms includes showing the panel and letting it settle.
         ms = capture.captureEndedMs ?? capture.ms
         notes += check(capture, against: scenario.expect)
@@ -207,6 +218,31 @@ struct E2E {
         "expected context \(Self.quote(context)), got \(Self.quote(capture.context))")
     }
     notes += Self.panelProblems(capture.translation, against: expect)
+    if capture.step == "write" { notes += Self.writeProblems(capture.write, against: expect) }
+    return notes
+  }
+
+  /// What a `write` step's panel showed and what the field held after Return and ⌘Z.
+  static func writeProblems(_ write: [String: Any], against expect: E2EScenario.Expectation)
+    -> [String]
+  {
+    var notes: [String] = []
+    if let phase = expect.phase, write["phase"] as? String != phase {
+      notes.append("expected the panel in \(phase), got \(write["phase"] as? String ?? "nil")")
+    }
+    if let back = expect.backTranslation, (write["backTranslation"] as? String != nil) != back {
+      notes.append(back ? "no back-translation before Return" : "an unexpected back-translation")
+    }
+    if let replaced = expect.replaced, write["valueAfterReplace"] as? String != replaced {
+      notes.append(
+        "expected \(quote(replaced)) after Return, got "
+          + "\(quote(write["valueAfterReplace"] as? String)) (toast \(write["toast"] ?? "nil"))")
+    }
+    if let undone = expect.undone, write["valueAfterUndo"] as? String != undone {
+      notes.append(
+        "expected \(quote(undone)) after ⌘Z, got \(quote(write["valueAfterUndo"] as? String))")
+    }
+    if write["visibleAtEnd"] as? Bool == true { notes.append("the panel stayed after Return") }
     return notes
   }
 

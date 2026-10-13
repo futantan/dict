@@ -16,6 +16,10 @@
 // A word or phrase goes to the card as in the app, with a stub dictionary that knows every
 // term and a stub card model, or the configured model with `"translator": "model"`; nothing
 // is written to the vocabulary log.
+// `write` presses the "write" shortcut instead, waits for the panel to finish (for a
+// translate-out, the back-translation too), sends Return to the panel, then reads the
+// field's value through accessibility, posts ⌘Z to the app and reads it again. It translates
+// out with a stub model (`E2EStub.TranslateOutModel`) unless `"translator": "model"`.
 
 #if DEBUG
   import AppKit
@@ -26,6 +30,8 @@
     case select(control: String, text: String, content: String? = nil)
     case capture(ClipboardPolicy)
     case read(E2EReadOptions)
+    /// Presses the write shortcut, confirms with Return, then undoes with ⌘Z.
+    case write(E2EReadOptions)
     case wait(ms: Int)
     /// A step this runner does not understand; reported, then skipped.
     case invalid(String)
@@ -84,6 +90,15 @@
         options.escapeAfterMs = read["escapeAfterMs"] as? Int
         return .read(options)
       }
+      if let write = object["write"] as? [String: Any] {
+        var options = E2EReadOptions()
+        switch write["translator"] as? String {
+        case nil, "stub": break
+        case "model": options.usesModel = true
+        default: return .invalid("write translator must be stub or model")
+        }
+        return .write(options)
+      }
       if let wait = object["wait"] as? [String: Any] {
         guard let ms = wait["ms"] as? Int else { return .invalid("wait needs ms") }
         return .wait(ms: ms)
@@ -98,6 +113,7 @@
     case capture(
       ms: Double, result: Result<Selection, CaptureFailure>, report: CaptureReport? = nil)
     case read(ms: Double, session: E2ESession.Record, report: CaptureReport?)
+    case write(ms: Double, session: E2ESession.Record, report: CaptureReport?)
     case invalid(String)
 
     var json: Any {
@@ -121,6 +137,14 @@
         object["translation"] = session.translation
         row = object
         return row
+      case .write(let ms, let session, let report):
+        guard
+          var object = E2EResultRow.read(ms: ms, session: session, report: report).json
+            as? [String: Any]
+        else { return [:] }
+        object["step"] = "write"
+        object["write"] = session.write
+        return object
       case .capture(let ms, let result, let report):
         var row: [String: Any] = ["step": "capture", "ms": rounded(ms)]
         switch result {
@@ -231,6 +255,12 @@
           let record = await running.press(options)
           rows.append(
             .read(ms: milliseconds(clock.now - start), session: record, report: reader.lastReport))
+        case .write(let options):
+          let running = session ?? E2ESession(reader: reader)
+          session = running
+          let record = await running.write(options)
+          rows.append(
+            .write(ms: milliseconds(clock.now - start), session: record, report: reader.lastReport))
         case .invalid(let reason):
           rows.append(.invalid(reason))
         }
@@ -276,6 +306,12 @@
       /// Panel calls the coordinator made after the panel was dismissed or hidden.
       var callsAfterDismissal = 0
       var visibleAtEnd = false
+      /// `write` steps: the panel's state before Return, the toast, and the field's value
+      /// after the replacement and after ⌘Z.
+      var stateBeforeReturn: PanelState?
+      var toast: ToastMessage?
+      var valueAfterReplace: String?
+      var valueAfterUndo: String?
     }
 
     private let reader: AccessibilitySelectionReader
@@ -301,9 +337,10 @@
         makeProofreader: { nil },
         replaceWriter: SystemReplaceWriter(
           system: LiveReplaceSystem(queue: reader.queue, clipboard: reader.clipboard)),
-        showToast: { _, _ in },
+        showToast: { [unowned self] message, _ in self.record.toast = message },
         lookUpTerm: { term, _ in [E2EStub.entry(term)] },
-        makeCardMaker: { [unowned self] in self.cardMaker() }))
+        makeCardMaker: { [unowned self] in self.cardMaker() },
+        makeTranslateOut: { [unowned self] in self.translateOutEngine() }))
 
     init(reader: AccessibilitySelectionReader) {
       self.reader = reader
@@ -311,6 +348,7 @@
         self.dismissed = true
         self.coordinator.panelDismissed($0)
       }
+      controller.onConfirm = { [unowned self] in self.coordinator.confirm(anyway: $0) }
     }
 
     /// Presses the shortcut, waits for the session to finish, then hides the panel.
@@ -336,6 +374,59 @@
       // Let the target's window take key back before the next step.
       try? await Task.sleep(for: .milliseconds(100))
       return record
+    }
+
+    /// Presses the write shortcut and waits for the panel to finish, then presses Return in
+    /// the panel, as the user would, and reads the field after the replacement and after ⌘Z.
+    func write(_ options: E2EReadOptions) async -> Record {
+      self.options = options
+      record = Record()
+      dismissed = false
+      start = clock.now
+      let statesBefore = controller.shownStates
+      coordinator.hotkeyPressed(.write)
+      await coordinator.settle()
+      record.endedMs = elapsed
+      record.stateBeforeReturn = record.lastState
+      record.panelStates = controller.shownStates - statesBefore
+      guard case .success(let selection) = record.result, let target = selection.target,
+        controller.isVisible
+      else {
+        record.visibleAtEnd = controller.isVisible
+        coordinator.end()
+        return record
+      }
+      send(keyCode: PanelKeys.returnKey, characters: "\r", to: controller.window)
+      await coordinator.settle()
+      record.visibleAtEnd = controller.isVisible
+      // The target's window takes key back once the panel is gone.
+      try? await Task.sleep(for: .milliseconds(300))
+      record.valueAfterReplace = AX.string(target.element.raw, kAXValueAttribute).1
+      postCommandZ(to: target.app.pid)
+      try? await Task.sleep(for: .milliseconds(500))
+      record.valueAfterUndo = AX.string(target.element.raw, kAXValueAttribute).1
+      coordinator.end()
+      return record
+    }
+
+    private func send(keyCode: UInt16, characters: String, to window: NSWindow) {
+      guard
+        let event = NSEvent.keyEvent(
+          with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+          windowNumber: window.windowNumber, context: nil, characters: characters,
+          charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)
+      else { return }
+      window.sendEvent(event)
+    }
+
+    /// ⌘Z to the app, as the user would press it: the app's own undo, not Dict's.
+    private func postCommandZ(to pid: pid_t) {
+      let z: CGKeyCode = 6
+      for isDown in [true, false] {
+        let event = CGEvent(keyboardEventSource: nil, virtualKey: z, keyDown: isDown)
+        event?.flags = .maskCommand
+        event?.postToPid(pid)
+      }
     }
 
     /// The second press and the Esc key the step asks for, at their times.
@@ -370,6 +461,17 @@
       }
       return makeTranslationEngine(
         preferences, presets: (try? ProviderPreset.all()) ?? [], secrets: secrets)
+    }
+
+    private func translateOutEngine() -> any SessionTranslateOut {
+      guard options.usesModel else {
+        return TranslateOutEngine(
+          model: ModelTranslator(model: E2EStub.TranslateOutModel()),
+          appleAvailability: { _, _ in .notInstalled })
+      }
+      return makeTranslateOutEngine(
+        PreferencesStore(defaults: .standard).load().model,
+        presets: (try? ProviderPreset.all()) ?? [], secrets: CachedSecretStore.app)
     }
 
     private func cardMaker() -> CardMaker? {
@@ -468,7 +570,52 @@
     }
   }
 
+  extension E2EStub {
+    /// Translates out the scenarios' sentences, and translates any English back, the way the
+    /// mock model does for the same sentences (`Fixtures/MockModel/replies.json`).
+    struct TranslateOutModel: TextModel {
+      static let translations = [
+        "我们明天下午三点开会。": "We have a meeting at three tomorrow afternoon."
+      ]
+
+      func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+        let isForward =
+          request.user.contains("as the writer's own message")
+          || request.system.contains("as the writer's own message")
+        let reply =
+          isForward
+          ? Self.translations.first { request.user.contains($0.key) }?.value
+            ?? "Stub translation."
+          : Self.translations.first { request.user.contains($0.value) }?.key ?? "存根回译。"
+        return AsyncThrowingStream { continuation in
+          continuation.yield(.text(reply))
+          continuation.yield(.finished(.complete, nil))
+          continuation.finish()
+        }
+      }
+    }
+  }
+
   extension E2ESession.Record {
+    /// The write part of a `write` row.
+    var write: [String: Any] {
+      var object: [String: Any] = ["visibleAtEnd": visibleAtEnd]
+      object["phase"] = stateBeforeReturn?.phase.name ?? NSNull()
+      object["result"] = stateBeforeReturn?.phase.copyableText ?? NSNull()
+      if case .translatedOut(let translation) = stateBeforeReturn?.phase {
+        switch translation.backTranslation {
+        case .text(let text): object["backTranslation"] = text
+        case .pending, .unavailable: object["backTranslation"] = NSNull()
+        }
+        object["issues"] = translation.issues.map { "\($0)" }
+        object["replaceable"] = translation.replaceable
+      }
+      object["toast"] = toast.map { String(describing: $0) } ?? NSNull()
+      object["valueAfterReplace"] = valueAfterReplace ?? NSNull()
+      object["valueAfterUndo"] = valueAfterUndo ?? NSNull()
+      return object
+    }
+
     /// The translation's part of a `read` row.
     var translation: [String: Any] {
       var object: [String: Any] = [

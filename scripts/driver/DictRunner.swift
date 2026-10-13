@@ -29,6 +29,9 @@ struct StepResult {
   let fallbackMs: Double?
   /// `read` steps: the translation's timings and outcome (E2ERunner's `translation`).
   let translation: [String: Any]
+  /// `write` steps: the panel before Return and the field after it and after ⌘Z
+  /// (E2ERunner's `write`).
+  let write: [String: Any]
 
   init(_ object: [String: Any]) {
     step = object["step"] as? String ?? ""
@@ -48,6 +51,7 @@ struct StepResult {
     copyWaitMs = (stages?["copyWaitMs"] as? NSNumber)?.doubleValue
     fallbackMs = (stages?["fallbackMs"] as? NSNumber)?.doubleValue
     translation = object["translation"] as? [String: Any] ?? [:]
+    write = object["write"] as? [String: Any] ?? [:]
   }
 
   /// Problems with the reading panel of a `read` step that went through the fallback: it

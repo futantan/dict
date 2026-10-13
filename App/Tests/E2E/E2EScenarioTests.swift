@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #if DEBUG
+  import DictCore
   import Foundation
   import Testing
 
@@ -21,6 +22,9 @@
           {"read": {"translator": "model", "baseURL": "http://127.0.0.1:1/v1", "apiKey": "x",
             "pressAgainAfterMs": 0, "escapeAfterMs": 900}},
           {"read": {"translator": "magic"}},
+          {"write": {}},
+          {"write": {"translator": "model"}},
+          {"write": {"translator": "echo"}},
           {"unknown": {}}
         ]}
         """
@@ -40,6 +44,9 @@
               usesModel: true, baseURL: "http://127.0.0.1:1/v1", apiKey: "x",
               pressAgainAfterMs: 0, escapeAfterMs: 900)),
           .invalid("read translator must be echo or model"),
+          .write(E2EReadOptions()),
+          .write(E2EReadOptions(usesModel: true)),
+          .invalid("write translator must be stub or model"),
           .invalid("unknown step"),
         ])
     }
@@ -89,6 +96,24 @@
       #expect(steps.count == 2)
       #expect(steps[0]["step"] as? String == "wait")
       #expect(steps[1]["failure"] as? String == "ownApp")
+    }
+
+    /// The `write` scenario's sentence goes out and comes back through the stub model, so the
+    /// e2e checks the panel and the replacement, not a model.
+    @MainActor @Test func theStubModelTranslatesTheScenarioOutAndBack() async {
+      let engine = TranslateOutEngine(
+        model: ModelTranslator(model: E2EStub.TranslateOutModel()),
+        appleAvailability: { _, _ in .notInstalled })
+      var last: PanelState?
+      await engine.translateOut("我们明天下午三点开会。", pair: LanguagePair(), context: .document) {
+        last = $0
+      }
+      #expect(
+        last?.phase
+          == .translatedOut(
+            TranslateOut(
+              text: "We have a meeting at three tomorrow afternoon.", isComplete: true,
+              backTranslation: .text("我们明天下午三点开会。"))))
     }
   }
 #endif

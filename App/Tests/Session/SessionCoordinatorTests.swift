@@ -770,6 +770,79 @@ struct WriteSessionTests {
     #expect(sentences?.first?.editsJSON == #"[{"right":"the","wrong":"teh"}]"#)
   }
 
+  // MARK: Keeping the formatting (architecture 4.7)
+
+  /// `text` with the runs at `bold` (UTF-16 ranges) in bold, as accessibility reads it.
+  private func formatted(_ text: String, bold: [NSRange]) -> Selection {
+    let attributed = NSMutableAttributedString(
+      string: text, attributes: [.font: NSFont.systemFont(ofSize: 13)])
+    for range in bold {
+      attributed.addAttribute(.font, value: NSFont.boldSystemFont(ofSize: 13), range: range)
+    }
+    return Selection(
+      text: text, source: .accessibility, app: app, bounds: bounds, context: nil,
+      target: replaceTarget(text), rich: .accessibility(attributed))
+  }
+
+  @Test func aCorrectionOfFormattedTextIsPastedWithItsFormatting() async {
+    let harness = Harness([
+      (.success(formatted("teh cat", bold: [NSRange(location: 0, length: 3)])), nil)
+    ])
+    await harness.press(.write)
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.map(\.result) == ["the cat"])
+    #expect(harness.writer.writes.first?.rich?.html == "<meta charset=\"utf-8\"><b>the</b> cat")
+  }
+
+  @Test func onlyTheAcceptedChangesCarryTheFormatting() async {
+    let text = "teh cat sat on teh mat"
+    let harness = Harness([
+      (.success(formatted(text, bold: [NSRange(location: 15, length: 3)])), nil)
+    ])
+    harness.proofreader?.result = .success(
+      AppliedEdits(
+        text: "the cat sat on the mat",
+        segments: [
+          .changed(from: "teh", to: "the"), .unchanged(" cat sat on "),
+          .changed(from: "teh", to: "the"), .unchanged(" mat"),
+        ]))
+    await harness.press(.write)
+    harness.panel.review { $0.toggle(0) }
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.map(\.result) == ["teh cat sat on the mat"])
+    #expect(
+      harness.writer.writes.first?.rich?.html
+        == "<meta charset=\"utf-8\">teh cat sat on <b>the</b> mat")
+  }
+
+  @Test func textWithoutFormattingIsWrittenAsPlainText() async {
+    let harness = Harness([(.success(formatted("teh cat", bold: [])), nil)])
+    await harness.press(.write)
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.map(\.result) == ["the cat"])
+    #expect(harness.writer.writes.first.map { $0.rich == nil } == true)
+  }
+
+  @Test func aTranslationOfBoldTextStaysBold() async {
+    let harness = Harness([
+      (.success(formatted(meeting, bold: [NSRange(location: 0, length: meeting.utf16.count)])), nil)
+    ])
+    await harness.press(.write)
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.map(\.result) == [meetingInEnglish])
+    #expect(
+      harness.writer.writes.first?.rich?.html
+        == "<meta charset=\"utf-8\"><b>\(meetingInEnglish)</b>")
+  }
+
   /// Return with every change declined replaces nothing and says so in the panel.
   @Test func returnWithEveryChangeDeclinedKeepsThePanelAndSaysSo() async {
     let target = replaceTarget("teh cat")

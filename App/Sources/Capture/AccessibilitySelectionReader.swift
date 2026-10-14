@@ -25,6 +25,8 @@ struct AccessibilityRead: Sendable {
   let context: ContextSentence?
   /// The field, when the selection may be replaced (architecture 4.3).
   let target: ReplaceSnapshot?
+  /// The selection's formatting, when the field may be replaced (architecture 4.7).
+  var rich: RichSource? = nil
   let attempts: Int
   let firstStage: Duration
   let secondStage: Duration?
@@ -101,7 +103,7 @@ final class AccessibilitySelectionReader: SelectionReader {
         return .success(
           Selection(
             text: text, source: .accessibility, app: app, bounds: read.bounds,
-            context: read.context, target: target))
+            context: read.context, target: target, rich: target == nil ? nil : read.rich))
       case .failure(let failure):
         firstFailure = failure
       }
@@ -120,7 +122,7 @@ final class AccessibilitySelectionReader: SelectionReader {
     return run.result.map { copied in
       Selection(
         text: copied.text, source: copied.source, app: app, bounds: nil, context: nil,
-        target: nil)
+        target: nil, rich: copied.rich)
     }
   }
 
@@ -220,7 +222,8 @@ final class AccessibilitySelectionReader: SelectionReader {
       report.copyWaitMs = run.copyWait.map(milliseconds)
       return run.result.map {
         Selection(
-          text: $0.text, source: $0.source, app: app, bounds: nil, context: nil, target: nil)
+          text: $0.text, source: $0.source, app: app, bounds: nil, context: nil, target: nil,
+          rich: $0.rich)
       }
     }
   }
@@ -258,9 +261,14 @@ func readSelection(pid: pid_t, kind: AppKind, screens: [CGRect]) -> Accessibilit
     let context =
       clock.now - secondStart < .milliseconds(100) ? readContext(found, kind: kind) : nil
     let target = replaceSnapshot(found, kind: kind)
+    // Only native apps report formatting through accessibility in full (architecture 4.7).
+    let rich =
+      target != nil && kind == .native
+      ? found.range.flatMap { readFormattedSelection(found.element, range: $0, text: found.text) }
+      : nil
     return AccessibilityRead(
       outcome: .success(found.text), bounds: bounds, context: context, target: target,
-      attempts: attempts,
+      rich: rich.map(RichSource.accessibility), attempts: attempts,
       firstStage: firstStage, secondStage: clock.now - secondStart)
   }
 }

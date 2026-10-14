@@ -9,7 +9,7 @@ import AppKit
 import DictCore
 
 /// Formatted text captured with a selection. The attributed string is an immutable copy.
-enum RichSource: @unchecked Sendable {
+enum RichSource: @unchecked Sendable, Equatable {
   /// Read through `AXAttributedStringForRange`, with AppKit attributes; its text is the
   /// selection's.
   case accessibility(NSAttributedString)
@@ -41,16 +41,21 @@ enum RichSource: @unchecked Sendable {
 struct RichPayload: Sendable, Equatable {
   let rtf: Data
   let html: String
-  /// The formatting, as `describeRuns` writes it, for the log.
+  /// Which formats it holds, "B,I,U,S,L,C", for the log: no text, no link targets.
   let summary: String
 
   init?(_ text: NSAttributedString) {
     let range = NSRange(location: 0, length: text.length)
     guard let rtf = text.rtf(from: range, documentAttributes: [:]) else { return nil }
-    let runs = styledRuns(text)
+    let styles = styledRuns(text).map(\.style)
     self.rtf = rtf
-    html = semanticHTML(runs)
-    summary = runs.map(\.style.flags).filter { !$0.isEmpty }.joined(separator: " ")
+    html = semanticHTML(styledRuns(text))
+    let marks: [(String, (RunStyle) -> Bool)] = [
+      ("B", \.bold), ("I", \.italic), ("U", \.underline), ("S", \.strike),
+      ("L", { $0.link != nil }), ("C", { $0.color != nil }),
+    ]
+    summary = marks.filter { _, has in styles.contains(where: has) }.map(\.0)
+      .joined(separator: ",")
   }
 }
 

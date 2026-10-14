@@ -37,6 +37,8 @@ enum MenuCopyState: Equatable, Sendable {
 struct CopiedSelection: Equatable, Sendable {
   let text: String
   let source: CaptureSource
+  /// The copy's richest flavor, read before the clipboard is put back (architecture 4.7).
+  var rich: RichSource? = nil
 }
 
 /// What the fallback returns: the result, and how long the copy took to land (nil when no
@@ -111,6 +113,7 @@ struct CopyFallback {
     }
     let wait = clock.now - start
     let content = clipboard.copiedContent()
+    let rich = if case .text = content { clipboard.richestFlavor() } else { RichSource?.none }
     clipboard.restore(snapshot, after: copy)
     guard case .text(let text) = content,
       !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -118,6 +121,7 @@ struct CopyFallback {
     else {
       return CopyRun(result: .failure(.nothingSelected(fieldText: fieldText)), copyWait: wait)
     }
-    return CopyRun(result: .success(CopiedSelection(text: text, source: source)), copyWait: wait)
+    return CopyRun(
+      result: .success(CopiedSelection(text: text, source: source, rich: rich)), copyWait: wait)
   }
 }

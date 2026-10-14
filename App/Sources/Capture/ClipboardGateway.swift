@@ -90,6 +90,18 @@ final class ClipboardGateway {
     return .text(text)
   }
 
+  /// The richest formatted flavor a copy left, RTFD, RTF or HTML, as data: reading HTML
+  /// needs WebKit, so it is parsed only if a replacement uses it (architecture 4.7). Chrome
+  /// copies HTML and no RTF (measured). Never read for concealed content.
+  func richestFlavor() -> RichSource? {
+    let types = pasteboard.types ?? []
+    guard !types.contains(Self.concealedType) else { return nil }
+    for type in [NSPasteboard.PasteboardType.rtfd, .rtf, .html] where types.contains(type) {
+      if let data = pasteboard.data(forType: type) { return .pasteboard(type, data) }
+    }
+    return nil
+  }
+
   /// After a copy timed out, watches for `window`: if exactly one more change arrives (the
   /// late copy), puts the snapshot back. More than one change means the user copied; keep it.
   func undoLateCopy(of snapshot: ClipboardSnapshot, window: Duration) async {

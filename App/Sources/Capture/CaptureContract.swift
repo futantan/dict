@@ -60,6 +60,10 @@ struct Selection: Sendable {
   let context: ContextSentence?
   /// Present only when the selection can be replaced (architecture 4.3).
   let target: ReplaceTarget?
+  /// The selection's formatting, when it was read (architecture 4.7): through accessibility
+  /// for a replaceable selection in a native app, its text exactly `text`; or the richest
+  /// flavor of the fallback's copy.
+  var rich: RichSource? = nil
 }
 
 enum CaptureFailure: Error, Sendable, Equatable {

@@ -110,6 +110,16 @@ struct SettingsModelTests {
     #expect(makeModel().preferences.learningLanguage == "ja")
   }
 
+  @Test func turningOffKeepingTheFormattingIsSaved() {
+    let model = makeModel()
+    #expect(model.preferences.keepsFormatting)
+
+    model.update { $0.keepsFormatting = false }
+
+    #expect(PreferencesStore(defaults: defaults).load().keepsFormatting == false)
+    #expect(makeModel().preferences.keepsFormatting == false)
+  }
+
   @Test func storeReadsGarbageAsDefaults() {
     defaults.set(Data("not json".utf8), forKey: PreferencesStore.key)
 

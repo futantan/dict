@@ -37,15 +37,18 @@ public struct Preferences: Codable, Sendable, Equatable {
   /// Used when the learning language is English.
   public var accent: Accent
   public var model: ModelPreferences
+  /// Whether a replacement keeps the source's formatting (architecture 4.7). On by default.
+  public var keepsFormatting: Bool
 
   public init(
     myLanguage: String = "zh-Hans", learningLanguage: String = "en", accent: Accent = .american,
-    model: ModelPreferences = ModelPreferences()
+    model: ModelPreferences = ModelPreferences(), keepsFormatting: Bool = true
   ) {
     self.myLanguage = myLanguage
     self.learningLanguage = learningLanguage
     self.accent = accent
     self.model = model
+    self.keepsFormatting = keepsFormatting
   }
 
   public var languagePair: LanguagePair {
@@ -66,7 +69,9 @@ public struct Preferences: Codable, Sendable, Equatable {
     learningLanguage = identifier
   }
 
-  private enum CodingKeys: String, CodingKey { case myLanguage, learningLanguage, accent, model }
+  private enum CodingKeys: String, CodingKey {
+    case myLanguage, learningLanguage, accent, model, keepsFormatting
+  }
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -78,5 +83,8 @@ public struct Preferences: Codable, Sendable, Equatable {
       ?? defaults.learningLanguage
     accent = (try? container.decodeIfPresent(Accent.self, forKey: .accent)) ?? defaults.accent
     model = try container.decodeIfPresent(ModelPreferences.self, forKey: .model) ?? defaults.model
+    keepsFormatting =
+      (try? container.decodeIfPresent(Bool.self, forKey: .keepsFormatting))
+      ?? defaults.keepsFormatting
   }
 }

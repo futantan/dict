@@ -237,6 +237,7 @@ private final class Harness {
     return try? VocabStore(url: folder.appendingPathComponent("vocab.sqlite"))
   }()
   var spoken: [String] = []
+  var keepsFormatting = true
   lazy var coordinator = SessionCoordinator(
     reader: reader, panel: panel,
     environment: SessionCoordinator.Environment(
@@ -265,7 +266,8 @@ private final class Harness {
         spoken.append("\(text) \(language.minimalIdentifier) \(rate)")
       },
       today: { today },
-      makeTranslateOut: { [unowned self] in translateOut }))
+      makeTranslateOut: { [unowned self] in translateOut },
+      keepsFormatting: { [unowned self] in keepsFormatting }))
 
   init(
     _ results: [(Result<Selection, CaptureFailure>, Gate?)],
@@ -817,6 +819,19 @@ struct WriteSessionTests {
     #expect(
       harness.writer.writes.first?.rich?.html
         == "<meta charset=\"utf-8\">teh cat sat on <b>the</b> mat")
+  }
+
+  @Test func withTheSettingOffFormattedTextIsWrittenAsPlainText() async {
+    let harness = Harness([
+      (.success(formatted("teh cat", bold: [NSRange(location: 0, length: 3)])), nil)
+    ])
+    harness.keepsFormatting = false
+    await harness.press(.write)
+    harness.coordinator.confirm()
+    await harness.coordinator.settle()
+
+    #expect(harness.writer.writes.map(\.result) == ["the cat"])
+    #expect(harness.writer.writes.first.map { $0.rich == nil } == true)
   }
 
   @Test func textWithoutFormattingIsWrittenAsPlainText() async {

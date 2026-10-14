@@ -355,6 +355,17 @@
         }
       }
     },
+    "Keep formatting when replacing" : {
+      "comment" : "Settings toggle label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换时保留格式"
+          }
+        }
+      }
+    },
     "Language I’m learning" : {
       "comment" : "Settings field label",
       "localizations" : {
@@ -516,6 +527,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "必填"
+          }
+        }
+      }
+    },
+    "Return keeps bold, italics and links when it writes a correction or translation back. Only in native Mac apps." : {
+      "comment" : "Subtitle under the keep formatting toggle",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回车写回纠错或译文时保留加粗、斜体和链接。只对原生 Mac 应用生效。"
           }
         }
       }

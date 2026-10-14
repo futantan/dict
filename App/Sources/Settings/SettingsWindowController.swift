@@ -66,7 +66,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
       switch pane {
       case .languages: AnyView(LanguagesPane(model: model))
       case .model: AnyView(ModelPane(model: model))
-      case .shortcuts: AnyView(ShortcutsPane(center: hotkeys))
+      case .shortcuts: AnyView(ShortcutsPane(model: model, center: hotkeys))
       }
     let controller = NSHostingController(rootView: root)
     controller.sizingOptions = [.preferredContentSize]

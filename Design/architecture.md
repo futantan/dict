@@ -640,7 +640,7 @@ enum ReadBack: Sendable, Equatable { case unchanged, confirmed, changedUnexpecte
 
 | # | `PlainReason` | 条件 | 依据 |
 |---|---|---|---|
-| 1 | `settingOff` | 「保留格式」关闭 | 产品开关；现在没有设置项，恒为开 |
+| 1 | `settingOff` | 「保留格式」关闭 | 产品开关：偏好 `keepsFormatting`，设置快捷键页的「替换时保留格式」，默认开，每次替换时读 |
 | 2 | `noRichSource` | 没有取到格式，或剪贴板风味解析失败 | 没有属性可搬 |
 | 3 | `incompleteSource` | 格式来自无障碍，且应用不是 `native`，或是备忘录 | 只读到一部分格式，粘贴会丢掉其余的（实测 Chrome 只有颜色和下划线、备忘录没有加粗） |
 | 4 | `plainTextTarget` | 终端，或 VS Code、VSCodium、Cursor、Zed、Xcode、Sublime Text | 只收纯文本，放了富文本也一样 |
@@ -650,6 +650,8 @@ enum ReadBack: Sendable, Equatable { case unchanged, confirmed, changedUnexpecte
 | 8 | `chromiumParagraphs` | `chromium` 应用且结果跨段 | 先保证段落，等第 16.1 节第 2 项人工验收 |
 | 9 | -（写入时） | 不能投递按键，或剪贴板被拒 | 退回纯文本，走第 4.4 节原流程 |
 | 10 | -（读回） | 文字闸门不通过 | 按现有 `ReplaceOutcome`（`unconfirmed`、`failed`），不再试纯文本，不对同一选区粘第二次 |
+
+开关是 `Preferences.keepsFormatting`，默认开；旧版本存的偏好没有这个键时也是开，会话每次替换前经 `Environment.keepsFormatting` 读一次，改了立即生效。
 
 与原型报告的偏离：第 6 行的「没有格式」按标记和颜色种数判，而不是「只有一种样式」，所以整段加粗也保留（纯文本粘进 WebKit 的 `<b>` 会丢加粗）；报告的「格式读回只记日志」没做；无障碍读格式只信任 `native` 应用，备忘录除外。
 
@@ -1739,6 +1741,7 @@ M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读
 - 菜单栏菜单：今天（每日回顾）、复习（显示待复习数）、截图取词、暂停记录、设置、关于（含数据署名）、退出。
   现在有设置、关于、检查更新（第 15.6 节）、退出；快捷键注册失败或已被 macOS 占用时，菜单最上面多出警告项，点击打开设置的快捷键页。
 - 登录时启动用 `SMAppService.mainApp`，设置里一个开关，首次引导里询问。
+- 设置窗口现在有语言、模型、快捷键三页；「替换时保留格式」（第 4.7 节）放在快捷键页的快捷键下面，默认开，副标题说明只对原生应用生效。
 - 应用不在 `/Applications` 里运行时（例如直接从下载目录打开），提示移动，否则更新和授权都会出问题【推断】。
 
 ### 11.5 面板键盘
@@ -1781,7 +1784,7 @@ M2.8 接上了卡片：操作栏的「发音」和 ⌘P 用设置里的口音读
 - 界面语言：简体中文和英文，跟随系统；字符串在 `App/Resources/` 下按界面区域分表的 String Catalog 里（`Localizable.xcstrings` 放菜单等全局文案，其余区域各用一张表，例如 `Panel.xcstrings`），代码里用 `String(localized:table:comment:)`；分表让并行开发的任务不改同一个文件。
 - `DictCore` 不含面向用户的文案，只返回枚举和数据，由应用目标映射成本地化文字；这也让以后的 iOS 版自带文案。
 - 提示词内部是英文，语言名作为参数代入。
-- 用户设置：我的语言（默认简体中文）、学习语言（默认英语）、口音（默认美音）；都可以改。
+- 用户设置：我的语言（默认简体中文）、学习语言（默认英语）、口音（默认美音）、替换时保留格式（默认开，第 4.7 节）；都可以改。
 - 即时词典层只有英语 → 简体中文；其他语言对没有即时层，模型卡片和 Apple 翻译仍然可用。
 - 偏好设置是 `DictCore` 里的 `Codable` 值类型，应用目标负责存进 UserDefaults。
 

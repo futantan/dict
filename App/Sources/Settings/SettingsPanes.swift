@@ -606,6 +606,7 @@ private func warningLabel(_ text: String) -> some View {
 // MARK: - Shortcuts
 
 struct ShortcutsPane: View {
+  let model: SettingsModel
   let center: HotkeyCenter
 
   var body: some View {
@@ -625,6 +626,24 @@ struct ShortcutsPane: View {
             localized:
               "Click a shortcut and press the new keys, or press a modifier key twice. Press Delete to remove it, or Esc to cancel.",
             table: "Settings", comment: "Footer under the shortcut fields"))
+      }
+
+      Section {
+        Toggle(
+          isOn: Binding(
+            get: { model.preferences.keepsFormatting },
+            set: { value in model.update { $0.keepsFormatting = value } })
+        ) {
+          Text(
+            String(
+              localized: "Keep formatting when replacing", table: "Settings",
+              comment: "Settings toggle label"))
+          Text(
+            String(
+              localized:
+                "Return keeps bold, italics and links when it writes a correction or translation back. Only in native Mac apps.",
+              table: "Settings", comment: "Subtitle under the keep formatting toggle"))
+        }
       }
     }
     .formStyle(.grouped)

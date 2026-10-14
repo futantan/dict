@@ -92,8 +92,8 @@ final class SessionCoordinator {
     /// A translate-out engine for the current settings; nil when there is none, which the
     /// panel shows as a model to set up.
     var makeTranslateOut: () -> (any SessionTranslateOut)? = { nil }
-    /// Whether a replacement keeps the source's formatting (architecture 4.7). There is no
-    /// setting yet, so it is always on.
+    /// Whether a replacement keeps the source's formatting (architecture 4.7): the setting,
+    /// read at each replacement.
     var keepsFormatting: () -> Bool = { true }
   }
 

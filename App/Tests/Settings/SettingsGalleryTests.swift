@@ -176,8 +176,16 @@ struct SettingsGalleryTests {
                         "Model Not Exist. Please check the model name and try again; see the documentation for the list of available models."
                     )))))))
       ),
-      ("shortcuts-empty", AnyView(ShortcutsPane(center: hotkeys(assigned: false)))),
-      ("shortcuts", AnyView(ShortcutsPane(center: hotkeys(assigned: true)))),
+      (
+        "shortcuts-empty",
+        AnyView(ShortcutsPane(model: model(Preferences()), center: hotkeys(assigned: false)))
+      ),
+      (
+        "shortcuts",
+        AnyView(
+          ShortcutsPane(
+            model: model(Preferences(keepsFormatting: false)), center: hotkeys(assigned: true)))
+      ),
     ]
   }
 

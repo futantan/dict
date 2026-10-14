@@ -170,7 +170,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
           makeTranslateOutEngine(
             PreferencesStore(defaults: .standard).load().model, presets: presets,
             secrets: CachedSecretStore.app)
-        }))
+        },
+        keepsFormatting: { PreferencesStore(defaults: .standard).load().keepsFormatting }))
   }
 
   /// The vocabulary log in Application Support (architecture 8.2); nil, logged, when it

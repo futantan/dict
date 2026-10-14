@@ -17,6 +17,7 @@ struct PreferencesTests {
     #expect(preferences.learningLanguage == "en")
     #expect(preferences.accent == .american)
     #expect(preferences.model.providerID == nil)
+    #expect(preferences.keepsFormatting)
     #expect(preferences.languagePair == LanguagePair())
   }
 
@@ -27,6 +28,7 @@ struct PreferencesTests {
     preferences.accent = .british
     preferences.model = ModelPreferences(
       providerID: "custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1")
+    preferences.keepsFormatting = false
 
     let data = try JSONEncoder().encode(preferences)
 
@@ -43,8 +45,8 @@ struct PreferencesTests {
 
     #expect(
       json
-        == #"{"accent":"american","learningLanguage":"en","model":{"baseURL":"","model":"","#
-        + #""providerID":"openai"},"myLanguage":"zh-Hans"}"#)
+        == #"{"accent":"american","keepsFormatting":true,"learningLanguage":"en","#
+        + #""model":{"baseURL":"","model":"","providerID":"openai"},"myLanguage":"zh-Hans"}"#)
   }
 
   @Test func missingFieldsTakeDefaults() throws {
@@ -55,6 +57,13 @@ struct PreferencesTests {
     #expect(partial.myLanguage == "zh-Hans")
     #expect(partial.learningLanguage == "de")
     #expect(partial.model == ModelPreferences(providerID: "ollama"))
+  }
+
+  /// Preferences saved before the setting existed, or unreadable, keep the formatting.
+  @Test func keepingTheFormattingIsOnUnlessSavedOff() throws {
+    #expect(try decode(#"{"myLanguage": "ja"}"#).keepsFormatting)
+    #expect(try decode(#"{"keepsFormatting": "no"}"#).keepsFormatting)
+    #expect(try decode(#"{"keepsFormatting": false}"#).keepsFormatting == false)
   }
 
   @Test func unknownAccentFallsBackToDefault() throws {

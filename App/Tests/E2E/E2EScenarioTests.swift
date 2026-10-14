@@ -115,5 +115,15 @@
               text: "We have a meeting at three tomorrow afternoon.", isComplete: true,
               backTranslation: .text("我们明天下午三点开会。"))))
     }
+
+    /// The formatted `write` scenario is corrected by the stub model in four places.
+    @Test func theStubModelCorrectsTheFormattedScenario() async throws {
+      let source = "Ths is a bold wrd and a lnk here.\nSecond paragraf end."
+      let applied = try await Proofreader(model: E2EStub.ProofreadModel()).proofread(source)
+      #expect(applied.text == "This is a bold word and a link here.\nSecond paragraph end.")
+      #expect(applied.changeCount == 4)
+      let other = try await Proofreader(model: E2EStub.ProofreadModel()).proofread("Fine.")
+      #expect(other.changeCount == 0)
+    }
   }
 #endif

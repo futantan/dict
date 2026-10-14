@@ -18,8 +18,9 @@
 // is written to the vocabulary log.
 // `write` presses the "write" shortcut instead, waits for the panel to finish (for a
 // translate-out, the back-translation too), sends Return to the panel, then reads the
-// field's value through accessibility, posts ⌘Z to the app and reads it again. It translates
-// out with a stub model (`E2EStub.TranslateOutModel`) unless `"translator": "model"`.
+// field's value and formatting through accessibility, posts ⌘Z to the app and reads them
+// again. It translates out and proofreads with stub models (`E2EStub.TranslateOutModel`,
+// `E2EStub.ProofreadModel`) unless `"translator": "model"`.
 
 #if DEBUG
   import AppKit
@@ -312,6 +313,9 @@
       var toast: ToastMessage?
       var valueAfterReplace: String?
       var valueAfterUndo: String?
+      /// The field's formatting after each, as `describeRuns` writes it.
+      var formattingAfterReplace: String?
+      var formattingAfterUndo: String?
     }
 
     private let reader: AccessibilitySelectionReader
@@ -334,7 +338,7 @@
         performPermissionAction: { _ in false },
         openSettings: {},
         mouseLocation: { NSEvent.mouseLocation },
-        makeProofreader: { nil },
+        makeProofreader: { [unowned self] in self.proofreader() },
         replaceWriter: SystemReplaceWriter(
           system: LiveReplaceSystem(queue: reader.queue, clipboard: reader.clipboard)),
         showToast: { [unowned self] message, _ in self.record.toast = message },
@@ -406,9 +410,11 @@
       // The target's window takes key back once the panel is gone.
       try? await Task.sleep(for: .milliseconds(300))
       record.valueAfterReplace = AX.string(target.element.raw, kAXValueAttribute).1
+      record.formattingAfterReplace = formatting(of: target.element)
       postCommandZ(to: target.app.pid)
       try? await Task.sleep(for: .milliseconds(500))
       record.valueAfterUndo = AX.string(target.element.raw, kAXValueAttribute).1
+      record.formattingAfterUndo = formatting(of: target.element)
       coordinator.end()
       return record
     }
@@ -421,6 +427,16 @@
           charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)
       else { return }
       window.sendEvent(event)
+    }
+
+    /// The whole field's formatting through accessibility, read the way a capture reads a
+    /// selection's; nil when the field does not report it.
+    private func formatting(of element: AXElement) -> String? {
+      guard let value = AX.string(element.raw, kAXValueAttribute).1 else { return nil }
+      let range = CFRange(location: 0, length: value.utf16.count)
+      return readFormattedSelection(element.raw, range: range, text: value).map {
+        describeRuns(styledRuns($0))
+      }
     }
 
     /// ⌘Z to the app, as the user would press it: the app's own undo, not Dict's.
@@ -474,6 +490,13 @@
           appleAvailability: { _, _ in .notInstalled })
       }
       return makeTranslateOutEngine(
+        PreferencesStore(defaults: .standard).load().model,
+        presets: (try? ProviderPreset.all()) ?? [], secrets: CachedSecretStore.app)
+    }
+
+    private func proofreader() -> (any SessionProofreader)? {
+      guard options.usesModel else { return Proofreader(model: E2EStub.ProofreadModel()) }
+      return makeProofreader(
         PreferencesStore(defaults: .standard).load().model,
         presets: (try? ProviderPreset.all()) ?? [], secrets: CachedSecretStore.app)
     }
@@ -600,6 +623,31 @@
     }
   }
 
+  extension E2EStub {
+    /// Corrects the scenarios' sentences with fixed edit lists; anything else has no
+    /// mistakes.
+    struct ProofreadModel: TextModel {
+      static let edits = [
+        "Ths is a bold wrd and a lnk here.": """
+        {"edits":[{"kind":"spelling","wrong":"Ths","right":"This"},\
+        {"kind":"spelling","wrong":"wrd","right":"word"},\
+        {"kind":"spelling","wrong":"lnk","right":"link"},\
+        {"kind":"spelling","wrong":"paragraf","right":"paragraph"}]}
+        """
+      ]
+
+      func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+        let reply =
+          Self.edits.first { request.user.contains($0.key) }?.value ?? #"{"edits":[]}"#
+        return AsyncThrowingStream { continuation in
+          continuation.yield(.text(reply))
+          continuation.yield(.finished(.complete, nil))
+          continuation.finish()
+        }
+      }
+    }
+  }
+
   extension E2ESession.Record {
     /// The write part of a `write` row.
     var write: [String: Any] {
@@ -617,6 +665,8 @@
       object["toast"] = toast.map { String(describing: $0) } ?? NSNull()
       object["valueAfterReplace"] = valueAfterReplace ?? NSNull()
       object["valueAfterUndo"] = valueAfterUndo ?? NSNull()
+      object["formattingAfterReplace"] = formattingAfterReplace ?? NSNull()
+      object["formattingAfterUndo"] = formattingAfterUndo ?? NSNull()
       return object
     }
 

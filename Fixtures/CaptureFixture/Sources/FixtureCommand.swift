@@ -37,6 +37,8 @@ struct FixtureCommand: Equatable {
 enum ControlID {
   static let plainTextView = "textView.plain"
   static let richTextView = "textView.rich"
+  /// A rich text view whose content is light markup: `**bold**` and `[text](url)`.
+  static let formattedTextView = "textView.formatted"
   static let textField = "textField"
   static let secureField = "secureField"
   static let webParagraph = "web.paragraph"

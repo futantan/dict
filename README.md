@@ -50,6 +50,9 @@ The window test launches the app through Launch Services as `open` does and chec
 It forces the first-run window with the launch argument `-onboarding.completed NO`, so the user's preferences are never written.
 It takes focus, so it is not part of `make test` and holds `/private/tmp/dict-ui.lock` while it runs.
 
+`make matrix` and `make e2e-live` serve the web fixture page on `127.0.0.1:8765`.
+If that port is taken they stop and say so; run them with another port, for example `DICT_PAGE_PORT=8799 make matrix`.
+
 ### Running without spending tokens
 
 `make test` and `make e2e` never call a real model; `make e2e-live`, `make eval` and the Dev app with a saved key do.

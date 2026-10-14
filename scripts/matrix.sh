@@ -9,6 +9,7 @@
 # Usage: scripts/matrix.sh [Debug|Release]
 # Environment: MATRIX_ONLY=textedit,safari,chrome,chrome-cold,vscode limits the sections;
 # MATRIX_APP and MATRIX_OUT override the app under test and the output file (driver tests).
+# DICT_PAGE_PORT moves the fixture page server off 127.0.0.1:8765 when that port is taken.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."

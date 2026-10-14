@@ -553,8 +553,36 @@ struct Matrix {
 
 // MARK: - Fixture pages
 
-/// The local HTTP server's port for Fixtures/CaptureFixture/Resources/page.html.
-let pageServerPort = 8765
+/// The local HTTP server's port for Fixtures/CaptureFixture/Resources/page.html: 8765, or
+/// `DICT_PAGE_PORT` when set. An invalid override falls back here and fails in
+/// `startPageServer`, which names the problem.
+let pageServerPort = requestedPageServerPort(in: ProcessInfo.processInfo.environment) ?? 8765
+
+/// The port `environment` asks for; 8765 when unset, nil when `DICT_PAGE_PORT` is not a port.
+func requestedPageServerPort(in environment: [String: String]) -> Int? {
+  guard let value = environment["DICT_PAGE_PORT"] else { return 8765 }
+  guard let port = Int(value), (1...65535).contains(port) else { return nil }
+  return port
+}
+
+/// Whether 127.0.0.1:`port` can be bound the way `python3 -m http.server` binds it.
+func pageServerPortIsFree(_ port: Int) -> Bool {
+  let fd = socket(AF_INET, SOCK_STREAM, 0)
+  guard fd >= 0 else { return false }
+  defer { close(fd) }
+  var reuse: Int32 = 1
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout<Int32>.size))
+  var address = sockaddr_in()
+  address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+  address.sin_family = sa_family_t(AF_INET)
+  address.sin_port = UInt16(port).bigEndian
+  address.sin_addr.s_addr = inet_addr("127.0.0.1")
+  return withUnsafePointer(to: &address) {
+    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+      bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+    }
+  }
+}
 
 /// The fixture page selecting `text` in `control`; `content` first replaces the control's text.
 func fixturePageURL(_ control: String, text: String, content: String? = nil) -> String {
@@ -602,6 +630,17 @@ func closeFixtureTab(_ pid: pid_t, control: String) {
 /// Serves `pages` on 127.0.0.1 until the driver exits.
 @MainActor
 func startPageServer(_ pages: URL) throws {
+  guard requestedPageServerPort(in: ProcessInfo.processInfo.environment) != nil else {
+    throw DriverError(
+      "DICT_PAGE_PORT=\(ProcessInfo.processInfo.environment["DICT_PAGE_PORT"] ?? "")"
+        + " is not a port number (1-65535)")
+  }
+  guard pageServerPortIsFree(pageServerPort) else {
+    throw DriverError(
+      "port \(pageServerPort) for the fixture page server is in use by another process;"
+        + " free it, or pick another port with DICT_PAGE_PORT, e.g."
+        + " `DICT_PAGE_PORT=8799 make matrix`")
+  }
   let server = Process()
   server.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
   server.arguments = [
@@ -621,7 +660,9 @@ func startPageServer(_ pages: URL) throws {
           ? true : nil
       }) != nil
   else {
-    throw DriverError("the HTTP server on port \(pageServerPort) did not start (port in use?)")
+    throw DriverError(
+      "the HTTP server on port \(pageServerPort) did not start; try another port with"
+        + " DICT_PAGE_PORT")
   }
 }
 

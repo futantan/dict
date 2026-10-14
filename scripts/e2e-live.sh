@@ -9,6 +9,7 @@
 # Usage: scripts/e2e-live.sh
 # Environment: LIVE_ONLY=fixture,textedit,safari,chrome limits the sections; LIVE_RUNS sets
 # how many times TextEdit's sentence is read for the latency medians (default 10).
+# DICT_PAGE_PORT moves the fixture page server off 127.0.0.1:8765 when that port is taken.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."

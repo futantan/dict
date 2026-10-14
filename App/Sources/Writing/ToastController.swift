@@ -4,8 +4,8 @@ import AppKit
 import SwiftUI
 
 /// The small note shown after a replacement (architecture 11.3). It never becomes key and
-/// never activates Dict, so the app just written into keeps its focus. It hides after 3 s,
-/// or later while the pointer is over it.
+/// never activates Dict, so the app just written into keeps its focus. When it hides is
+/// `ToastLifetime`'s call.
 @MainActor
 final class ToastController {
   static let shared = ToastController()
@@ -24,13 +24,17 @@ final class ToastController {
     panel.setFrame(CGRect(origin: origin(for: size, near: bounds), size: size), display: true)
     panel.orderFrontRegardless()
     Log.ui.info("toast shown: \(message.logName, privacy: .public)")
+    model.lifetime.show(at: .now)
     hideTask?.cancel()
     hideTask = Task { [weak self] in
-      try? await Task.sleep(for: .seconds(3))
-      while self?.model.isHovering == true {
-        try? await Task.sleep(for: .milliseconds(300))
+      do {
+        try await Task.sleep(for: ToastLifetime.linger)
+        while let self, !self.model.lifetime.shouldHide(at: .now) {
+          try await Task.sleep(for: .milliseconds(300))
+        }
+      } catch {
+        return  // a newer toast took over
       }
-      guard !Task.isCancelled else { return }
       self?.panel.orderOut(nil)
     }
   }
@@ -76,7 +80,7 @@ final class ToastController {
 @Observable
 private final class ToastModel {
   var message = ToastMessage.replaced
-  var isHovering = false
+  @ObservationIgnored var lifetime = ToastLifetime(shownAt: .now)
   var copied = false
 }
 
@@ -111,7 +115,7 @@ private struct ToastView: View {
     .background(.regularMaterial, in: Capsule())
     .overlay(Capsule().strokeBorder(.separator, lineWidth: 0.5))
     .fixedSize()
-    .onHover { model.isHovering = $0 }
+    .onHover { model.lifetime.setHovering($0, at: .now) }
   }
 }
 

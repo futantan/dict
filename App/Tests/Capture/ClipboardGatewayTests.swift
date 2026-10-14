@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import AppKit
+import DictCore
 import Testing
 
 @testable import DictApp
@@ -210,5 +211,41 @@ struct ClipboardGatewayTests {
     #expect(count == pasteboard.changeCount)
     #expect(pasteboard.string(forType: .string) == "result")
     #expect(pasteboard.types?.contains(ClipboardGateway.transientType) == true)
+  }
+
+  /// One item with every flavor: an app pastes the richest it reads (architecture 4.7).
+  @Test func aFormattedResultIsOneItemWithPlainTextRTFAndHTML() throws {
+    let bold = NSAttributedString(
+      string: "bold word", attributes: [.font: NSFont.boldSystemFont(ofSize: 13)])
+    let rich = try #require(RichPayload(bold))
+    gateway.writeTransient("bold word", rich: rich)
+    #expect(pasteboard.pasteboardItems?.count == 1)
+    #expect(pasteboard.string(forType: .string) == "bold word")
+    #expect(pasteboard.data(forType: .rtf) == rich.rtf)
+    #expect(pasteboard.string(forType: .html) == "<meta charset=\"utf-8\"><b>bold word</b>")
+    #expect(pasteboard.types?.contains(ClipboardGateway.transientType) == true)
+    let rtf = try #require(pasteboard.data(forType: .rtf))
+    let pasted = try #require(NSAttributedString(rtf: rtf, documentAttributes: nil))
+    #expect(describeRuns(styledRuns(pasted)) == "[bold word]{B}")
+  }
+
+  /// The user's own rich copy comes back whole after a formatted result was pasted.
+  @Test func theUsersRichClipboardIsRestoredAfterAFormattedResult() throws {
+    pasteboard.clearContents()
+    let item = NSPasteboardItem()
+    item.setString("mine", forType: .string)
+    item.setData(Data("{\\rtf1 mine}".utf8), forType: .rtf)
+    item.setString("<i>mine</i>", forType: .html)
+    pasteboard.writeObjects([item])
+    let snapshot = gateway.snapshot()
+
+    let rich = try #require(RichPayload(NSAttributedString(string: "result")))
+    gateway.writeTransient("result", rich: rich)
+    gateway.restore(snapshot)
+
+    #expect(pasteboard.string(forType: .string) == "mine")
+    #expect(pasteboard.data(forType: .rtf) == Data("{\\rtf1 mine}".utf8))
+    #expect(pasteboard.string(forType: .html) == "<i>mine</i>")
+    #expect(pasteboard.types?.contains(ClipboardGateway.transientType) == false)
   }
 }

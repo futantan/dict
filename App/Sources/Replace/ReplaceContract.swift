@@ -37,5 +37,14 @@ enum FailReason: Sendable { case pasteNotApplied, noPostEventPermission, clipboa
 
 @MainActor
 protocol ReplaceWriter {
-  func replace(_ target: ReplaceTarget, with result: String) async -> ReplaceOutcome
+  /// With `rich`, the result keeps the source's formatting (architecture 4.7): it is pasted
+  /// as plain text, RTF and HTML together, never written through accessibility.
+  func replace(_ target: ReplaceTarget, with result: String, rich: RichPayload?) async
+    -> ReplaceOutcome
+}
+
+extension ReplaceWriter {
+  func replace(_ target: ReplaceTarget, with result: String) async -> ReplaceOutcome {
+    await replace(target, with: result, rich: nil)
+  }
 }

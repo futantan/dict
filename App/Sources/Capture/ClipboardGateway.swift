@@ -107,12 +107,18 @@ final class ClipboardGateway {
     }
   }
 
-  /// Writes text that should not be remembered by clipboard managers; returns the new count.
+  /// Writes text that should not be remembered by clipboard managers, with RTF and HTML
+  /// beside it in the same item when `rich` is given; returns the new count. Native text
+  /// views paste the RTF, web views the HTML, plain-text editors the text (measured).
   @discardableResult
-  func writeTransient(_ text: String) -> Int {
+  func writeTransient(_ text: String, rich: RichPayload? = nil) -> Int {
     pasteboard.clearContents()
     let item = NSPasteboardItem()
     item.setString(text, forType: .string)
+    if let rich {
+      item.setData(rich.rtf, forType: .rtf)
+      item.setString(rich.html, forType: .html)
+    }
     item.setData(Data(), forType: Self.transientType)
     pasteboard.writeObjects([item])
     return pasteboard.changeCount

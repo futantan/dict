@@ -27,8 +27,9 @@ protocol ReplaceSystem {
   var clipboardDenied: Bool { get }
   var clipboardChangeCount: Int { get }
   func snapshotClipboard() -> ClipboardSnapshot
-  /// Writes `text` marked transient; returns the new change count.
-  func writeClipboard(_ text: String) -> Int
+  /// Writes `text`, with RTF and HTML beside it when `rich` is given, marked transient;
+  /// returns the new change count.
+  func writeClipboard(_ text: String, rich: RichPayload?) -> Int
   func restoreClipboard(_ snapshot: ClipboardSnapshot)
   func postPaste(to pid: pid_t)
   func sleep(_ duration: Duration) async
@@ -37,7 +38,9 @@ protocol ReplaceSystem {
 /// Writes a result in place of the snapshotted selection (architecture 4.4): an
 /// accessibility write first, checked by reading the field back, then one paste. The target
 /// is checked again before each, so nothing lands anywhere but where the user selected, and
-/// a write that took effect late is never followed by a paste.
+/// a write that took effect late is never followed by a paste. A result with formatting
+/// (architecture 4.7) skips the accessibility write, which takes plain text only; when it
+/// cannot be pasted, it is written as plain text instead.
 @MainActor
 struct SystemReplaceWriter: ReplaceWriter {
   let system: any ReplaceSystem
@@ -47,10 +50,17 @@ struct SystemReplaceWriter: ReplaceWriter {
   static let accessibilityReadBack: Duration = .milliseconds(300)
   static let pasteReadBack: Duration = .seconds(1)
 
-  func replace(_ target: ReplaceTarget, with result: String) async -> ReplaceOutcome {
+  func replace(_ target: ReplaceTarget, with result: String, rich: RichPayload?) async
+    -> ReplaceOutcome
+  {
     if let stale = await check(target) { return .stale(stale) }
 
-    if target.axWritable {
+    var rich = rich
+    if rich != nil, !system.canPostKeys(to: target) || system.clipboardDenied {
+      Log.replace.info("formatting cannot be pasted here: replacing with plain text")
+      rich = nil
+    }
+    if target.axWritable && rich == nil {
       await system.writeSelectedText(result, into: target)
       switch await readBack(target, result: result, window: Self.accessibilityReadBack) {
       case .confirmed: return .replaced(via: .accessibility)
@@ -65,7 +75,7 @@ struct SystemReplaceWriter: ReplaceWriter {
     guard system.canPostKeys(to: target) else { return .failed(.noPostEventPermission) }
     guard !system.clipboardDenied else { return .failed(.clipboardDenied) }
     let snapshot = system.snapshotClipboard()
-    let written = system.writeClipboard(result)
+    let written = system.writeClipboard(result, rich: rich)
     system.postPaste(to: target.app.pid)
     let readBack = await readBack(target, result: result, window: Self.pasteReadBack)
     let clipboardIsOurs = system.clipboardChangeCount == written

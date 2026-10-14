@@ -178,10 +178,12 @@ private final class StubTranslateOut: SessionTranslateOut {
 @MainActor
 private final class StubWriter: ReplaceWriter {
   var outcome = ReplaceOutcome.replaced(via: .accessibility)
-  private(set) var writes: [(target: ReplaceTarget, result: String)] = []
+  private(set) var writes: [(target: ReplaceTarget, result: String, rich: RichPayload?)] = []
 
-  func replace(_ target: ReplaceTarget, with result: String) async -> ReplaceOutcome {
-    writes.append((target, result))
+  func replace(_ target: ReplaceTarget, with result: String, rich: RichPayload?) async
+    -> ReplaceOutcome
+  {
+    writes.append((target, result, rich))
     return outcome
   }
 }

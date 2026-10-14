@@ -111,7 +111,9 @@ final class LiveReplaceSystem: ReplaceSystem {
   var clipboardDenied: Bool { clipboard.isAccessDenied }
   var clipboardChangeCount: Int { clipboard.changeCount }
   func snapshotClipboard() -> ClipboardSnapshot { clipboard.snapshot() }
-  func writeClipboard(_ text: String) -> Int { clipboard.writeTransient(text) }
+  func writeClipboard(_ text: String, rich: RichPayload?) -> Int {
+    clipboard.writeTransient(text, rich: rich)
+  }
   func restoreClipboard(_ snapshot: ClipboardSnapshot) { clipboard.restore(snapshot) }
 
   func postPaste(to pid: pid_t) {

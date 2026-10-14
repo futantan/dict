@@ -29,6 +29,8 @@ private final class FakeReplaceSystem: ReplaceSystem {
   private(set) var axWrites = 0
   private(set) var pastes = 0
   private(set) var clipboard = "user's clipboard"
+  /// The formatting written beside the last result.
+  private(set) var clipboardRich: RichPayload?
   private(set) var clipboardChangeCount = 1
   private(set) var restores = 0
   private var pending: [(at: Duration, apply: () -> Void)] = []
@@ -49,8 +51,9 @@ private final class FakeReplaceSystem: ReplaceSystem {
     ClipboardSnapshot(changeCount: clipboardChangeCount, items: [[(.string, Data(clipboard.utf8))]])
   }
 
-  func writeClipboard(_ text: String) -> Int {
+  func writeClipboard(_ text: String, rich: RichPayload?) -> Int {
     clipboard = text
+    clipboardRich = rich
     clipboardChangeCount += 1
     return clipboardChangeCount
   }
@@ -261,6 +264,62 @@ struct ReplaceStateMachineTests {
     #expect(
       await SystemReplaceWriter(system: system).replace(target, with: "the")
         == .stale(.elementChanged))
+  }
+
+  // MARK: Formatting (architecture 4.7)
+
+  private func runRich(_ system: FakeReplaceSystem) async -> ReplaceOutcome {
+    let (target, field) = makeTarget()
+    if system.field == nil { system.field = field }
+    return await SystemReplaceWriter(system: system).replace(target, with: "the", rich: bold)
+  }
+
+  private var bold: RichPayload? {
+    RichPayload(
+      NSAttributedString(string: "the", attributes: [.font: NSFont.boldSystemFont(ofSize: 13)]))
+  }
+
+  /// An accessibility write takes plain text only, so formatting always goes by paste.
+  @Test func formattingSkipsTheAccessibilityWriteAndIsPastedOnce() async {
+    let system = FakeReplaceSystem()
+    system.onAXWrite = { replaceSelection(&$0, with: "the") }
+    system.onPaste = { replaceSelection(&$0, with: $1) }
+    #expect(await runRich(system) == .replaced(via: .paste))
+    #expect(system.axWrites == 0)
+    #expect(system.pastes == 1)
+    #expect(system.clipboardRich == bold)
+    #expect(system.restores == 1)
+    #expect(system.clipboard == "user's clipboard")
+  }
+
+  @Test func formattingThatCannotBePastedIsWrittenAsPlainText() async {
+    let system = FakeReplaceSystem()
+    system.postAllowed = false
+    system.onAXWrite = { replaceSelection(&$0, with: "the") }
+    #expect(await runRich(system) == .replaced(via: .accessibility))
+    #expect(system.pastes == 0)
+  }
+
+  @Test func formattingWithTheClipboardDeniedIsWrittenAsPlainText() async {
+    let system = FakeReplaceSystem()
+    system.clipboardDenied = true
+    system.onAXWrite = { replaceSelection(&$0, with: "the") }
+    #expect(await runRich(system) == .replaced(via: .accessibility))
+    #expect(system.pastes == 0)
+  }
+
+  /// WebKit writes the spaces beside inline elements as U+00A0 (measured).
+  @Test func aPasteThatTurnsSpacesIntoNoBreakSpacesIsConfirmed() async {
+    let system = FakeReplaceSystem()
+    system.onPaste = { field, _ in field.value = "I saw\u{00A0}the\u{00A0}cat." }
+    #expect(await runRich(system) == .replaced(via: .paste))
+  }
+
+  @Test func aRichPasteThatIsNotConfirmedIsNeverRetried() async {
+    let system = FakeReplaceSystem()
+    system.onPaste = { field, _ in field.value = "I saw the the cat." }
+    #expect(await runRich(system) == .unconfirmed(clipboardHoldsResult: true))
+    #expect(system.pastes == 1 && system.axWrites == 0)
   }
 
   /// The target app takes key focus back a moment after the panel hides.

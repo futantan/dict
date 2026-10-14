@@ -7,8 +7,9 @@ import ApplicationServices
 let maxFormattedLength = 20_000
 
 /// The selection's formatting through `AXAttributedStringForRange`, as AppKit attributes,
-/// or nil when the element does not answer or answers other text (architecture 4.7).
-/// Accessibility queue only.
+/// or nil when the element does not answer, answers other text, or has a link whose address
+/// it does not give: pasting that would drop the link (architecture 4.7). Accessibility
+/// queue only.
 func readFormattedSelection(_ element: AXUIElement, range: CFRange, text: String)
   -> NSAttributedString?
 {
@@ -17,15 +18,18 @@ func readFormattedSelection(_ element: AXUIElement, range: CFRange, text: String
     let value = AX.value(element, "AXAttributedStringForRange", parameter: parameter).1
       as? NSAttributedString
   else { return nil }
+  var unresolvedLinks = 0
   let formatted = formattedText(fromAccessibility: value) { link in
-    guard let link = AX.asElement(link) else { return nil }
-    switch AX.value(link, kAXURLAttribute).1 {
-    case let url as URL: return url
-    case let string as String: return URL(string: string)
-    default: return nil
-    }
+    let url: URL? =
+      switch AX.asElement(link).flatMap({ AX.value($0, kAXURLAttribute).1 }) {
+      case let url as URL: url
+      case let string as String: URL(string: string)
+      default: nil
+      }
+    if url == nil { unresolvedLinks += 1 }
+    return url
   }
-  return formatted.string == text ? formatted : nil
+  return formatted.string == text && unresolvedLinks == 0 ? formatted : nil
 }
 
 /// An accessibility attributed string with AppKit's attributes in place of the

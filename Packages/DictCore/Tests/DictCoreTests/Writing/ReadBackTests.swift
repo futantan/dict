@@ -53,4 +53,13 @@ struct ReadBackTests {
       replacementConfirmed(before: "e\u{301}", after: "\u{E9}", original: "x", result: "y")
         == .unchanged)
   }
+
+  /// WebKit writes the spaces beside inline elements as U+00A0 after a paste, plain or HTML
+  /// (measured); a rich replacement there must still be confirmed.
+  @Test func aNoBreakSpaceCountsAsASpace() {
+    #expect(
+      replacementConfirmed(
+        before: "a bold wrd here", after: "a bold\u{00A0}word here", original: "bold wrd",
+        result: "bold word") == .confirmed)
+  }
 }

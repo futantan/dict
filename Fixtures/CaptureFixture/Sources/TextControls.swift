@@ -78,6 +78,12 @@ enum TextControls {
 
   static func setContent(_ text: String, of textView: NSTextView) {
     let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+    if textView.identifier?.rawValue == ControlID.formattedTextView {
+      textView.textStorage?.setAttributedString(formatted(text, font: font))
+      // ⌘Z after a replacement must undo exactly that.
+      textView.undoManager?.removeAllActions()
+      return
+    }
     guard textView.isRichText else {
       textView.string = text
       textView.font = font
@@ -93,6 +99,42 @@ enum TextControls {
         .font, value: NSFont.boldSystemFont(ofSize: font.pointSize), range: range)
     }
     textView.textStorage?.setAttributedString(attributed)
+  }
+
+  /// Light markup as formatted text: `**bold**` and `[text](url)`, nothing else.
+  static func formatted(_ markup: String, font: NSFont) -> NSAttributedString {
+    let result = NSMutableAttributedString()
+    var bold = false
+    var rest = Substring(markup)
+    func append(_ text: some StringProtocol, link: URL? = nil) {
+      var attributes: [NSAttributedString.Key: Any] = [
+        .font: bold ? NSFont.boldSystemFont(ofSize: font.pointSize) : font,
+        .foregroundColor: NSColor.textColor,
+      ]
+      attributes[.link] = link
+      result.append(NSAttributedString(string: String(text), attributes: attributes))
+    }
+    while let next = rest.firstIndex(where: { $0 == "*" || $0 == "[" }) {
+      append(rest[..<next])
+      rest = rest[next...]
+      if rest.hasPrefix("**") {
+        bold.toggle()
+        rest = rest.dropFirst(2)
+      } else if let close = rest.firstIndex(of: "]"),
+        rest[rest.index(after: close)...].hasPrefix("("),
+        let end = rest[close...].firstIndex(of: ")")
+      {
+        let label = rest[rest.index(after: rest.startIndex)..<close]
+        let url = rest[rest.index(close, offsetBy: 2)..<end]
+        append(label, link: URL(string: String(url)))
+        rest = rest[rest.index(after: end)...]
+      } else {
+        append(rest.prefix(1))
+        rest = rest.dropFirst()
+      }
+    }
+    append(rest)
+    return result
   }
 
   static func field(id: String, secure: Bool, text: String) -> NSTextField {

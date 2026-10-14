@@ -221,6 +221,21 @@
       "policy": "allowed",
       "step": "write",
       "expect": { "source": "accessibility", "text": "我们明天下午三点开会。", "copyEvents": 0, "phase": "translatedOut", "backTranslation": true, "replaced": "We have a meeting at three tomorrow afternoon.", "undone": "我们明天下午三点开会。" }
+    },
+    {
+      "name": "write shortcut, rich text view: formatting survives the replacement",
+      "control": "textView.formatted",
+      "text": "Ths is a bold wrd and a lnk here.\nSecond paragraf end.",
+      "content": "Ths is a **bold wrd** and [a lnk here](https://example.com/docs).\nSecond paragraf end.",
+      "policy": "allowed",
+      "step": "write",
+      "expect": {
+        "source": "accessibility", "text": "Ths is a bold wrd and a lnk here.\nSecond paragraf end.", "copyEvents": 0, "pasteEvents": 1, "phase": "corrected",
+        "replaced": "This is a bold word and a link here.\nSecond paragraph end.",
+        "formattingAfterReplace": "[This is a ][bold word]{B}[ and ][a link here]{L=https://example.com/docs}[.⏎Second paragraph end.]",
+        "undone": "Ths is a bold wrd and a lnk here.\nSecond paragraf end.",
+        "formattingAfterUndo": "[Ths is a ][bold wrd]{B}[ and ][a lnk here]{L=https://example.com/docs}[.⏎Second paragraf end.]"
+      }
     }
   ]
 }

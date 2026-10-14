@@ -38,6 +38,10 @@ final class FixtureApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     for (id, rich, text) in [
       (ControlID.plainTextView, false, "The quick brown fox jumps over the lazy dog."),
       (ControlID.richTextView, true, "Sphinx of black quartz, judge my vow."),
+      (
+        ControlID.formattedTextView, true,
+        "Ths is a **bold wrd** and [a lnk here](https://example.com/docs).\nSecond paragraf end."
+      ),
     ] {
       let (scroll, textView) = TextControls.textView(id: id, rich: rich, text: text)
       textViews[id] = textView
@@ -68,7 +72,7 @@ final class FixtureApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     let window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 560, height: 820),
+      contentRect: NSRect(x: 0, y: 0, width: 560, height: 900),
       styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered,
       defer: false)
     window.title = "CaptureFixture"

@@ -92,6 +92,9 @@ final class SessionCoordinator {
     /// A translate-out engine for the current settings; nil when there is none, which the
     /// panel shows as a model to set up.
     var makeTranslateOut: () -> (any SessionTranslateOut)? = { nil }
+    /// Whether a replacement keeps the source's formatting (architecture 4.7). There is no
+    /// setting yet, so it is always on.
+    var keepsFormatting: () -> Bool = { true }
   }
 
   /// Where the session's text came from, for the vocabulary log (architecture 8.1).
@@ -134,6 +137,8 @@ final class SessionCoordinator {
   /// Where Return writes the correction, while the panel shows one.
   private var target: ReplaceTarget?
   private var targetBounds: CGRect?
+  /// The selection's formatting, which a replacement keeps when it can (architecture 4.7).
+  private var targetFormatting: RichSource?
   /// The last phase the Write flow showed, for Return.
   private var currentPhase: PanelPhase?
   private var replacement: Task<Void, Never>?
@@ -181,7 +186,9 @@ final class SessionCoordinator {
       confirm(shown, target: target)
     case .translatedOut(let shown) where anyway ? shown.canReplace : shown.replacesOnReturn:
       let pair = environment.languagePair()
-      replace(target, with: shown.text, why: "translation") { source, applied in
+      // A translation is one change: what all the source shares carries over.
+      let whole = [DiffSegment.changed(from: text ?? "", to: shown.text)]
+      replace(target, with: shown.text, segments: whole, why: "translation") { source, applied in
         await self.recordSentence(
           .translatedOut, source: source, result: shown.text, applied: applied,
           app: target.app.bundleID, languages: (pair.mine, pair.learning))
@@ -202,7 +209,9 @@ final class SessionCoordinator {
       Log.ui.info("session \(self.id, privacy: .public): every change declined, nothing replaced")
       return
     }
-    replace(target, with: correction.text, why: "correction") { source, applied in
+    replace(
+      target, with: correction.text, segments: correction.result.segments, why: "correction"
+    ) { source, applied in
       await self.recordSentence(
         .corrected, source: source, result: correction.text, edits: correction.editsJSON,
         applied: applied, app: target.app.bundleID)
@@ -210,9 +219,10 @@ final class SessionCoordinator {
   }
 
   /// Hides the panel, ends the session, writes `result`, reports the outcome with a toast,
-  /// then records the session's text with whether it was replaced.
+  /// then records the session's text with whether it was replaced. `segments` lead from the
+  /// session's text to `result`, for keeping the formatting (architecture 4.7).
   private func replace(
-    _ target: ReplaceTarget, with result: String, why: String,
+    _ target: ReplaceTarget, with result: String, segments: [DiffSegment], why: String,
     record: @escaping (_ source: String, _ applied: Bool) async -> Void
   ) {
     let bounds = targetBounds
@@ -220,11 +230,12 @@ final class SessionCoordinator {
     let showToast = environment.showToast
     let id = id
     let source = text
+    let rich = formatting(target, segments: segments)
     cancel()
     panel.hide()
     Log.ui.info("session \(id, privacy: .public): replacing with the \(why, privacy: .public)")
     replacement = Task {
-      let outcome = await writer.replace(target, with: result)
+      let outcome = await writer.replace(target, with: result, rich: rich)
       Log.replace.info(
         "session \(id, privacy: .public): \(String(describing: outcome), privacy: .public)")
       showToast(ToastMessage(outcome, result: result), bounds)
@@ -232,6 +243,24 @@ final class SessionCoordinator {
         let applied = if case .replaced = outcome { true } else { false }
         await record(source, applied)
       }
+    }
+  }
+
+  /// The formatting to paste with the result, or nil to write plain text; logs which and why.
+  private func formatting(_ target: ReplaceTarget, segments: [DiffSegment]) -> RichPayload? {
+    let decision = richReplacement(
+      enabled: environment.keepsFormatting(), source: targetFormatting, text: text ?? "",
+      segments: segments, app: target.app)
+    switch decision {
+    case .rich(let payload):
+      Log.replace.info(
+        "session \(self.id, privacy: .public): keeping formatting \(payload.summary, privacy: .public)"
+      )
+      return payload
+    case .plain(let reason):
+      Log.replace.info(
+        "session \(self.id, privacy: .public): plain text, \(reason.rawValue, privacy: .public)")
+      return nil
     }
   }
 
@@ -332,6 +361,7 @@ final class SessionCoordinator {
     cannotLookUp = false
     target = nil
     targetBounds = nil
+    targetFormatting = nil
     currentPhase = nil
     awaitsPermission = false
   }
@@ -383,6 +413,7 @@ final class SessionCoordinator {
       if role == .write {
         target = selection.target
         targetBounds = selection.bounds
+        targetFormatting = selection.rich
         let action = writeAction(for: selection.text, pair: environment.languagePair())
         let first = firstWriteState(selection.text, action: action)
         currentPhase = first.phase
@@ -535,10 +566,12 @@ final class SessionCoordinator {
     guard panel.isVisible else { return }
     let target = target
     let bounds = targetBounds
+    let formatting = targetFormatting
     let origin = origin
     cancel()
     self.target = target
     targetBounds = bounds
+    targetFormatting = formatting
     self.origin = origin
     let id = id
     let action = writeAction(for: text, pair: environment.languagePair())

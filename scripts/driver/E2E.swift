@@ -16,6 +16,9 @@ struct E2EScenario: Decodable {
     /// A `CaptureFailure` case name; when set, the capture must fail with it.
     var failure: String?
     var copyEvents: Int?
+    /// Paste events the fixture logs; 0 when absent. A replacement that keeps formatting
+    /// pastes once.
+    var pasteEvents: Int?
     /// `read` scenarios: whether the reading panel must show before the clipboard fallback
     /// (true) or not at all (false).
     var readingPanel: Bool?
@@ -32,6 +35,10 @@ struct E2EScenario: Decodable {
     /// `write` scenarios: the field's whole value after Return, and after ⌘Z.
     var replaced: String?
     var undone: String?
+    /// `write` scenarios: the field's formatting after Return, and after ⌘Z, as
+    /// "[plain][bold]{B}[link]{L=<url>}" (DictCore's `describeRuns`).
+    var formattingAfterReplace: String?
+    var formattingAfterUndo: String?
   }
 
   var name: String
@@ -168,7 +175,10 @@ struct E2E {
     if copies != expectedCopies {
       notes.append("copy events \(copies), expected \(expectedCopies)")
     }
-    if pastes != 0 { notes.append("paste events \(pastes), expected 0") }
+    let expectedPastes = scenario.expect.pasteEvents ?? 0
+    if pastes != expectedPastes {
+      notes.append("paste events \(pastes), expected \(expectedPastes)")
+    }
 
     switch outcome {
     case .noEntryPoint:
@@ -241,6 +251,15 @@ struct E2E {
     if let undone = expect.undone, write["valueAfterUndo"] as? String != undone {
       notes.append(
         "expected \(quote(undone)) after ⌘Z, got \(quote(write["valueAfterUndo"] as? String))")
+    }
+    for (key, expected) in [
+      ("formattingAfterReplace", expect.formattingAfterReplace),
+      ("formattingAfterUndo", expect.formattingAfterUndo),
+    ] {
+      if let expected, write[key] as? String != expected {
+        notes.append(
+          "expected \(key) \(quote(expected)), got \(quote(write[key] as? String))")
+      }
     }
     if write["visibleAtEnd"] as? Bool == true { notes.append("the panel stayed after Return") }
     return notes

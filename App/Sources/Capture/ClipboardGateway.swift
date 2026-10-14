@@ -90,6 +90,18 @@ final class ClipboardGateway {
     return .text(text)
   }
 
+  /// The richest formatted flavor a copy left, RTFD, RTF or HTML, as data: reading HTML
+  /// needs WebKit, so it is parsed only if a replacement uses it (architecture 4.7). Chrome
+  /// copies HTML and no RTF (measured). Never read for concealed content.
+  func richestFlavor() -> RichSource? {
+    let types = pasteboard.types ?? []
+    guard !types.contains(Self.concealedType) else { return nil }
+    for type in [NSPasteboard.PasteboardType.rtfd, .rtf, .html] where types.contains(type) {
+      if let data = pasteboard.data(forType: type) { return .pasteboard(type, data) }
+    }
+    return nil
+  }
+
   /// After a copy timed out, watches for `window`: if exactly one more change arrives (the
   /// late copy), puts the snapshot back. More than one change means the user copied; keep it.
   func undoLateCopy(of snapshot: ClipboardSnapshot, window: Duration) async {
@@ -107,12 +119,18 @@ final class ClipboardGateway {
     }
   }
 
-  /// Writes text that should not be remembered by clipboard managers; returns the new count.
+  /// Writes text that should not be remembered by clipboard managers, with RTF and HTML
+  /// beside it in the same item when `rich` is given; returns the new count. Native text
+  /// views paste the RTF, web views the HTML, plain-text editors the text (measured).
   @discardableResult
-  func writeTransient(_ text: String) -> Int {
+  func writeTransient(_ text: String, rich: RichPayload? = nil) -> Int {
     pasteboard.clearContents()
     let item = NSPasteboardItem()
     item.setString(text, forType: .string)
+    if let rich {
+      item.setData(rich.rtf, forType: .rtf)
+      item.setString(rich.html, forType: .html)
+    }
     item.setData(Data(), forType: Self.transientType)
     pasteboard.writeObjects([item])
     return pasteboard.changeCount

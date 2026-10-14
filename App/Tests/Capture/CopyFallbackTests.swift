@@ -69,6 +69,8 @@ final class FallbackHarness {
   var secureInputFailure: CaptureFailure?
   /// What the target puts on the clipboard when asked to copy; nil copies nothing.
   var copies: String? = "copied text"
+  /// Formatted flavors the copy writes beside the text.
+  var copiesFlavors: [(NSPasteboard.PasteboardType, Data)] = []
   var events: [String] = []
 
   init() {
@@ -79,7 +81,10 @@ final class FallbackHarness {
   func copy() {
     guard let copies else { return }
     pasteboard.clearContents()
-    pasteboard.setString(copies, forType: .string)
+    let item = NSPasteboardItem()
+    for (type, data) in copiesFlavors { item.setData(data, forType: type) }
+    item.setString(copies, forType: .string)
+    pasteboard.writeObjects([item])
   }
 
   var fallback: CopyFallback {
@@ -119,6 +124,33 @@ struct CopyFallbackTests {
     #expect(result == .success(CopiedSelection(text: "copied text", source: .menuCopy)))
     #expect(h.events == ["find", "press"])
     #expect(h.pasteboard.string(forType: .string) == "user clipboard")
+  }
+
+  /// The richest flavor is kept as it was copied, RTF before HTML; HTML is parsed only if a
+  /// replacement uses it.
+  @Test func keepsTheRichestFormattedFlavorOfTheCopy() async {
+    let h = FallbackHarness()
+    let rtf = Data("{\\rtf1 {\\b copied} text}".utf8)
+    h.copiesFlavors = [(.html, Data("<b>copied</b> text".utf8)), (.rtf, rtf)]
+    let result = await h.run()
+    #expect(
+      result
+        == .success(
+          CopiedSelection(text: "copied text", source: .menuCopy, rich: .pasteboard(.rtf, rtf))))
+    #expect(h.pasteboard.string(forType: .string) == "user clipboard")
+    #expect(h.pasteboard.data(forType: .rtf) == nil)
+  }
+
+  /// Chrome copies HTML and plain text only (measured).
+  @Test func keepsHTMLWhenThereIsNoRTF() async {
+    let h = FallbackHarness()
+    let html = Data("<b>copied</b> text".utf8)
+    h.copiesFlavors = [(.html, html)]
+    let result = await h.run()
+    #expect(
+      result
+        == .success(
+          CopiedSelection(text: "copied text", source: .menuCopy, rich: .pasteboard(.html, html))))
   }
 
   @Test func disabledMenuItemMeansNothingSelectedWithoutAnyKey() async {

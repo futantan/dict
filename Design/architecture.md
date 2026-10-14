@@ -265,6 +265,7 @@ struct Selection: Sendable {
   let bounds: CGRect?                  // 屏幕坐标（Cocoa 原点在左下）；拿不到为 nil
   let context: ContextSentence?
   let target: ReplaceTarget?           // 只有可替换时才有，见第 4.3 节
+  var rich: RichSource? = nil          // 选区的格式，见第 4.7 节
 }
 
 enum CaptureFailure: Error, Sendable, Equatable {
@@ -473,6 +474,9 @@ Chrome 的 contenteditable 和只读网页文字经无障碍读出时丢掉段�
 - 写（纠错、润色、译成外语并替换）：模型的输入和替换的基准都必须带换行，否则多段邮件会被压成一段。
   `chromium` 应用里，如果选区的起止文本标记不在同一段（段落范围不包含整个选区），「写」键路径改用菜单栏拷贝项取一次带换行的文本作为原文，同时保留无障碍快照作为替换目标。
   这个跨段判据是【推断】，要在第 3 个里程碑用夹具验证；粘贴带换行的纯文本进 contenteditable 会生成怎样的段落结构【未验证】，验证失败就把 Chromium 里的多段改写降级为只复制（见第 16 节）。
+- 保留格式的替换（第 4.7 节）沿用同一条路：拷贝取原文、粘贴、读回确认，只是剪贴板多放 RTF 和 HTML 两个风味。
+  HTML 里的 `<p>` 明确给出段落，可能比纯文本的 `\n` 更稳【推断】。
+  现状：上面这条「写」键在无障碍成功时也拷贝一次的步骤还没有做，拷贝兜底得到的选区不可替换，所以 Chromium 里的替换只有纯文本；降级表（第 4.7 节）的第 8 行把「Chromium 且结果跨段」固定为纯文本，等第 16.1 节第 2 项人工验收后再放开。
 
 ## 4. 替换
 
@@ -517,7 +521,8 @@ enum FailReason: Sendable { case pasteNotApplied, noPostEventPermission, clipboa
 
 @MainActor
 protocol ReplaceWriter {
-  func replace(_ target: ReplaceTarget, with result: String) async -> ReplaceOutcome
+  // rich 不为空：保留格式，剪贴板同时放纯文本、RTF、HTML 粘贴，不走无障碍写入（第 4.7 节）
+  func replace(_ target: ReplaceTarget, with result: String, rich: RichPayload?) async -> ReplaceOutcome
 }
 ```
 
@@ -587,6 +592,66 @@ enum ReadBack: Sendable, Equatable { case unchanged, confirmed, changedUnexpecte
 - 不用 HID 或 session 投递 ⌘V。
 - 不对来源是 `.menuCopy`、`.keyCopy`、`.ocr`、`.typed` 的选区替换；这些来源只给「复制」。
 - 不自动把失败的结果写进剪贴板；由胶囊上的「复制结果」按钮让用户决定。
+
+### 4.7 保留格式
+
+纠错和译成外语回车替换时，原文是富文本就保住加粗、斜体、下划线、删除线、链接和颜色，段落结构不变。
+对照 Raycast Quick Fix 的「保留格式」和 deepcast 插件补齐；可行性原型和五个真实应用的实测在 `spikes/results/rich-replace.md`（仓库外）。
+
+证据（原型实测）：
+
+- 剪贴板同一项里放纯文本、RTF、HTML 后 ⌘V：TextEdit、备忘录取 RTF，Safari、Chrome 取 HTML，VS Code 取纯文本；格式全部保住（备忘录粘贴不收前景色），⌘Z 一步还原【实测】。
+- 缺 RTF 时原生文本控件取 HTML，末尾多一个换行；缺 HTML 时 WebKit 取 RTF，写进一整套内联字体样式【实测，进程内】。
+- 只放纯文本时，WebKit 把替换 `<b>` 末尾一个词的文字插到 `<b>` 外面，纠正一个加粗词会让它变成不加粗【实测，进程内】。
+- WebKit 无论粘贴什么，行内元素两侧的空格都写成 U+00A0【实测】。
+- `AXAttributedStringForRange`：原生 `NSTextView` 给出字体、颜色、下划线、删除线和链接（链接是元素，网址要再读它的 `AXURL`）；备忘录读不出加粗；Chrome 只有颜色和下划线；VS Code 只有主题色【实测】。
+  颜色标成 Generic RGB，但分量其实是 sRGB（#cc0000 读出 0.8、0、0），按 Generic RGB 换算会变成 #d81e00【实测】。
+
+取原文：
+
+- 可替换、`AppKind` 是 `native` 的选区，第二段顺带读 `AXAttributedStringForRange`（不超过 20 000 个 UTF-16 单位），把无障碍属性换回 AppKit 属性：字体按名字和粗细、斜体重建（系统字体的私有名字按名字找不到），颜色按 sRGB 读、近黑近白当作编辑器自己的颜色丢掉，链接读元素的 `AXURL`，拼写标记和对齐丢掉。
+  转换后的文字必须与选中文字逐字相同，否则不要。
+  所以送去纠错和翻译的原文本来就是富文本的文字，diff 段和属性基于同一个字符串。
+- 拷贝兜底时在恢复剪贴板之前取最富的风味（RTFD、RTF、HTML 依次），只存数据；HTML 要经 WebKit 解析，只在替换真的用到时在主线程解析。
+  兜底得到的选区现在不可替换（第 4.6 节），这份数据留给第 3.9 节的 Chromium 多段。
+- `Selection.rich` 带着它，会话在「写」键路径把它和 `ReplaceTarget` 一起存下。
+
+属性映射（DictCore 的纯函数 `carryAttributes(from:along:)`，只比较属性值、不解读，平台无关）：
+
+1. 各段的 `unchanged` 和 `from` 拼起来必须等于原文，否则返回 nil，退回纯文本。
+2. 未改段原样搬属性，删除段丢弃。
+3. 纯插入继承前一个字符的属性，段首继承后一个字符；只是碰到链接边界时不延伸链接。
+4. 替换继承被替换文字的属性；跨了格式边界时，同样的词改拼写（词数相同、每个词编辑距离不超过较长词的一半）逐词继承，否则只留整段共有的属性。
+   `textDiff` 会把只隔空白的两处修改合成一段，所以要逐词拆回去；全文重写词数相同也不能逐词搬。
+
+纠错用逐条接受后的 `Correction.result.segments`，被拒绝的改动是未改段，原样保住格式。
+译成外语是一整段替换，只留原文整段共有的属性：整段斜体的译文还是斜体，混杂格式的译文是纯文本。
+
+写回：
+
+- 剪贴板用 `semanticHTML` 生成 HTML，只含 `<b>`、`<i>`、`<u>`、`<s>`、`<a href>` 和颜色 `<span>`，不带字体字号，让目标沿用自己的样式；结果跨段时每段一个 `<p>`，单段不包 `<p>`，免得把所在段落拆开；链接上的颜色和下划线是渲染样式，不输出。
+- RTF 用 AppKit 从映射结果生成；系统字体在 RTF 里会写成 Helvetica Neue，这和应用自己拷贝粘贴时一样。
+- 有格式时 `SystemReplaceWriter` 跳过无障碍写入（`kAXSelectedText` 只收纯文本），先隐藏面板再粘贴，其余步骤与第 4.4 节相同；不能投递按键或剪贴板被拒时退回纯文本、照常先试无障碍写入。
+- 读回仍用第 4.5 节的文字判据，U+00A0 本来就算空白，折叠成空格。
+  格式本身不读回比对：格式偏差不值得再改一次用户的文本。
+- 剪贴板恢复与第 3.7 节相同：快照本来就存了每一项的每一种类型，用户原来的 RTF、HTML 原样放回。
+
+降级判定（App 的 `richReplacement`，按顺序判，命中就用纯文本，原因 `PlainReason` 记日志）：
+
+| # | `PlainReason` | 条件 | 依据 |
+|---|---|---|---|
+| 1 | `settingOff` | 「保留格式」关闭 | 产品开关；现在没有设置项，恒为开 |
+| 2 | `noRichSource` | 没有取到格式，或剪贴板风味解析失败 | 没有属性可搬 |
+| 3 | `incompleteSource` | 格式来自无障碍，且应用不是 `native`，或是备忘录 | 只读到一部分格式，粘贴会丢掉其余的（实测 Chrome 只有颜色和下划线、备忘录没有加粗） |
+| 4 | `plainTextTarget` | 终端，或 VS Code、VSCodium、Cursor、Zed、Xcode、Sublime Text | 只收纯文本，放了富文本也一样 |
+| 5 | `textMismatch` | 格式的文字统一换行、去掉拷贝末尾的换行、U+00A0 当空格后，仍不等于送去处理的原文 | 属性对不上位置；无障碍来源按构造不会命中 |
+| 6 | `nothingToKeep` | 原文或映射结果里没有加粗、斜体、下划线、删除线、链接，且颜色不超过一种 | 纯文本一样好，还能走无障碍写入；一种颜色是主题色或渲染色（VS Code 拷贝整段带主题色，实测） |
+| 7 | `carryFailed` | `carryAttributes` 返回 nil，或 RTF 生成失败 | diff 段与原文不符 |
+| 8 | `chromiumParagraphs` | `chromium` 应用且结果跨段 | 先保证段落，等第 16.1 节第 2 项人工验收 |
+| 9 | -（写入时） | 不能投递按键，或剪贴板被拒 | 退回纯文本，走第 4.4 节原流程 |
+| 10 | -（读回） | 文字闸门不通过 | 按现有 `ReplaceOutcome`（`unconfirmed`、`failed`），不再试纯文本，不对同一选区粘第二次 |
+
+与原型报告的偏离：第 6 行的「没有格式」按标记和颜色种数判，而不是「只有一种样式」，所以整段加粗也保留（纯文本粘进 WebKit 的 `<b>` 会丢加粗）；报告的「格式读回只记日志」没做；无障碍读格式只信任 `native` 应用，备忘录除外。
 
 ## 5. 文本分析（`DictCore`，纯函数）
 
@@ -1880,9 +1945,13 @@ SwiftUI 的 `TextField`、`TextEditor` 和「撒谎」控件都还没有，计�
 | M3.6 零配置写作 | 系统拼写检查转错处列表；Apple 翻译的译成外语 | M1.8 | 是 |
 | M3.7 界面串联 | 写键流程、动作切换、diff 视图、校验警告、记录纠正的句子；Chromium 多段的拷贝取原文。现状：写键按 `writeAction` 在纠错和译成外语之间分流，译成外语的面板、回译行、校验警告和 ⌘回车、替换后记 `translated_out` 已做（第 6.9 节）；动作切换、润色和 Chromium 多段还没有做 | M3.1–M3.6 | 最后 |
 | M3.8 逐条接受 | `AppliedEdits.accepting`；面板里点击或 ← → 加空格逐条接受、拒绝改动；回车只替换被接受的改动，全部拒绝时不替换并提示；画廊 `proofread-partial`、`proofread-all-rejected`（第 6.7 节） | M3.3、M3.7 | 是 |
+| M3.10 保留格式 | 纠错、译成外语回车替换时保住原文的加粗、斜体、链接、颜色和段落：取词读 `AXAttributedStringForRange` 或拷贝的风味，`carryAttributes` 沿 diff 段搬属性，`semanticHTML`，剪贴板同时放纯文本、RTF、HTML 粘贴，降级判定 `richReplacement`；夹具 `textView.formatted` 和 e2e 场景；对照 Raycast Quick Fix 的「保留格式」和 deepcast 补齐（第 4.7 节） | M3.4、M3.8 | 是 |
 | M3.9 双击修饰键 | 「读」「写」可以设为双击一个修饰键（左侧录入为任一侧，右侧录入只认右侧）：`Hotkey` 类型与向后兼容的持久化、纯状态机 `DoubleTapDetector`、事件监视器、录键控件与引导选键步骤、⌘⌃ 的系统冲突提示（第 10.1 节） | M1.6 | 是 |
 
 现状：M3.9 已实现，状态机、规则、持久化和中心的分发有单测；真实按键的双击（含其他应用在前台、安全输入开启时）还没有人工验收。
+
+现状：M3.10 已做：原生应用里可替换的选区读格式，纠错（只含被接受的改动）和译成外语替换时按第 4.7 节的降级表决定是否带格式粘贴，属性映射、HTML、判定、写入和剪贴板有单测，e2e 场景「write shortcut, rich text view: formatting survives the replacement」已写好但还没有在真机上跑。
+「保留格式」设置项、结果胶囊上的「已保留格式」标注、写键在无障碍成功时也拷贝取原文（Chromium 多段）、格式读回比对都还没有做；五个真实应用的验收按原型报告的步骤再做一遍。
 
 验收：`make e2e` 替换场景全部通过：原生 `NSTextView` 走无障碍写入；撒谎控件走粘贴且粘贴事件恰好 1 次；异步写入控件不出现两份；确认后剪贴板恢复；⌘Z 恢复原文；只读和密码框不提供替换。
 `make matrix` 替换列：Chrome、Safari、VS Code 走粘贴并确认；终端只读不提供替换。
@@ -1941,7 +2010,7 @@ zip 和 `appcast.xml` 放在 GitHub Releases，应用读 `https://github.com/<�
 | # | 问题 | 选项与建议 |
 |---|---|---|
 | 1 | 为 Chrome 和 Electron 应用开启无障碍支持的默认值 | 写属性会让 VS Code 进入屏幕阅读器优化模式（用户可见的行为变化）、Chrome 维护完整无障碍树（性能代价未测）。建议：Chromium 浏览器默认开启，Electron 应用默认关闭、在首次在其中取词时询问一次。现状：代码已按这条建议写死两个 UserDefaults 键的默认值，开关和询问未实现（M4，第 3.3 节） |
-| 2 | Chromium 多段文字的替换 | 建议：用拷贝取带换行的原文、粘贴替换、读回确认，M3 用人工验收；不满足就降级为只复制 |
+| 2 | Chromium 多段文字的替换 | 建议：用拷贝取带换行的原文、粘贴替换、读回确认，M3 用人工验收；不满足就降级为只复制。现状：拷贝取原文还没有做，人工验收也没有做；保留格式的替换（第 4.7 节）走同一条路，在这之前「Chromium 且结果跨段」一律纯文本（降级表第 8 行） |
 | 3 | 复习算法 | 建议 v1 用固定间隔阶梯加完整复习日志，FSRS 以后再换 |
 | 4 | 词频数据来源 | wordfreq 质量更好但导出需要 Python 包；FrequencyWords 是纯文本、零工具。建议 v1 用 FrequencyWords，后续再换 |
 | 5 | 词典输入的来源文件 | 已定：英文维基词典翻译表作为第二来源默认启用，前 5 千个词覆盖 94.5%（构建报告）。待定：kaikki.org 要撤掉按语言拆分的后处理文件（我们用的三个都是）。选项一是届时换成全量原始提取（英文版 2.98 GB 压缩、含所有语言，接近单次下载 3 GB 的上限，构建时多解压约 20 GB；好处是翻译表保留页面顺序）；选项二是现在就把用到的输入（约 630 MB）存进自己的存储，清单指向副本。建议先做选项二，上游真撤掉时再评估选项一 |
@@ -1967,6 +2036,7 @@ zip 和 `appcast.xml` 放在 GitHub Releases，应用读 `https://github.com/<�
 - 已知限制（不修）：同一个应用里 1 s 内连续两次取词且选区状态变了，菜单栏「拷贝」项的 `AXEnabled` 和 `AXPress` 都还是上一次的状态（AppKit 约每秒校验一次菜单，真实鼠标点击也一样），第二次可能误报「没有选中文字」。
   评估过的绕法：不信任「不可用」直接按下，按下同样按旧状态执行【实测，夹具】，没有用；改发 ⌘C 也许会触发重新校验【推断】，但真的没有选区时目标应用会响提示音，编辑器还会拷贝整行。
   都不简单可靠，所以保留现状；用户再按一次即可。
+- 保留格式（第 4.7 节）：产品代码在 TextEdit、备忘录、Safari、Chrome、VS Code 上的真机验收（原型已测机制）；Pages、Word、Google Docs、Notion、Slack 没测；Gmail 这类用 `<div>` 的编辑器收到 `<p>` 是否多空行；粘贴不带段落样式的 RTF 是否改掉目标段落的对齐；AX 读出的 WebKit 值里 `&nbsp;` 是不是 U+00A0。
 - `AppKind` 的 Electron、Chromium 判定规则。
 - 点击划词图标是否影响原应用的 key 窗口和选区。
 - `screencapture` 的屏幕录制授权归属；首次 OCR 的长延迟。

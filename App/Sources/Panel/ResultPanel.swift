@@ -28,9 +28,7 @@ final class ResultPanel: NSPanel {
   var onToggleChange: () -> Void = {}
 
   /// Corner radius of the panel's background.
-  static var cornerRadius: CGFloat {
-    if #available(macOS 26, *) { 18 } else { 12 }
-  }
+  static let cornerRadius = Radius.panel
 
   init(content: NSView) {
     super.init(
@@ -163,7 +161,7 @@ final class ResultPanel: NSPanel {
   }
 }
 
-/// The panel's fill over the material: the window background, nearly opaque. On the bare
+/// The panel's fill over the material: the palette's `panelFill`, nearly opaque. On the bare
 /// material a dark window behind a light panel shows through and darkens it while the text
 /// keeps the light appearance's colours, so the secondary text all but disappears.
 ///
@@ -176,7 +174,7 @@ final class PanelBacking: NSView {
   /// Enough to hide the text of a window behind; the rest leaves a trace of the material.
   static let opacity: CGFloat = 0.95
 
-  static var color: NSColor { .windowBackgroundColor.withAlphaComponent(opacity) }
+  static var color: NSColor { Palette.panelFill.withAlphaComponent(opacity) }
 
   private var appearanceObservation: NSKeyValueObservation?
 

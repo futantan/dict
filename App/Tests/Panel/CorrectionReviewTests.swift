@@ -76,7 +76,7 @@ struct CorrectionReviewTests {
     let text = diffText(
       correction.proposed.segments, accepted: correction.accepted, current: correction.current)
     var underlined = false
-    text.enumerateAttribute(.underlineStyle, in: NSRange(location: 0, length: text.length)) {
+    text.enumerateAttribute(.dictUnderline, in: NSRange(location: 0, length: text.length)) {
       value, _, _ in if value != nil { underlined = true }
     }
     #expect(!underlined)
@@ -101,8 +101,8 @@ struct CorrectionReviewTests {
   }
 
   @Test func theFooterCountsTheAcceptedChanges() {
-    #expect(WritingStrings.changes(3, of: 3) == WritingStrings.changes(3))
-    #expect(WritingStrings.changes(1, of: 3) == "1 of 3 changes")
+    #expect(WritingStrings.changes(3, of: 3) == "Accepted 3/3")
+    #expect(WritingStrings.changes(1, of: 3) == "Accepted 1/3")
   }
 }
 
@@ -120,7 +120,7 @@ struct DiffTextReviewTests {
     let suggestion = text.attributes(at: 4, effectiveRange: nil)
     #expect(suggestion[.foregroundColor] as? NSColor == Palette.textTertiary)
     #expect(suggestion[.strikethroughStyle] != nil)
-    #expect(suggestion[.backgroundColor] == nil)
+    #expect(suggestion[.dictTint] == nil)
     #expect(text.attributes(at: 9, effectiveRange: nil)[.dictChange] == nil)
   }
 
@@ -128,9 +128,9 @@ struct DiffTextReviewTests {
     let text = diffText(applied.segments, accepted: [0, 1], current: 1)
     let inserted = (text.string as NSString).range(of: "a ")
     let current = text.attributes(at: inserted.location, effectiveRange: nil)
-    #expect(current[.underlineColor] as? NSColor == Palette.accent)
+    #expect(current[.dictUnderline] as? NSColor == Palette.accent)
     #expect(current[.dictChange] as? Int == 1)
-    #expect(text.attributes(at: 0, effectiveRange: nil)[.underlineStyle] == nil)
+    #expect(text.attributes(at: 0, effectiveRange: nil)[.dictUnderline] == nil)
   }
 
   /// A click on a change hits it; a click beside the text hits nothing, although the layout

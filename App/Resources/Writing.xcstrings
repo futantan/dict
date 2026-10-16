@@ -1,46 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%lld changes" : {
-      "comment" : "Panel footer: how many corrections the proofread made",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 处修改"
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld change"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld changes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "%lld of %lld changes" : {
-      "comment" : "Panel footer: how many of the corrections are accepted, when not all are",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已接受 %1$lld/%2$lld 处修改"
-          }
-        }
-      }
-    },
     "A link in the original is missing from the translation." : {
       "comment" : "Translation issue: a link was not kept",
       "localizations" : {
@@ -48,6 +8,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "原文里的链接没有保留下来。"
+          }
+        }
+      }
+    },
+    "Accepted %lld/%lld" : {
+      "comment" : "Panel footer: how many of the corrections are accepted",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已接受 %1$lld/%2$lld 处修改"
           }
         }
       }
@@ -85,7 +56,7 @@
         }
       }
     },
-    "Can’t replace text in this app; copy it instead." : {
+    "Can’t replace in this app; copy it instead." : {
       "comment" : "Panel footer when the selection's field cannot be written",
       "localizations" : {
         "zh-Hans" : {

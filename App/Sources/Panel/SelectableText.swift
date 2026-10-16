@@ -25,6 +25,8 @@ struct SelectableText: NSViewRepresentable {
   func makeNSView(context: Context) -> ChangeTextView {
     // TextKit 1, so the height for a width comes straight from the layout manager.
     let view = ChangeTextView(usingTextLayoutManager: false)
+    // Draws the proofread diff's tints and the current change's underline.
+    view.textContainer?.replaceLayoutManager(DiffLayoutManager())
     view.isEditable = false
     view.isSelectable = true
     view.isRichText = false

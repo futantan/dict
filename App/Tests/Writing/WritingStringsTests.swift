@@ -17,9 +17,10 @@ struct WritingStringsTests {
     #expect(try chinese("Replaced · ⌘Z to undo") == "已替换 · ⌘Z 撤销")
   }
 
-  @Test func theChangeCountIsPluralInEnglish() {
-    #expect(WritingStrings.changes(1) == "1 change")
-    #expect(WritingStrings.changes(3) == "3 changes")
+  /// The count needs no plural: 「已接受 1/1 处修改」, "Accepted 1/1".
+  @Test func theAcceptedCountReadsInChinese() throws {
+    #expect(try chinese("Accepted %lld/%lld") == "已接受 %1$lld/%2$lld 处修改")
+    #expect(WritingStrings.changes(1, of: 1) == "Accepted 1/1")
   }
 
   @Test func everyToastHasItsOwnText() {

@@ -13,18 +13,11 @@ enum WritingStrings {
   static let title = String(
     localized: "Proofread", table: "Writing", comment: "Panel footer title of the Write flow")
 
-  static func changes(_ count: Int) -> String {
-    String(
-      localized: "\(count) changes", table: "Writing",
-      comment: "Panel footer: how many corrections the proofread made")
-  }
-
-  /// How many of the changes are accepted; when all are, as `changes(_:)`.
+  /// How many of the changes are accepted.
   static func changes(_ accepted: Int, of count: Int) -> String {
-    guard accepted != count else { return changes(count) }
-    return String(
-      localized: "\(accepted) of \(count) changes", table: "Writing",
-      comment: "Panel footer: how many of the corrections are accepted, when not all are")
+    String(
+      localized: "Accepted \(accepted)/\(count)", table: "Writing",
+      comment: "Panel footer: how many of the corrections are accepted")
   }
 
   static let allDeclined = String(
@@ -44,7 +37,7 @@ enum WritingStrings {
     comment: "Panel footer when the proofread changed nothing")
 
   static let cannotReplace = String(
-    localized: "Can’t replace text in this app; copy it instead.", table: "Writing",
+    localized: "Can’t replace in this app; copy it instead.", table: "Writing",
     comment: "Panel footer when the selection's field cannot be written")
 
   static let replaceAction = String(

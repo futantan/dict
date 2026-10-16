@@ -70,6 +70,35 @@ struct PanelGalleryTests {
     #expect(PanelLayout.trailingPadding(isScrollable: true, scrollerStyle: .legacy) == 22 - legacy)
   }
 
+  /// Content taller than the panel scrolls above the bottom bar, which stays at the bottom
+  /// of the panel; the height the panel reports includes the bar.
+  @Test(arguments: ["result-long", "translate-out-back-long", "card-long"])
+  func theBarStaysInATallPanel(name: String) throws {
+    let state = try #require(PanelGallery.states().first { $0.name == name }).state
+    var contentHeight: CGFloat = 0
+    let model = PanelModel(state: state)
+    let hosting = NSHostingView(
+      rootView: PanelView(model: model, onContentHeight: { contentHeight = $0 }))
+    hosting.sizingOptions = []
+    // In a window, so the scroll view sizes its document.
+    let panel = ResultPanel(content: hosting)
+    panel.setFrame(CGRect(x: 0, y: 0, width: PanelLayout.width, height: 300), display: false)
+    model.isScrollable = true
+    panel.contentView?.layoutSubtreeIfNeeded()
+    #expect(contentHeight > 350)
+
+    let scrollView = try #require(Self.firstView(NSScrollView.self, in: hosting))
+    let scrolling = scrollView.convert(scrollView.bounds, to: nil)
+    let bar = PanelLayout.barHeight
+    // The bar's fixed height is what it needs.
+    let natural = NSHostingView(rootView: ActionBar(state: state)).fittingSize.height
+    #expect(natural + Spacing.panelBottom == bar)
+    #expect(scrolling.minY == bar)
+    #expect(scrolling.maxY == 300)
+    let document = try #require(scrollView.documentView).frame.height
+    #expect(document + bar == contentHeight)
+  }
+
   /// The streaming spinner sits right after the last word, on its line, and never past the
   /// trailing edge.
   @Test func theSpinnerFollowsTheLastWord() {

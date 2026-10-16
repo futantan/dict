@@ -149,6 +149,8 @@ enum Size {
   /// The tinted disc behind a notice's icon.
   static let disc: CGFloat = 36
   static let spinner: CGFloat = 14
+  /// The fade of scrolling content above the bottom bar.
+  static let scrollFade: CGFloat = 28
   /// The spinner's ring, as a share of the accent.
   static let spinnerTrack: CGFloat = 0.2
   /// A disabled icon button's icon, as a share of its colour.

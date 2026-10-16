@@ -34,22 +34,57 @@ struct PanelView: View {
   var onConfirm: (_ anyway: Bool) -> Void = { _ in }
   /// A click on a change of the correction shown; the value is its index.
   var onToggleChange: (Int) -> Void = { _ in }
-  /// Reports the height the content wants; the controller sizes the window from it.
+  /// Reports the height the content wants, the bar included; the controller sizes the window
+  /// from it.
   var onContentHeight: (CGFloat) -> Void = { _ in }
 
+  @State private var isScrolledToEnd = false
+
   var body: some View {
-    ScrollView(.vertical) {
-      PanelContent(
-        model: model, onSubmit: onSubmit, onAction: onAction, onConfirm: onConfirm,
-        onToggleChange: onToggleChange
-      )
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .fixedSize(horizontal: false, vertical: true)
-      .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: onContentHeight)
+    let barHeight = ActionBar.shows(model.state) ? PanelLayout.barHeight : 0
+    // While more text lies below, the panel takes an opaque fill for the text to fade into:
+    // its own fill lets a trace of the material through, which no fade colour would match.
+    let fade = model.isScrollable && !isScrolledToEnd ? Color(Palette.panelFill) : nil
+    // The bar stays at the bottom while the content above it scrolls.
+    VStack(spacing: 0) {
+      ScrollView(.vertical) {
+        PanelContent(
+          model: model, onSubmit: onSubmit, onAction: onAction, onToggleChange: onToggleChange
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        // One report with the bar's fixed height, so the window never sees a stale half.
+        .onGeometryChange(
+          for: CGFloat.self, of: { $0.size.height + barHeight }, action: onContentHeight)
+      }
+      .scrollDisabled(!model.isScrollable)
+      .scrollIndicators(model.isScrollable ? .automatic : .never)
+      .onScrollGeometryChange(
+        for: Bool.self, of: { $0.visibleRect.maxY >= $0.contentSize.height - 1 }
+      ) { isScrolledToEnd = $1 }
+      // Text that scrolls on fades out, then leaves the content's bottom margin clear, until
+      // the end shows. Within the content's width, so a scroller stays clear too.
+      .overlay(alignment: .bottom) {
+        if let fade {
+          VStack(spacing: 0) {
+            LinearGradient(colors: [fade.opacity(0), fade], startPoint: .top, endPoint: .bottom)
+              .frame(height: Size.scrollFade)
+            fade.frame(height: model.state.bottomPadding)
+          }
+          .padding(.horizontal, Spacing.panel)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+        }
+      }
+      if ActionBar.shows(model.state) {
+        ActionBar(state: model.state, onAction: onAction, onConfirm: onConfirm)
+          .padding(.horizontal, Spacing.panel)
+          .padding(.bottom, Spacing.panelBottom)
+          .frame(height: barHeight, alignment: .top)
+      }
     }
-    .scrollDisabled(!model.isScrollable)
-    .scrollIndicators(model.isScrollable ? .automatic : .never)
     .frame(width: PanelLayout.width)
+    .background(fade)
     .accessibilityElement(children: .contain)
     .accessibilityLabel(
       String(localized: "Dict panel", table: "Panel", comment: "Accessibility label of the panel")
@@ -58,12 +93,12 @@ struct PanelView: View {
   }
 }
 
-/// The original, what the phase shows, the note and the bottom bar, in that order.
+/// The original, what the phase shows and the note, in that order: what scrolls above the
+/// bottom bar.
 private struct PanelContent: View {
   let model: PanelModel
   let onSubmit: (String) -> Void
   let onAction: (PanelAction.ID) -> Void
-  let onConfirm: (_ anyway: Bool) -> Void
   let onToggleChange: (Int) -> Void
 
   var body: some View {
@@ -80,14 +115,10 @@ private struct PanelContent: View {
         if let note = state.note, state.phase.showsNote {
           NoteLine(note: note, isWarning: state.phase.isPartial, onAction: onAction)
         }
-        if ActionBar.shows(state) {
-          ActionBar(state: state, onAction: onAction, onConfirm: onConfirm)
-        }
       }
       .padding([.top, .leading], Spacing.panel)
       .padding(.trailing, PanelLayout.trailingPadding(isScrollable: model.isScrollable))
-      // Buttons at the bottom are taller than a line of text, so less space under them.
-      .padding(.bottom, state.hasButtonsAtTheBottom ? Spacing.panelBottom : Spacing.panel)
+      .padding(.bottom, state.bottomPadding)
     }
   }
 }
@@ -302,6 +333,9 @@ private struct InputField: View {
 }
 
 extension PanelLayout {
+  /// The bottom bar with the space above its buttons and the panel's margin below them.
+  static let barHeight = Spacing.barTop + Size.iconButton + Spacing.panelBottom
+
   /// The content's trailing margin. A legacy scroller, shown when scroll bars always show
   /// or a mouse is attached, takes its width from the scroll view's content; the margin
   /// gives it back, so the content keeps one width and one trailing edge either way.
@@ -314,11 +348,15 @@ extension PanelLayout {
 }
 
 extension PanelState {
-  /// A bar or a notice's buttons end the panel.
-  fileprivate var hasButtonsAtTheBottom: Bool {
+  /// Under the content: the space between the blocks above the bar; less above a notice's
+  /// buttons, which are taller than a line of text.
+  fileprivate var bottomPadding: CGFloat {
+    if ActionBar.shows(self) { return Spacing.section }
     switch phase {
-    case .failure(let notice), .needsSetup(let notice): !notice.actions.isEmpty
-    default: ActionBar.shows(self)
+    case .failure(let notice), .needsSetup(let notice):
+      return notice.actions.isEmpty ? Spacing.panel : Spacing.panelBottom
+    default:
+      return Spacing.panel
     }
   }
 }

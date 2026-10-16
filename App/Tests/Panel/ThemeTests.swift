@@ -28,6 +28,40 @@ struct ThemeTests {
     }
   }
 
+  /// The README's type table lists exactly the shared text styles, with their sizes and
+  /// weights, so the design notes and the code cannot drift apart.
+  @Test func theReadmeTypeTableMatchesTheTypography() throws {
+    let styles: [String: TextStyle] = [
+      "headword": Typography.headword, "result": Typography.result,
+      "proofread": Typography.proofread, "title": Typography.title, "body": Typography.body,
+      "callout": Typography.callout, "secondary": Typography.secondary,
+      "button": Typography.button, "note": Typography.note, "pill": Typography.pill,
+      "label": Typography.label, "caption": Typography.caption,
+    ]
+    let readme = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+      .deletingLastPathComponent().appendingPathComponent("Design/option-a/README.md")
+    let text = try String(contentsOf: readme, encoding: .utf8)
+    let section =
+      try #require(text.components(separatedBy: "## 字体").last)
+      .components(separatedBy: "\n## ").first ?? ""
+    let weights: [String: NSFont.Weight] = [
+      "regular": .regular, "medium": .medium, "semibold": .semibold, "bold": .bold,
+    ]
+    var listed: Set<String> = []
+    for line in section.split(separator: "\n") where line.hasPrefix("| `") {
+      let cells = line.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+      let name = cells[0].trimmingCharacters(in: CharacterSet(charactersIn: "`"))
+      let parts = cells[1].components(separatedBy: " / ")
+      let weight = parts[1].prefix { $0.isLetter }
+      let style = try #require(styles[name], "\(name) is in the README but not in Typography")
+      #expect(Double(parts[0]) == Double(style.size), "\(name)")
+      #expect(weights[String(weight)] == style.weight, "\(name)")
+      listed.insert(name)
+    }
+    #expect(listed == Set(styles.keys))
+  }
+
   /// The panel's fill keeps following the appearance with its opacity applied.
   @Test func theBackingColorIsDynamic() throws {
     let light = try #require(NSAppearance(named: .aqua))

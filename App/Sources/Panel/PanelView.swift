@@ -149,8 +149,8 @@ struct SourceText: View {
   var body: some View {
     // Blank lines between paragraphs would waste the few lines the source gets.
     SelectableText(
-      text: text.replacing(/\n\s*\n/, with: "\n"), font: Typography.source.nsFont,
-      color: Palette.textSecondary, lineSpacing: Typography.source.lineSpacing,
+      text: text.replacing(/\n\s*\n/, with: "\n"), font: Typography.callout.nsFont,
+      color: Palette.textSecondary, lineSpacing: Typography.callout.lineSpacing,
       maximumLines: 4,
       accessibilityLabel: String(
         localized: "Original text", table: "Panel", comment: "Accessibility label"))
@@ -216,7 +216,7 @@ struct ProgressLine: View {
     HStack(spacing: Spacing.buttons) {
       Spinner()
       Text(text)
-        .font(Typography.source.font)
+        .font(Typography.callout.font)
         .foregroundStyle(Color(Palette.textSecondary))
     }
     .frame(maxWidth: .infinity, minHeight: height, alignment: .leading)

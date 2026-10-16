@@ -7,11 +7,6 @@ import SwiftUI
 // The bodies of the Write flow: the proofread diff and the translate-out, and what their
 // bars say (Design/option-a, 校对 and 外译). The bars themselves are in `ActionBar`.
 
-extension Typography {
-  /// The text being proofread and its diff: a size above the body, as the mockups set it.
-  static let proofread = TextStyle(size: 16, lineSpacing: 6)
-}
-
 // MARK: Proofread
 
 /// The text being proofread, greyed until the diff takes its place.

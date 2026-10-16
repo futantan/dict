@@ -53,7 +53,7 @@ struct Pill: View {
   }
 
   var body: some View {
-    let style = size == .regular ? Typography.pill : Typography.smallPill
+    let style = size == .regular ? Typography.pill : Typography.caption
     HStack(spacing: 5) {
       if isBusy {
         Spinner(size: style.size)
@@ -175,7 +175,7 @@ private struct CapsuleLabel: View {
       }
       if let keys {
         Text(keys)
-          .font(Typography.keycap.font)
+          .font(Typography.caption.font)
           .padding(.horizontal, 4)
           .frame(minWidth: Size.keycap, minHeight: Size.keycap)
           .background(

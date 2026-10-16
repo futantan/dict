@@ -73,27 +73,33 @@ struct TextStyle {
   }
 }
 
+/// The type scale of the panel and the app's windows (Design/option-a/README.md, 字体).
+/// Measures only the word card uses are the card's own (`CardView`).
 enum Typography {
   /// The word on a card.
   static let headword = TextStyle(size: 28, weight: .bold, tracking: -0.4)
   /// A translation, a translate-out.
   static let result = TextStyle(size: 17, weight: .medium, lineSpacing: 5)
+  /// The text being proofread and its diff.
+  static let proofread = TextStyle(size: 16, lineSpacing: 6)
   /// A notice's title, the meaning in this sentence.
   static let title = TextStyle(size: 15, weight: .semibold)
-  /// Definitions and the proofread text.
+  /// Definitions, the input field.
   static let body = TextStyle(size: 15, lineSpacing: 4)
-  /// The original above a result, and what shows while waiting for it.
-  static let source = TextStyle(size: 14, lineSpacing: 4)
+  /// The original above a result, what shows while waiting, the card's other meanings and
+  /// examples.
+  static let callout = TextStyle(size: 14, lineSpacing: 4)
   /// The context sentence, a back-translation, a notice's message.
   static let secondary = TextStyle(size: 13, lineSpacing: 3)
-  /// A note under a result.
+  /// The title of a capsule button.
+  static let button = TextStyle(size: 13, weight: .semibold)
+  /// A note under a result, a hint.
   static let note = TextStyle(size: 12.5, lineSpacing: 2)
+  static let pill = TextStyle(size: 12.5, weight: .semibold)
   /// A section's small heading (本句, 例句, 搭配).
   static let label = TextStyle(size: 11.5, weight: .semibold)
-  static let pill = TextStyle(size: 12.5, weight: .semibold)
-  static let smallPill = TextStyle(size: 11, weight: .semibold)
-  static let button = TextStyle(size: 13, weight: .semibold)
-  static let keycap = TextStyle(size: 11, weight: .semibold)
+  /// A small pill and a key cap.
+  static let caption = TextStyle(size: 11, weight: .semibold)
 }
 
 enum Spacing {

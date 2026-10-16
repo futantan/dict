@@ -38,7 +38,7 @@ struct CardView: View {
           ForEach(Array(card.otherSenses.enumerated()), id: \.offset) { _, sense in
             SenseRow(
               partOfSpeech: sense.partOfSpeech, text: sense.definition, chip: chip,
-              style: Typography.detail)
+              style: Typography.callout)
           }
         }
       }
@@ -46,7 +46,7 @@ struct CardView: View {
         CardSection(title: CardStrings.examples, spacing: Spacing.minorRows) {
           ForEach(Array(card.examples.enumerated()), id: \.offset) { _, example in
             VStack(alignment: .leading, spacing: Spacing.pair) {
-              Wrapped(example.sentence, style: Typography.detail)
+              Wrapped(example.sentence, style: Typography.callout)
               Wrapped(
                 example.translation, style: Typography.secondary, color: Palette.textSecondary)
             }
@@ -130,7 +130,7 @@ struct CardView: View {
       HStack(alignment: .firstTextBaseline, spacing: Spacing.tight) {
         if let transcription = card.transcription {
           Text(verbatim: transcription == .us ? "US" : "UK")
-            .font(Typography.smallPill.font)
+            .font(Typography.caption.font)
             .foregroundStyle(Color(Palette.textSecondary))
         }
         Text(phonetic)
@@ -263,8 +263,6 @@ extension Typography {
   /// A word too long for `headword` on one line.
   static let compactHeadword = TextStyle(size: 22, weight: .bold, tracking: -0.4)
   static let partOfSpeech = TextStyle(size: 12, weight: .semibold)
-  /// The other meanings and the examples, a step below the main senses.
-  static let detail = TextStyle(size: 14, lineSpacing: 4)
   /// A collocation.
   static let phrase = TextStyle(size: 14, weight: .semibold)
 }

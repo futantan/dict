@@ -150,8 +150,8 @@ private struct TryItStep: View {
       TintedBlock {
         VStack(alignment: .leading, spacing: Spacing.row) {
           Text(OnboardingModel.sample)
-            .font(Typography.source.font)
-            .lineSpacing(Typography.source.lineSpacing)
+            .font(Typography.callout.font)
+            .lineSpacing(Typography.callout.lineSpacing)
             .foregroundStyle(Color(Palette.textPrimary))
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)

@@ -50,7 +50,8 @@ struct ActionBar: View {
 
   // MARK: Translation
 
-  /// A translation copies once it is done; a word or phrase can be looked up instead.
+  /// A translation copies once it is done; a word or phrase can be looked up instead, which
+  /// is then the bar's main action.
   private func translationBar(text: String, isPartial: Bool, isDone: Bool) -> some View {
     BottomBar(
       status: {
@@ -59,15 +60,17 @@ struct ActionBar: View {
         }
       },
       icons: {
-        if state.offersLookUp {
-          IconButton(title: CardStrings.lookUp, symbol: "character.book.closed") {
-            onAction(CardStrings.lookUpAction)
-          }
-        }
-        IconButton(title: PanelStrings.copy, symbol: "doc.on.doc", shortcut: "⌘C") {
+        IconButton(title: PanelStrings.copy, symbol: "square.on.square", shortcut: "⌘C") {
           copyToClipboard(text)
         }
         .disabled(!isDone || text.isEmpty)
+      },
+      primary: {
+        if state.offersLookUp {
+          SecondaryButton(title: CardStrings.lookUp, symbol: "magnifyingglass", tone: .accent) {
+            onAction(CardStrings.lookUpAction)
+          }
+        }
       })
   }
 

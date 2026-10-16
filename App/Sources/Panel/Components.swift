@@ -126,11 +126,14 @@ struct PrimaryButton: View {
   }
 }
 
-/// Any other button with a title: a neutral capsule as tall as the primary one, or, compact,
-/// an accent-tinted one that sits inside a note.
+/// Any other button with a title: a capsule as tall as the primary one, neutral or tinted
+/// (「查这个词」), or, compact, an accent-tinted one that sits inside a note.
 struct SecondaryButton: View {
   let title: String
+  var symbol: String?
   var keys: String?
+  /// The full-height capsule's colour; a compact one is always the accent's.
+  var tone = Tone.neutral
   var isCompact = false
   let action: () -> Void
 
@@ -147,9 +150,9 @@ struct SecondaryButton: View {
           .background(Color(Palette.panelFill), in: Capsule())
           .fixedSize()
       } else {
-        CapsuleLabel(title: title, symbol: nil, keys: keys, onFill: false)
-          .foregroundStyle(Color(Palette.textPrimary))
-          .background(Tone.neutral.tint, in: Capsule())
+        CapsuleLabel(title: title, symbol: symbol, keys: keys, onFill: false)
+          .foregroundStyle(tone == .neutral ? Color(Palette.textPrimary) : tone.onTint)
+          .background(tone.tint, in: Capsule())
       }
     }
     .buttonStyle(PressableStyle())

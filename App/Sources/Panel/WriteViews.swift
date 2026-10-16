@@ -37,7 +37,7 @@ struct CorrectedView: View {
       )
       .help(correction.changeCount > 0 ? WritingStrings.reviewHelp : "")
       if correction.showsReviewHint {
-        HStack(spacing: 6) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
           Image(systemName: "keyboard").accessibilityHidden(true)
           Text(WritingStrings.reviewHelp)
             .frame(maxWidth: .infinity, alignment: .leading)

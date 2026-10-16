@@ -221,12 +221,15 @@ struct NoteLine: View {
   var body: some View {
     let tone = isWarning ? Tone.warning : .neutral
     HStack(alignment: .center, spacing: Spacing.buttons) {
-      Image(systemName: isWarning ? "exclamationmark.triangle" : "info.circle")
-        .accessibilityHidden(true)
-      Text(note.text)
-        .lineSpacing(Typography.note.lineSpacing)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
+      // The icon stays on the first line of a note that wraps; the button is centred.
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.buttons) {
+        Image(systemName: isWarning ? "exclamationmark.triangle" : "info.circle")
+          .accessibilityHidden(true)
+        Text(note.text)
+          .lineSpacing(Typography.note.lineSpacing)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .fixedSize(horizontal: false, vertical: true)
+      }
       if let action = note.action {
         SecondaryButton(title: action.title, isCompact: true) { onAction(action.id) }
       }

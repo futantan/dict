@@ -56,7 +56,7 @@
         }
       }
     },
-    "Can’t replace text in this app; copy it instead." : {
+    "Can’t replace in this app; copy it instead." : {
       "comment" : "Panel footer when the selection's field cannot be written",
       "localizations" : {
         "zh-Hans" : {

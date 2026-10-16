@@ -37,7 +37,7 @@ enum WritingStrings {
     comment: "Panel footer when the proofread changed nothing")
 
   static let cannotReplace = String(
-    localized: "Can’t replace text in this app; copy it instead.", table: "Writing",
+    localized: "Can’t replace in this app; copy it instead.", table: "Writing",
     comment: "Panel footer when the selection's field cannot be written")
 
   static let replaceAction = String(

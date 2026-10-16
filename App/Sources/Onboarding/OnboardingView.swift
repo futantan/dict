@@ -23,13 +23,10 @@ struct OnboardingView: View {
 
       Divider()
       HStack(spacing: 12) {
-        Text(
+        Pill(
           String(
             localized: "Step \(model.step.rawValue + 1) of \(OnboardingStep.allCases.count)",
-            comment: "Onboarding progress; the arguments are the step number and the step count")
-        )
-        .font(.callout)
-        .foregroundStyle(.secondary)
+            comment: "Onboarding progress; the arguments are the step number and the step count"))
         Spacer()
         if model.step != .accessibility {
           Button(String(localized: "Back", comment: "Onboarding button")) { model.goBack() }
@@ -92,7 +89,7 @@ private struct AccessibilityStep: View {
             String(
               localized: "Accessibility is on.", comment: "Onboarding: the permission is granted"))
         } icon: {
-          Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+          Image(systemName: "checkmark.circle.fill").foregroundStyle(Color(Palette.successOnTint))
         }
       } else {
         Button(
@@ -150,23 +147,25 @@ private struct TryItStep: View {
         title: String(localized: "Try it", comment: "Title of the onboarding step with a sample"),
         message: message)
 
-      VStack(alignment: .leading, spacing: 12) {
-        Text(OnboardingModel.sample)
-          .font(.system(size: 14))
-          .lineSpacing(3)
-          .textSelection(.enabled)
-          .fixedSize(horizontal: false, vertical: true)
-        HStack {
-          Spacer()
-          Button(
-            String(
-              localized: "Translate Sample",
-              comment: "Onboarding button that translates the sample in the result panel")
-          ) { model.translateSample() }
+      TintedBlock {
+        VStack(alignment: .leading, spacing: Spacing.row) {
+          Text(OnboardingModel.sample)
+            .font(Typography.source.font)
+            .lineSpacing(Typography.source.lineSpacing)
+            .foregroundStyle(Color(Palette.textPrimary))
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+          HStack {
+            Spacer()
+            SecondaryButton(
+              title: String(
+                localized: "Translate Sample",
+                comment: "Onboarding button that translates the sample in the result panel"),
+              isCompact: true
+            ) { model.translateSample() }
+          }
         }
       }
-      .padding(14)
-      .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
       .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) {
         model.sampleFrame = $0
       }

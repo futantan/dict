@@ -130,7 +130,7 @@ private struct PanelBody: View {
       )
       .help(correction.changeCount > 0 ? WritingStrings.reviewHelp : "")
     case .card(let card):
-      CardView(card: card)
+      CardView(card: card, onAction: onAction)
     case .translatedOut(let translation):
       TranslatedOutView(translation: translation)
     }

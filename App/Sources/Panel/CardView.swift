@@ -4,59 +4,67 @@ import AppKit
 import DictCore
 import SwiftUI
 
-/// The word card in the panel (architecture 6.6): the main senses on top, the dictionary's
-/// or else the model's, then the meaning in this sentence and the model's other fields as
-/// they arrive.
+/// The word card in the panel (architecture 6.6): the word, then the main senses, the
+/// dictionary's or else the model's, then the meaning in this sentence and the model's other
+/// fields as they arrive. Pronouncing and translating are in the bar (`ActionBar`).
 struct CardView: View {
   let card: CardState
+  var onAction: (PanelAction.ID) -> Void = { _ in }
 
   var body: some View {
     let main = card.mainSenses
-    // One column for every part of speech on the card, as narrow as the widest label, so
-    // the senses and the other meanings share one left edge.
-    let column = CardLayout.partOfSpeechWidth(
+    // One chip width for every part of speech on the card, so the senses and the other
+    // meanings share one left edge.
+    let chip = CardLayout.chipWidth(
       main.map(\.partOfSpeech) + card.otherSenses.map(\.partOfSpeech))
-    let followed =
-      card.showsSentenceSection || !card.otherSenses.isEmpty || !card.examples.isEmpty
-      || !card.collocations.isEmpty
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Spacing.section) {
       header
       if !main.isEmpty {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.senses) {
           ForEach(Array(main.enumerated()), id: \.offset) { _, sense in
-            SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.gloss, column: column)
+            SenseRow(
+              partOfSpeech: sense.partOfSpeech, text: sense.gloss, chip: chip,
+              style: Typography.body)
           }
         }
       } else if card.model == .loading {
-        LookingUp()
+        ProgressLine(text: CardStrings.lookingUp, height: Typography.body.lineHeight)
       }
-      if followed && (!main.isEmpty || card.model == .loading) { Divider() }
       if card.showsSentenceSection {
-        inThisSentence(spinning: card.model == .loading && !main.isEmpty)
+        inThisSentence(isWaitingAbove: main.isEmpty)
       }
       if !card.otherSenses.isEmpty {
-        CardSection(title: CardStrings.otherSenses) {
+        CardSection(title: CardStrings.otherSenses, spacing: Spacing.minorRows) {
           ForEach(Array(card.otherSenses.enumerated()), id: \.offset) { _, sense in
-            SenseRow(partOfSpeech: sense.partOfSpeech, text: sense.definition, column: column)
+            SenseRow(
+              partOfSpeech: sense.partOfSpeech, text: sense.definition, chip: chip,
+              style: Typography.detail)
           }
         }
       }
       if !card.examples.isEmpty {
-        CardSection(title: CardStrings.examples) {
+        CardSection(title: CardStrings.examples, spacing: Spacing.minorRows) {
           ForEach(Array(card.examples.enumerated()), id: \.offset) { _, example in
-            VStack(alignment: .leading, spacing: 2) {
-              Wrapped(example.sentence, size: 13)
-              Wrapped(example.translation, size: 12.5, secondary: true)
+            VStack(alignment: .leading, spacing: Spacing.pair) {
+              Wrapped(example.sentence, style: Typography.detail)
+              Wrapped(
+                example.translation, style: Typography.secondary, color: Palette.textSecondary)
             }
           }
         }
       }
       if !card.collocations.isEmpty {
-        CardSection(title: CardStrings.collocations) {
+        let column = CardLayout.phraseWidth(card.collocations.map(\.phrase))
+        CardSection(title: CardStrings.collocations, spacing: Spacing.tight) {
           ForEach(Array(card.collocations.enumerated()), id: \.offset) { _, collocation in
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-              Text(collocation.phrase).font(.system(size: 13, weight: .medium))
-              Wrapped(collocation.meaning, size: 12.5, secondary: true)
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.pill) {
+              Text(collocation.phrase)
+                .font(Typography.phrase.font)
+                .foregroundStyle(Color(Palette.textPrimary))
+                .frame(width: column, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+              Wrapped(
+                collocation.meaning, style: Typography.secondary, color: Palette.textSecondary)
             }
           }
         }
@@ -65,83 +73,118 @@ struct CardView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
-  /// The word, its pronunciation and band, and the encounters on one line; a word too long
-  /// for that keeps its own line and the rest goes below, so neither wraps mid-word.
+  // MARK: Header
+
+  /// The word over its pronunciation and band, with the star at the trailing edge.
   private var header: some View {
-    ViewThatFits(in: .horizontal) {
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        lemma.fixedSize()
-        details.fixedSize()
-        Spacer(minLength: 0)
-        encounters
-      }
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-          lemma
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-          encounters
-        }
+    HStack(alignment: .top, spacing: Spacing.pill) {
+      VStack(alignment: .leading, spacing: Spacing.senses) {
+        lemma
         details
       }
+      Spacer(minLength: 0)
+      IconButton(
+        title: card.isLearning ? CardStrings.learning : CardStrings.learn,
+        symbol: card.isLearning ? "star.fill" : "star", shortcut: "⌘S", isOn: card.isLearning
+      ) { onAction(CardStrings.learnAction) }
     }
   }
 
+  /// The word on one line, smaller if it must be; a word too long even for that wraps rather
+  /// than being cut short.
   private var lemma: some View {
+    ViewThatFits(in: .horizontal) {
+      headword(Typography.headword).fixedSize()
+      headword(Typography.compactHeadword).fixedSize()
+      headword(Typography.compactHeadword)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func headword(_ style: TextStyle) -> some View {
     Text(card.lemma)
-      .font(.system(size: 20, weight: .semibold))
+      .font(style.font)
+      .tracking(style.tracking)
+      .foregroundStyle(Color(Palette.textPrimary))
   }
 
-  private var details: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 8) {
-      if let phonetic = card.phonetic {
+  /// The pronunciation after its US or UK tag, and the band; the band goes under a
+  /// pronunciation too long to share its line.
+  @ViewBuilder private var details: some View {
+    if card.phonetic != nil || card.band != nil {
+      ViewThatFits(in: .horizontal) {
+        HStack(spacing: Spacing.senses) {
+          pronunciation.fixedSize()
+          band
+        }
+        VStack(alignment: .leading, spacing: Spacing.tight) {
+          pronunciation.fixedSize(horizontal: false, vertical: true)
+          band
+        }
+      }
+    }
+  }
+
+  @ViewBuilder private var pronunciation: some View {
+    if let phonetic = card.phonetic {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.tight) {
+        if let transcription = card.transcription {
+          Text(verbatim: transcription == .us ? "US" : "UK")
+            .font(Typography.smallPill.font)
+            .foregroundStyle(Color(Palette.textSecondary))
+        }
         Text(phonetic)
-          .font(.system(size: 13))
-          .foregroundStyle(.secondary)
-      }
-      if let band = card.band {
-        Text(CardStrings.band(band))
-          .font(.system(size: 10.5, weight: .medium))
-          .foregroundStyle(.secondary)
-          .padding(.horizontal, 5)
-          .padding(.vertical, 1)
-          .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+          .font(Typography.secondary.font)
+          .foregroundStyle(Color(Palette.textSecondary))
       }
     }
   }
 
-  @ViewBuilder private var encounters: some View {
-    if let count = card.shownEncounters {
-      Text(CardStrings.encounters(count))
-        .font(.system(size: 11.5))
-        .foregroundStyle(.secondary)
-        .fixedSize()
+  @ViewBuilder private var band: some View {
+    if let band = card.band {
+      Pill(CardStrings.band(band), tone: band.tone, size: .small)
     }
   }
 
-  private func inThisSentence(spinning: Bool) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(spacing: 6) {
-        Heading(CardStrings.inThisSentence)
-        if spinning {
-          ProgressView()
-            .controlSize(.mini)
+  // MARK: In this sentence
+
+  /// The meaning in this sentence, the sentence with the word marked, and its translation, on
+  /// the accent block. `isWaitingAbove`: the spinner above already says the model is busy.
+  private func inThisSentence(isWaitingAbove: Bool) -> some View {
+    // With the dictionary the block leads with the model's meaning, a spinner until it comes.
+    let waitsForMeaning = !card.senses.isEmpty && card.sentenceMeaning == nil
+    let isBusy = card.model == .loading && !waitsForMeaning && !isWaitingAbove
+    return TintedBlock {
+      HStack(spacing: Spacing.tight) {
+        Image(systemName: "sparkles").accessibilityHidden(true)
+        Text(CardStrings.inThisSentence)
+        if isBusy {
+          Spinner(size: Typography.label.size)
             .accessibilityLabel(CardStrings.lookingUp)
         }
       }
+      .font(Typography.label.font)
+      .foregroundStyle(Tone.accent.onTint)
       if let meaning = card.sentenceMeaning {
-        Wrapped(meaning, size: 15, weight: .medium)
-      } else if !card.senses.isEmpty {
-        // The meaning's size, so the line keeps its height when the meaning replaces it.
-        Text(CardStrings.lookingUp)
-          .font(.system(size: 15))
-          .foregroundStyle(.tertiary)
+        Wrapped(meaning, style: Typography.title)
+      } else if waitsForMeaning {
+        // The meaning's height, so the block keeps it when the meaning replaces the line.
+        ProgressLine(text: CardStrings.lookingUp, height: Typography.title.lineHeight)
       }
-      if let context = card.context {
-        Wrapped(context, size: 12.5, secondary: true)
-      }
-      if let translation = card.contextTranslation {
-        Wrapped(translation, size: 13)
+      if card.context != nil || card.contextTranslation != nil {
+        VStack(alignment: .leading, spacing: Spacing.pair) {
+          if let context = card.context {
+            Text(CardLayout.marking(card.term, in: context))
+              .font(Typography.secondary.font)
+              .lineSpacing(Typography.secondary.lineSpacing)
+              .foregroundStyle(Color(Palette.textPrimary))
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          if let translation = card.contextTranslation {
+            Wrapped(translation, style: Typography.secondary, color: Palette.textSecondary)
+          }
+        }
       }
     }
   }
@@ -149,103 +192,155 @@ struct CardView: View {
 
 /// The measures of the card that depend on its text.
 enum CardLayout {
-  static var partOfSpeechFont: NSFont {
-    let regular = NSFont.systemFont(ofSize: 12)
-    return NSFont(descriptor: regular.fontDescriptor.withSymbolicTraits(.italic), size: 12)
-      ?? regular
-  }
-  /// Between the part of speech and the sense.
-  static let columnSpacing: CGFloat = 8
+  static var partOfSpeechFont: NSFont { Typography.partOfSpeech.nsFont }
+  /// The narrowest a part-of-speech chip gets, and its label's room on either side.
+  static let minimumChipWidth: CGFloat = 44
+  static let chipPadding: CGFloat = 6
+  /// The widest the collocations' phrase column gets; a longer phrase wraps.
+  static let maximumPhraseWidth: CGFloat = 160
 
-  /// The width of the part-of-speech column: the widest label among `names`, 0 for none.
+  /// The widest label among the parts of speech `names`, 0 for none.
   static func partOfSpeechWidth(_ names: [String]) -> CGFloat {
-    let widths = names.filter { !$0.isEmpty }.map { name in
-      NSAttributedString(
-        string: CardStrings.partOfSpeech(name), attributes: [.font: partOfSpeechFont]
-      ).size().width
+    let widths = names.filter { !$0.isEmpty }.map {
+      width(CardStrings.partOfSpeech($0), font: partOfSpeechFont)
     }
     return (widths.max() ?? 0).rounded(.up)
   }
+
+  /// The width of every part-of-speech chip on a card with `names`, 0 for none.
+  static func chipWidth(_ names: [String]) -> CGFloat {
+    let label = partOfSpeechWidth(names)
+    return label == 0 ? 0 : max(minimumChipWidth, label + chipPadding * 2)
+  }
+
+  /// The width of the collocations' phrase column: the widest phrase, up to the cap.
+  static func phraseWidth(_ phrases: [String]) -> CGFloat {
+    let widths = phrases.map { width($0, font: Typography.phrase.nsFont) }
+    return min((widths.max() ?? 0).rounded(.up), maximumPhraseWidth)
+  }
+
+  /// The first place `term` stands in `sentence` as whole words, in any case.
+  static func termRange(_ term: String, in sentence: String) -> Range<String.Index>? {
+    guard !term.isEmpty else { return nil }
+    var start = sentence.startIndex
+    while let range = sentence.range(
+      of: term, options: .caseInsensitive, range: start..<sentence.endIndex)
+    {
+      let before =
+        range.lowerBound == sentence.startIndex
+        ? nil : sentence[sentence.index(before: range.lowerBound)]
+      let after = range.upperBound == sentence.endIndex ? nil : sentence[range.upperBound]
+      if before?.isLetter != true && after?.isLetter != true { return range }
+      start = sentence.index(after: range.lowerBound)
+    }
+    return nil
+  }
+
+  /// `sentence` with `term` on the highlight colour.
+  static func marking(_ term: String, in sentence: String) -> AttributedString {
+    var marked = AttributedString(sentence)
+    if let range = termRange(term, in: sentence),
+      let lower = AttributedString.Index(range.lowerBound, within: marked),
+      let upper = AttributedString.Index(range.upperBound, within: marked)
+    {
+      marked[lower..<upper].backgroundColor = Color(Palette.highlight)
+    }
+    return marked
+  }
+
+  private static func width(_ text: String, font: NSFont) -> CGFloat {
+    NSAttributedString(string: text, attributes: [.font: font]).size().width
+  }
 }
 
+extension FrequencyBand {
+  /// Only common words get the green pill; the others are a fact, not praise.
+  var tone: Tone { self == .common ? .success : .neutral }
+}
+
+/// The card's own measures, from the mockup (Design/option-a/card.html).
+extension Typography {
+  /// A word too long for `headword` on one line.
+  static let compactHeadword = TextStyle(size: 22, weight: .bold, tracking: -0.4)
+  static let partOfSpeech = TextStyle(size: 12, weight: .semibold)
+  /// The other meanings and the examples, a step below the main senses.
+  static let detail = TextStyle(size: 14, lineSpacing: 4)
+  /// A collocation.
+  static let phrase = TextStyle(size: 14, weight: .semibold)
+}
+
+extension Spacing {
+  /// Between the main senses, the word and its pronunciation, a heading and its rows.
+  static let senses: CGFloat = 8
+  /// Between the rows of the other meanings and the examples.
+  static let minorRows: CGFloat = 6
+  /// Between a sentence and its translation.
+  static let pair: CGFloat = 2
+}
+
+extension Size {
+  static let partOfSpeechHeight: CGFloat = 18
+}
+
+/// A part of speech on its chip, then the sense. The chip keeps its place for a sense with no
+/// part of speech, so the senses still line up.
 private struct SenseRow: View {
   let partOfSpeech: String
   let text: String
-  let column: CGFloat
+  let chip: CGFloat
+  let style: TextStyle
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: column > 0 ? CardLayout.columnSpacing : 0) {
-      if column > 0 {
+    HStack(alignment: .firstTextBaseline, spacing: chip > 0 ? Spacing.pill : 0) {
+      if chip > 0 {
         Text(partOfSpeech.isEmpty ? "" : CardStrings.partOfSpeech(partOfSpeech))
-          .font(Font(CardLayout.partOfSpeechFont))
-          .foregroundStyle(.secondary)
-          .frame(minWidth: column, alignment: .leading)
-          .fixedSize()
+          .font(Typography.partOfSpeech.font)
+          .foregroundStyle(Tone.accent.onTint)
+          .lineLimit(1)
+          .frame(width: chip, height: Size.partOfSpeechHeight)
+          .background(
+            partOfSpeech.isEmpty ? .clear : Tone.accent.tint,
+            in: RoundedRectangle(cornerRadius: Radius.partOfSpeech, style: .continuous))
       }
-      Wrapped(text, size: 14)
+      Wrapped(text, style: style)
     }
   }
 }
 
-/// In place of the main senses until the model's definition arrives.
-private struct LookingUp: View {
-  var body: some View {
-    HStack(spacing: 6) {
-      ProgressView().controlSize(.mini)
-      Text(CardStrings.lookingUp)
-        .font(.system(size: 13))
-        .foregroundStyle(.tertiary)
-    }
-  }
-}
-
+/// A small heading over its rows: 其他义项, 例句, 搭配.
 private struct CardSection<Content: View>: View {
   let title: String
+  let spacing: CGFloat
   @ViewBuilder let content: Content
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 5) {
-      Heading(title)
-      content
+    VStack(alignment: .leading, spacing: Spacing.senses) {
+      Text(title)
+        .font(Typography.label.font)
+        .foregroundStyle(Color(Palette.textSecondary))
+      VStack(alignment: .leading, spacing: spacing) { content }
     }
-  }
-}
-
-private struct Heading: View {
-  let title: String
-
-  init(_ title: String) { self.title = title }
-
-  var body: some View {
-    // Small capitals carry a Latin heading at 11 pt; Chinese has no case, so it needs the
-    // size to stand apart from the body text.
-    let isLatin = title.unicodeScalars.allSatisfy(\.isASCII)
-    Text(title)
-      .font(.system(size: isLatin ? 11 : 12.5, weight: .semibold))
-      .foregroundStyle(.secondary)
-      .textCase(.uppercase)
   }
 }
 
 /// Text that wraps to the panel's width instead of growing it.
 private struct Wrapped: View {
-  let text: String
-  var size: CGFloat
-  var weight: Font.Weight = .regular
-  var secondary = false
 
-  init(_ text: String, size: CGFloat, weight: Font.Weight = .regular, secondary: Bool = false) {
+  let text: String
+  let style: TextStyle
+  var color = Palette.textPrimary
+
+  init(_ text: String, style: TextStyle, color: NSColor = Palette.textPrimary) {
     self.text = text
-    self.size = size
-    self.weight = weight
-    self.secondary = secondary
+    self.style = style
+    self.color = color
   }
 
   var body: some View {
     Text(text)
-      .font(.system(size: size, weight: weight))
-      .foregroundStyle(secondary ? .secondary : .primary)
-      .lineSpacing(2)
+      .font(style.font)
+      .lineSpacing(style.lineSpacing)
+      .foregroundStyle(Color(color))
       .frame(maxWidth: .infinity, alignment: .leading)
       .fixedSize(horizontal: false, vertical: true)
   }

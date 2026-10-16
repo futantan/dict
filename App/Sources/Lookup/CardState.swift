@@ -13,6 +13,11 @@ struct CardState: Sendable, Equatable {
     var gloss: String
   }
 
+  /// The dictionary's American or British transcription.
+  enum Transcription: Sendable, Equatable {
+    case us, uk
+  }
+
   enum Model: Sendable, Equatable {
     /// The card has been asked for; `definition` and `contextTranslation` may arrive first.
     case loading
@@ -32,6 +37,8 @@ struct CardState: Sendable, Equatable {
   var lemma: String
   /// From the dictionary in the chosen accent; the model's only when the dictionary has none.
   var phonetic: String?
+  /// Which of the dictionary's transcriptions `phonetic` is; nil for the model's.
+  var transcription: Transcription?
   var senses: [Sense]
   /// nil without a dictionary entry.
   var band: FrequencyBand?
@@ -60,7 +67,9 @@ struct CardState: Sendable, Equatable {
     self.term = term
     self.context = context
     lemma = entry?.lemma ?? term
-    phonetic = entry.flatMap { Self.phonetic($0, accent: accent) }
+    let pronunciation = entry.flatMap { Self.pronunciation($0, accent: accent) }
+    phonetic = pronunciation?.ipa
+    transcription = pronunciation?.transcription
     senses = (entry?.senses ?? []).prefix(Self.shownSenses).map {
       Sense(partOfSpeech: $0.pos, gloss: $0.gloss)
     }
@@ -127,8 +136,15 @@ struct CardState: Sendable, Equatable {
   /// The IPA for the accent: American and Canadian English read the US transcription,
   /// the others the UK one; either stands in for the other when missing.
   static func phonetic(_ entry: LexiconEntry, accent: Accent) -> String? {
-    let us = entry.ipaUS.flatMap { $0.isEmpty ? nil : $0 }
-    let uk = entry.ipaUK.flatMap { $0.isEmpty ? nil : $0 }
+    pronunciation(entry, accent: accent)?.ipa
+  }
+
+  /// `phonetic` and which transcription it is.
+  private static func pronunciation(_ entry: LexiconEntry, accent: Accent) -> (
+    ipa: String, transcription: Transcription
+  )? {
+    let us = entry.ipaUS.flatMap { $0.isEmpty ? nil : (ipa: $0, transcription: Transcription.us) }
+    let uk = entry.ipaUK.flatMap { $0.isEmpty ? nil : (ipa: $0, transcription: Transcription.uk) }
     switch accent {
     case .american, .canadian: return us ?? uk
     case .british, .australian, .indian: return uk ?? us

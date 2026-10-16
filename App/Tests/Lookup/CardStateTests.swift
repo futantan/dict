@@ -45,6 +45,36 @@ struct CardStateTests {
     #expect(CardState.phonetic(entry, accent: .american) == nil)
   }
 
+  /// The tag before the pronunciation names the transcription shown, which is the other one
+  /// when the accent's is missing; the model's pronunciation has none.
+  @Test func thePronunciationIsTaggedWithItsTranscription() {
+    func transcription(_ accent: Accent, _ change: (inout LexiconEntry) -> Void = { _ in })
+      -> CardState.Transcription?
+    {
+      var entry = run
+      change(&entry)
+      return CardState(term: "ran", context: nil, entry: entry, accent: accent, model: .loading)
+        .transcription
+    }
+    #expect(transcription(.american) == .us)
+    #expect(transcription(.canadian) == .us)
+    #expect(transcription(.british) == .uk)
+    #expect(transcription(.indian) == .uk)
+    #expect(transcription(.american) { $0.ipaUS = "" } == .uk)
+    #expect(transcription(.british) { $0.ipaUK = nil } == .us)
+    #expect(
+      transcription(.british) {
+        $0.ipaUK = nil
+        $0.ipaUS = nil
+      } == nil)
+
+    var typed = CardState(
+      term: "took off", context: nil, entry: nil, accent: .american, model: .loading)
+    typed.show(card)
+    #expect(typed.phonetic == "/rʌn/")
+    #expect(typed.transcription == nil)
+  }
+
   @Test func theStreamedFieldsComeFirst() {
     var state = CardState(term: "ran", context: nil, entry: run, accent: .american, model: .loading)
     state.show(definition: "经营；管理", contextTranslation: nil)
@@ -136,6 +166,49 @@ struct CardStateTests {
     state.show(typed)
     #expect(state.mainSenses.map(\.gloss) == ["经营；管理"])
     #expect(!state.showsSentenceSection)
+  }
+
+  /// A part of speech sits on a chip at least as wide as the mockup's, wider for a long label.
+  @Test func thePartOfSpeechChipsShareOneWidth() {
+    #expect(CardLayout.chipWidth([]) == 0)
+    #expect(CardLayout.chipWidth(["", ""]) == 0)
+    #expect(CardLayout.chipWidth(["verb", "noun"]) == CardLayout.minimumChipWidth)
+    let phrasal = CardLayout.chipWidth(["verb", "phrasal verb"])
+    #expect(phrasal > CardLayout.minimumChipWidth)
+    #expect(phrasal == CardLayout.chipWidth(["phrasal verb"]))
+  }
+
+  /// The collocations' phrases share a column as wide as the widest, up to a cap past which a
+  /// phrase wraps.
+  @Test func thePhraseColumnFitsTheWidestPhraseUpToACap() {
+    #expect(CardLayout.phraseWidth([]) == 0)
+    let short = CardLayout.phraseWidth(["run a business", "run up"])
+    #expect(short == CardLayout.phraseWidth(["run a business"]))
+    #expect(short > 40)
+    #expect(short < CardLayout.maximumPhraseWidth)
+    let long = CardLayout.phraseWidth([String(repeating: "run a business ", count: 6)])
+    #expect(long == CardLayout.maximumPhraseWidth)
+  }
+
+  /// The looked-up word is marked in its sentence as a whole word, in any case; not inside
+  /// another word.
+  @Test func theTermIsFoundAsAWholeWordInItsSentence() {
+    func marked(_ term: String, _ sentence: String) -> String? {
+      CardLayout.termRange(term, in: sentence).map { String(sentence[$0]) }
+    }
+    #expect(marked("ran", "She ran a small bakery.") == "ran")
+    #expect(marked("ran", "Oranges ran out; Ran said so.") == "ran")
+    #expect(marked("RAN", "She ran.") == "ran")
+    #expect(marked("took off", "The plane took off late.") == "took off")
+    #expect(marked("ran", "Oranges are orange.") == nil)
+    #expect(marked("ran", "") == nil)
+    #expect(marked("", "She ran.") == nil)
+  }
+
+  @Test func onlyCommonWordsGetTheGreenBand() {
+    #expect(FrequencyBand.common.tone == .success)
+    #expect(FrequencyBand.moderate.tone == .neutral)
+    #expect(FrequencyBand.rare.tone == .neutral)
   }
 
   @Test func thePartOfSpeechColumnFitsTheWidestLabel() {

@@ -105,7 +105,13 @@ private final class SettingsTabViewController: NSTabViewController {
     guard size.height > 0 else { return }
     var frame = window.frameRect(forContentRect: CGRect(origin: .zero, size: size))
     frame.origin = CGPoint(x: window.frame.minX, y: window.frame.maxY - frame.height)
-    window.setFrame(frame, display: true, animate: animated)
+    // Through the animator, which returns at once: `setFrame(_:display:animate:)` runs the
+    // animation before returning, and the toolbar showed the new selection only after it.
+    // Unanimated too, so a size that changes mid-animation replaces the animation's target.
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = animated ? window.animationResizeTime(frame) : 0
+      window.animator().setFrame(frame, display: true)
+    }
   }
 }
 

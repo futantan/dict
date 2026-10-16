@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Dict 主应用 · 生词本</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#E6E7EB}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:#5B3FD6}a:hover{color:#4630B0}
+</style>
+</helmet>
+<div style="min-height: 800px; box-sizing: border-box; padding: 0; background: #E6E7EB; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; color: #1D1D1F">
+<div style="max-width: 1280px; min-height: 800px; margin: 0 auto; display: flex; flex-wrap: wrap; background: #FBFBFD; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.14), 0 20px 60px rgba(0,0,0,0.16)">
+<nav aria-label="主导航" style="flex: 0 0 232px; box-sizing: border-box; background: #F2F2F5; border-right: 0.5px solid #DEDEE3; padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; gap: 8px; padding: 2px 6px 18px" aria-hidden="true">
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57"></span>
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E"></span>
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840"></span>
+</div>
+<a href="App-Home.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg><span style="flex: 1">今天</span></a>
+<a href="App-History.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.5 2.5v2.6h2.6M8 5v3.2l2 1.3"></path></svg><span style="flex: 1">查询记录</span></a>
+<a href="App-Saved.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; background: #ECE8FF; color: #5B3FD6; font-size: 14px; font-weight: 600; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg><span style="flex: 1">生词本</span><span style="font-size: 12px; color: #5B3FD6">48</span></a>
+<a href="App-Review.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="10" height="10" rx="2"></rect><path d="M5 2.5h7.5a1.5 1.5 0 0 1 1.5 1.5v7.5"></path></svg><span style="flex: 1">复习</span><span style="font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF">9</span></a>
+<div style="flex: 1"></div>
+<a href="App-Settings.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M2.6 4.9l1.5.8M11.9 10.3l1.5.8M2.6 11.1l1.5-.8M11.9 5.7l1.5-.8"></path></svg><span style="flex: 1">设置</span></a>
+<div style="margin-top: 10px; padding: 10px; border-radius: 10px; background: #FBFBFD; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #6E6E73">
+<div style="display: flex; justify-content: space-between"><span>读：查词、翻译</span><kbd style="font: 600 11px -apple-system, sans-serif; color: #48484A; padding: 1px 6px; border-radius: 4px; background: #EFEFF2">⌥A</kbd></div>
+<div style="display: flex; justify-content: space-between"><span>写：纠错、译成外语</span><kbd style="font: 600 11px -apple-system, sans-serif; color: #48484A; padding: 1px 6px; border-radius: 4px; background: #EFEFF2">⌥F</kbd></div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 40px 48px 48px; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; color: #6E6E73">标了要学的词</div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px">生词本 <span style="font-size: 15px; font-weight: 500; color: #6E6E73; letter-spacing: 0">48 个词</span></h1>
+</div>
+<button aria-haspopup="menu" aria-expanded="false" aria-label="导出为 CSV 或 Anki" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; font-size: 13.5px; font-weight: 600; color: #3A3A3C"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.8 6.8L8 10l3.2-3.2M2.5 11v1.5A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V11"></path></svg>导出<span style="font-weight: 400; color: #6E6E73">CSV、Anki</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"></path></svg></button>
+</header>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<label style="flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#6E6E73" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">搜索生词本</span>
+<input type="search" placeholder="搜索词或释义" style="flex: 1; min-width: 0; border: 0; outline: none; background: none; font: 14px -apple-system, 'PingFang SC', sans-serif; color: #1D1D1F">
+</label>
+<div role="group" aria-label="筛选" style="display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: #EBEBEF">
+<button aria-pressed="true" style="height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.08); font-size: 13px; font-weight: 600; color: #1D1D1F">全部</button>
+<button aria-pressed="false" style="height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: none; font-size: 13px; color: #3A3A3C">待复习 <span style="color: #5B3FD6; font-weight: 600">9</span></button>
+<button aria-pressed="false" style="height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: none; font-size: 13px; color: #3A3A3C">本周新加</button>
+<button aria-pressed="false" style="height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: none; font-size: 13px; color: #3A3A3C">已熟悉</button>
+</div>
+<button aria-haspopup="menu" aria-expanded="false" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font-size: 13px; color: #3A3A3C"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v10M2.8 10.8L5 13l2.2-2.2M11 13V3M8.8 5.2L11 3l2.2 2.2"></path></svg><span style="color: #6E6E73">排序</span> 最近遇到<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"></path></svg></button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<section aria-label="生词列表" style="flex: 999 1 460px; min-width: 0; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; overflow: hidden">
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 640px; border-collapse: collapse; table-layout: fixed">
+<colgroup><col style="width: 132px"><col><col style="width: 82px"><col style="width: 124px"><col style="width: 96px"><col style="width: 40px"></colgroup>
+<thead><tr>
+<th scope="col" style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6E6E73; border-bottom: 0.5px solid #EDEDF0; white-space: nowrap">词</th>
+<th scope="col" style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6E6E73; border-bottom: 0.5px solid #EDEDF0; white-space: nowrap">释义</th>
+<th scope="col" style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6E6E73; border-bottom: 0.5px solid #EDEDF0; white-space: nowrap">遇到</th>
+<th scope="col" style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6E6E73; border-bottom: 0.5px solid #EDEDF0; white-space: nowrap">最近遇到</th>
+<th scope="col" style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6E6E73; border-bottom: 0.5px solid #EDEDF0; white-space: nowrap">复习</th>
+<th scope="col" style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6E6E73; border-bottom: 0.5px solid #EDEDF0; white-space: nowrap"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">要学</span></th>
+</tr></thead>
+<tbody>
+<tr aria-selected="true" style="background: #F2F0FF;">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; box-shadow: inset 3px 0 0 #5B3FD6;"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">ubiquitous</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/juːˈbɪkwɪtəs/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">adj.</span>无处不在的；普遍存在的</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 6 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Safari · 今天 14:02</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; white-space: nowrap">待复习</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：ubiquitous" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">mitigate</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ˈmɪtɪɡeɪt/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">v.</span>减轻；缓和</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 4 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Chrome · 今天 11:42</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; white-space: nowrap">待复习</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：mitigate" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">run</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/rʌn/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">v.</span>经营；管理</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 7 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Safari · 今天 14:20</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 13px; color: #3A3A3C; white-space: nowrap">10 月 19 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：run" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">caveat</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ˈkæviæt/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">n.</span>附加说明；注意事项</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 3 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Slack · 昨天 17:36</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; white-space: nowrap">待复习</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：caveat" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">incentivize</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ɪnˈsentɪvaɪz/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">v.</span>激励；以奖励促使</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 2 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Mail · 昨天 09:15</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 13px; color: #3A3A3C; white-space: nowrap">10 月 18 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：incentivize" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">streamline</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ˈstriːmlaɪn/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">v.</span>精简（流程）；使高效</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 5 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Chrome · 10 月 15 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 13px; color: #3A3A3C; white-space: nowrap">10 月 20 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：streamline" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">in lieu of</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ɪn ˈluː əv/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">短语</span>代替；作为……的替代</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 2 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Mail · 10 月 14 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 13px; color: #3A3A3C; white-space: nowrap">10 月 21 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：in lieu of" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">tenuous</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ˈtenjuəs/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">adj.</span>薄弱的；站不住脚的</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 3 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">备忘录 · 10 月 13 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; white-space: nowrap">待复习</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：tenuous" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">granular</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/ˈɡrænjələr/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">adj.</span>细粒度的；精细的</div></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 4 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Slack · 10 月 12 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle"><span style="font-size: 13px; color: #3A3A3C; white-space: nowrap">10 月 24 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0.5px solid #EDEDF0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：granular" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+<tr style="">
+<td style="padding: 11px 12px; border-bottom: 0; vertical-align: middle"><div style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">bespoke</div><div style="font-size: 12px; color: #6E6E73; margin-top: 2px; white-space: nowrap">/bɪˈspoʊk/</div></td>
+<td style="padding: 11px 12px; border-bottom: 0; vertical-align: middle"><div style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">adj.</span>定制的；专门制作的</div></td>
+<td style="padding: 11px 12px; border-bottom: 0; vertical-align: middle"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 2 次</span></td>
+<td style="padding: 11px 12px; border-bottom: 0; vertical-align: middle"><span style="font-size: 12.5px; color: #6E6E73; white-space: nowrap">Safari · 10 月 10 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0; vertical-align: middle"><span style="font-size: 13px; color: #3A3A3C; white-space: nowrap">10 月 26 日</span></td>
+<td style="padding: 11px 12px; border-bottom: 0; vertical-align: middle; padding-left: 0; padding-right: 8px; text-align: right"><button aria-label="取消要学：bespoke" style="width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; display: inline-flex; align-items: center; justify-content: center; color: #5B3FD6"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg></button></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div style="padding: 10px 16px; border-top: 0.5px solid #EDEDF0; font-size: 12px; color: #6E6E73">显示 10 / 48 个词</div>
+</section>
+<aside aria-label="词条详情" style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; padding: 22px 22px 20px; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap">
+<h2 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px">ubiquitous</h2>
+<span style="font-size: 14px; color: #6E6E73">/juːˈbɪkwɪtəs/</span>
+</div>
+<div style="display: flex; gap: 6px; flex-wrap: wrap">
+<span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6; white-space: nowrap">第 6 次</span>
+<span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF">待复习</span>
+<span style="font-size: 12px; color: #6E6E73; padding: 2px 0">10 月 9 日加入</span>
+</div>
+</div>
+<div style="padding: 14px 16px; border-radius: 12px; background: #F2F0FF; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 14.5px; line-height: 1.5"><span style="display: inline-block; min-width: 28px; box-sizing: border-box; font-size: 12px; font-weight: 600; text-align: center; padding: 2px 6px; border-radius: 6px; background: #ECE8FF; color: #5B3FD6; margin-right: 8px">adj.</span>无处不在的；普遍存在的</div>
+<div style="font-size: 13px; line-height: 1.5; color: #3A3A3C">其他义项：（技术、产品）随处可见的，已普及的</div>
+</div>
+<div style="display: flex; flex-direction: column">
+<h3 style="margin: 0 0 2px; font-size: 13px; font-weight: 600; color: #3A3A3C">你在这些地方遇到过它</h3>
+<ul style="margin: 0; padding: 0; list-style: none">
+<li style="padding: 12px 0; border-bottom: 0.5px solid #EDEDF0; display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0; font-size: 14px; line-height: 1.5">Smartphones have become <mark style="background: #FFE58F; border-radius: 3px; padding: 0 2px; color: #1D1D1F">ubiquitous</mark> in classrooms, and teachers are still figuring out the rules.</p>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #3A3A3C">智能手机在课堂上已经无处不在，老师们还在摸索规则。</p>
+<span style="font-size: 12px; color: #6E6E73">Safari · 今天 14:02</span>
+</li>
+<li style="padding: 12px 0; border-bottom: 0.5px solid #EDEDF0; display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0; font-size: 14px; line-height: 1.5">Type hints are now <mark style="background: #FFE58F; border-radius: 3px; padding: 0 2px; color: #1D1D1F">ubiquitous</mark> across the codebase, so the linter catches most of these.</p>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #3A3A3C">类型标注如今遍布整个代码库，所以大多数这类问题 linter 都能发现。</p>
+<span style="font-size: 12px; color: #6E6E73">Slack · 10 月 15 日 16:48</span>
+</li>
+<li style="padding: 12px 0; display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0; font-size: 14px; line-height: 1.5">Coffee chains are so <mark style="background: #FFE58F; border-radius: 3px; padding: 0 2px; color: #1D1D1F">ubiquitous</mark> here that nobody gives directions by them.</p>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #3A3A3C">这里连锁咖啡店到处都是，没人拿它们来指路。</p>
+<span style="font-size: 12px; color: #6E6E73">Mail · 10 月 9 日 08:30</span>
+</li>
+</ul>
+<a href="App-History.dc.html" style="font-size: 13px; text-decoration: none">全部 6 次遇到 ›</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; border-top: 0.5px solid #EDEDF0; padding-top: 16px">
+<button style="display: inline-flex; align-items: center; height: 32px; padding: 0 16px; border: 0; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; font-size: 13.5px; font-weight: 600">现在复习</button>
+<button style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; font-size: 13.5px; font-weight: 600; color: #3A3A3C"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6v4h2.5l3.5 3V3L5 6z"></path><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"></path></svg>发音</button>
+<button style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; font-size: 13.5px; font-weight: 600; color: #3A3A3C">取消要学</button>
+</div>
+</aside>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

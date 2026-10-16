@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Dict 主应用 · 查询记录</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#E6E7EB}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:#5B3FD6}a:hover{color:#4630B0}
+</style>
+</helmet>
+<div style="min-height: 800px; box-sizing: border-box; padding: 0; background: #E6E7EB; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; color: #1D1D1F">
+<div style="max-width: 1280px; min-height: 800px; margin: 0 auto; display: flex; flex-wrap: wrap; background: #FBFBFD; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.14), 0 20px 60px rgba(0,0,0,0.16)">
+<nav aria-label="主导航" style="flex: 0 0 232px; box-sizing: border-box; background: #F2F2F5; border-right: 0.5px solid #DEDEE3; padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; gap: 8px; padding: 2px 6px 18px" aria-hidden="true">
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57"></span>
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E"></span>
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840"></span>
+</div>
+<a href="App-Home.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg><span style="flex: 1">今天</span></a>
+<a href="App-History.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; background: #ECE8FF; color: #5B3FD6; font-size: 14px; font-weight: 600; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.5 2.5v2.6h2.6M8 5v3.2l2 1.3"></path></svg><span style="flex: 1">查询记录</span></a>
+<a href="App-Saved.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg><span style="flex: 1">生词本</span><span style="font-size: 12px; color: #6E6E73">48</span></a>
+<a href="App-Review.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="10" height="10" rx="2"></rect><path d="M5 2.5h7.5a1.5 1.5 0 0 1 1.5 1.5v7.5"></path></svg><span style="flex: 1">复习</span><span style="font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF">9</span></a>
+<div style="flex: 1"></div>
+<a href="App-Settings.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M2.6 4.9l1.5.8M11.9 10.3l1.5.8M2.6 11.1l1.5-.8M11.9 5.7l1.5-.8"></path></svg><span style="flex: 1">设置</span></a>
+<div style="margin-top: 10px; padding: 10px; border-radius: 10px; background: #FBFBFD; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #6E6E73">
+<div style="display: flex; justify-content: space-between"><span>读：查词、翻译</span><kbd style="font: 600 11px -apple-system, sans-serif; color: #48484A; padding: 1px 6px; border-radius: 4px; background: #EFEFF2">⌥A</kbd></div>
+<div style="display: flex; justify-content: space-between"><span>写：纠错、译成外语</span><kbd style="font: 600 11px -apple-system, sans-serif; color: #48484A; padding: 1px 6px; border-radius: 4px; background: #EFEFF2">⌥F</kbd></div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 40px 48px 48px; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; color: #6E6E73">共 214 条 · 本周 63 条</div>
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px">查询记录</h1>
+</div>
+<label style="flex: 0 1 320px; min-width: 220px; display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3, 0 2px 8px rgba(0,0,0,0.04)">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#6E6E73" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">搜索查询记录</span>
+<input type="search" placeholder="搜索词、原句或译文" style="flex: 1; min-width: 0; border: 0; outline: none; background: none; font: 14px -apple-system, 'PingFang SC', sans-serif; color: #1D1D1F">
+<kbd style="font: 600 11px -apple-system, sans-serif; color: #6E6E73; padding: 2px 6px; border-radius: 4px; background: #EFEFF2">⌘F</kbd>
+</label>
+</header>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div role="group" aria-label="记录类型" style="display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: #EFEFF2; overflow-x: auto">
+<button aria-pressed="true" style="height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.08); font-size: 13px; font-weight: 600; color: #1D1D1F">全部</button><button aria-pressed="false" style="height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: none; font-size: 13px; color: #3A3A3C">单词</button><button aria-pressed="false" style="height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: none; font-size: 13px; color: #3A3A3C">翻译</button><button aria-pressed="false" style="height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: none; font-size: 13px; color: #3A3A3C">纠错</button><button aria-pressed="false" style="height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: none; font-size: 13px; color: #3A3A3C">译成外语</button>
+</div>
+<button aria-haspopup="menu" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #EFEFF2; color: #3A3A3C; font-size: 13px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M2 5.5h12"></path></svg>来源应用：全部<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"></path></svg></button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<section aria-label="记录列表" style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; padding: 0 4px; font-size: 12px; font-weight: 600; color: #6E6E73">今天</h3>
+<ul style="margin: 0; padding: 0; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; overflow: hidden">
+<li aria-current="true" style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0; background: #F2F0FF; box-shadow: inset 3px 0 0 #5B3FD6; cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">run</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">v.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">经营；管理 — She ran a small bakery for ten years.</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Safari · 14:20</span>
+<svg role="img" aria-label="要学" width="14" height="14" viewBox="0 0 16 16" fill="#5B3FD6" style="flex: none"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">at home</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">短语</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">自在 — She finally feels at home in Berlin.</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Mail · 13:05</span>
+<svg role="img" aria-label="见过" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#AEAEB2" stroke-width="1.3" stroke-linejoin="round" style="flex: none"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">The committee deferred the vote until next week.</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">翻译</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">委员会把投票推迟到了下周。</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Chrome · 12:30</span>
+
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">mitigate</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">v.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">减轻；缓和 — to mitigate the risk of data loss</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Chrome · 11:42</span>
+<svg role="img" aria-label="见过" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#AEAEB2" stroke-width="1.3" stroke-linejoin="round" style="flex: none"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">She <span style="color: #B3261E; text-decoration: line-through">have</span> <span style="color: #17692F; background: rgba(52,199,89,0.16); border-radius: 3px; padding: 0 2px">has</span> lived here since 2019.</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #E3F4E8; color: #1F7A3A">纠错</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">1 处修改 · 已替换</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Slack · 10:18</span>
+
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px;   cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Could you get back to me by next Wednesday?</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">外译</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">下周三之前能给我答复吗？</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Slack · 09:40</span>
+
+</div>
+</li>
+</ul>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; padding: 0 4px; font-size: 12px; font-weight: 600; color: #6E6E73">昨天</h3>
+<ul style="margin: 0; padding: 0; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; overflow: hidden">
+<li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">leverage</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">v.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">利用；发挥 — We can leverage our existing data.</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Safari · 22:14</span>
+<svg role="img" aria-label="见过" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#AEAEB2" stroke-width="1.3" stroke-linejoin="round" style="flex: none"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">I look forward to <span style="color: #B3261E; text-decoration: line-through">hear</span> <span style="color: #17692F; background: rgba(52,199,89,0.16); border-radius: 3px; padding: 0 2px">hearing</span> from you.</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #E3F4E8; color: #1F7A3A">纠错</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">1 处修改 · 未替换</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Mail · 16:02</span>
+
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px;   cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">nuance</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">n.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">细微差别 — the nuances of the language</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">备忘录 · 15:30</span>
+<svg role="img" aria-label="要学" width="14" height="14" viewBox="0 0 16 16" fill="#5B3FD6" style="flex: none"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>
+</div>
+</li>
+</ul>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; padding: 0 4px; font-size: 12px; font-weight: 600; color: #6E6E73">10 月 15 日</h3>
+<ul style="margin: 0; padding: 0; border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; overflow: hidden">
+<li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px; border-bottom: 0.5px solid #EDEDF0;  cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">tentative</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">adj.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">暂定的；试探性的 — a tentative agreement</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Mail · 18:47</span>
+<svg role="img" aria-label="见过" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#AEAEB2" stroke-width="1.3" stroke-linejoin="round" style="flex: none"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>
+</div>
+</li><li style="list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 11px 16px;   cursor: default">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Rates are expected to remain elevated through the spring.</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">翻译</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+<span style="flex: 1; min-width: 0; font-size: 13px; color: #6E6E73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">预计利率在整个春季都将保持高位。</span>
+<span style="flex: none; font-size: 12px; color: #6E6E73">Chrome · 09:12</span>
+
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section aria-label="记录详情" style="flex: 1.4 1 420px; min-width: 0; position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px">
+<article style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; padding: 24px 24px 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; gap: 10px">
+<h2 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1">run</h2>
+<span style="font-size: 13px; color: #6E6E73">原文 ran</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; height: 20px; font-size: 13px; color: #6E6E73">
+<span style="font-size: 10.5px; font-weight: 600; line-height: 14px; padding: 1px 5px; border-radius: 4px; background: #EFEFF2; color: #545458">US</span>
+<span>/rʌn/</span>
+<span style="font-size: 11px; font-weight: 600; line-height: 15px; padding: 2px 7px; border-radius: 999px; background: #E3F4E8; color: #1F7A3A">常用</span>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 44px 1fr; column-gap: 12px; row-gap: 8px; align-items: baseline; font-size: 15px; line-height: 1.5">
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">v.</span><span>跑；奔跑</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">v.</span><span style="font-weight: 600">经营；管理</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">v.</span><span>（机器、程序）运行</span>
+<span style="flex: none; font-size: 12px; font-weight: 600; line-height: 18px; width: 44px; text-align: center; border-radius: 6px; background: #ECE8FF; color: #5B3FD6">n.</span><span>跑步；一段路程</span>
+</div>
+<div style="border-radius: 12px; background: #F2F0FF; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; line-height: 15px; color: #5B3FD6"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 2v2.5M8 11.5V14M2 8h2.5M11.5 8H14M3.8 3.8l1.7 1.7M10.5 10.5l1.7 1.7M3.8 12.2l1.7-1.7M10.5 5.5l1.7-1.7"></path></svg>本句</div>
+<div style="font-size: 15px; font-weight: 600; line-height: 1.4">经营；管理</div>
+<div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.5">
+<div style="color: #3A3A3C">She <mark style="background: #FFE58F; color: inherit; border-radius: 3px; padding: 0 2px">ran</mark> a small bakery in Queens for ten years before the pandemic.</div>
+<div style="color: #636368">疫情之前，她在皇后区经营一家小面包店十年了。</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 11.5px; font-weight: 600; line-height: 15px; color: #6E6E73">搭配</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; line-height: 1.5">
+<span><span style="font-weight: 600">run a business</span> <span style="color: #6E6E73">经营生意</span></span>
+<span><span style="font-weight: 600">run out of</span> <span style="color: #6E6E73">用完</span></span>
+<span><span style="font-weight: 600">run late</span> <span style="color: #6E6E73">晚点</span></span>
+</div>
+</div>
+<div style="height: 0.5px; background: #EDEDF0"></div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 11.5px; font-weight: 600; line-height: 15px; color: #6E6E73">来源</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: #3A3A3C">
+<span>Safari</span><span style="color: #AEAEB2" aria-hidden="true">·</span>
+<a href="https://www.nytimes.com/2026/10/17/nyregion/queens-bakery.html" style="text-decoration: none">nytimes.com</a><span style="color: #AEAEB2" aria-hidden="true">·</span>
+<span>10 月 17 日 14:20</span><span style="color: #AEAEB2" aria-hidden="true">·</span>
+<span style="font-size: 12px; font-weight: 600; line-height: 16px; padding: 1px 8px; border-radius: 999px; background: #ECE8FF; color: #5B3FD6">第 3 次遇到</span>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px">
+<button aria-pressed="true" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; font-size: 13px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg>要学</button>
+<button style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #EFEFF2; color: #3A3A3C; font-size: 13px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6v4h2.5l3.5 3V3L5 6z"></path><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"></path></svg>发音</button>
+<button style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #EFEFF2; color: #3A3A3C; font-size: 13px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect><path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg>复制</button>
+<button style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #EFEFF2; color: #3A3A3C; font-size: 13px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5L7.5 8.5M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3"></path></svg>打开来源</button>
+<div style="flex: 1"></div>
+<button style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: none; color: #B3261E; font-size: 13px; font-weight: 600"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.8h4V4M4 4l.7 9.2h6.6L12 4M6.8 6.5v4.5M9.2 6.5v4.5"></path></svg>删除这条记录</button>
+</div>
+</article>
+</section>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

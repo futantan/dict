@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Dict 主应用 · 设置</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#E6E7EB}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:#5B3FD6}a:hover{color:#4630B0}
+</style>
+</helmet>
+<div style="min-height: 800px; box-sizing: border-box; padding: 0; background: #E6E7EB; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; color: #1D1D1F">
+<div style="max-width: 1280px; min-height: 800px; margin: 0 auto; display: flex; flex-wrap: wrap; background: #FBFBFD; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.14), 0 20px 60px rgba(0,0,0,0.16)">
+<nav aria-label="主导航" style="flex: 0 0 232px; box-sizing: border-box; background: #F2F2F5; border-right: 0.5px solid #DEDEE3; padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; gap: 8px; padding: 2px 6px 18px" aria-hidden="true">
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57"></span>
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E"></span>
+<span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840"></span>
+</div>
+<a href="App-Home.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg><span style="flex: 1">今天</span></a>
+<a href="App-History.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.5 2.5v2.6h2.6M8 5v3.2l2 1.3"></path></svg><span style="flex: 1">查询记录</span></a>
+<a href="App-Saved.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z"></path></svg><span style="flex: 1">生词本</span><span style="font-size: 12px; color: #6E6E73">48</span></a>
+<a href="App-Review.dc.html" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3.5" width="10" height="10" rx="2"></rect><path d="M5 2.5h7.5a1.5 1.5 0 0 1 1.5 1.5v7.5"></path></svg><span style="flex: 1">复习</span><span style="font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: #5B3FD6; color: #FFFFFF">9</span></a>
+<div style="flex: 1"></div>
+<a href="App-Settings.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; background: #ECE8FF; color: #5B3FD6; font-size: 14px; font-weight: 600; text-decoration: none"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M2.6 4.9l1.5.8M11.9 10.3l1.5.8M2.6 11.1l1.5-.8M11.9 5.7l1.5-.8"></path></svg><span style="flex: 1">设置</span></a>
+<div style="margin-top: 10px; padding: 10px; border-radius: 10px; background: #FBFBFD; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #6E6E73">
+<div style="display: flex; justify-content: space-between"><span>读：查词、翻译</span><kbd style="font: 600 11px -apple-system, sans-serif; color: #48484A; padding: 1px 6px; border-radius: 4px; background: #EFEFF2">⌥A</kbd></div>
+<div style="display: flex; justify-content: space-between"><span>写：纠错、译成外语</span><kbd style="font: 600 11px -apple-system, sans-serif; color: #48484A; padding: 1px 6px; border-radius: 4px; background: #EFEFF2">⌥F</kbd></div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 40px 48px 48px; display: flex; flex-direction: column; gap: 28px">
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px">设置</h1>
+</header>
+<div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+<nav aria-label="设置分区" style="flex: 0 0 180px; position: sticky; top: 40px; display: flex; flex-direction: column; gap: 2px">
+<a href="#general" aria-current="true" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; background: #ECE8FF; color: #5B3FD6; font-size: 14px; font-weight: 600; text-decoration: none">通用</a>
+<a href="#language" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">语言</a>
+<a href="#model" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">模型</a>
+<a href="#shortcuts" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">快捷键</a>
+<a href="#writing" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">写作</a>
+<a href="#voice" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">发音</a>
+<a href="#permissions" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">权限</a>
+<a href="#privacy" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">数据与隐私</a>
+<a href="#about" style="display: flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; color: #3A3A3C; font-size: 14px; text-decoration: none">关于</a>
+</nav>
+<div style="flex: 1 1 520px; min-width: 0; max-width: 720px; display: flex; flex-direction: column; gap: 28px">
+
+<section id="general" aria-labelledby="h-general" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-general" style="margin: 0; font-size: 15px; font-weight: 600">通用</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="t-login" style="flex: 1; font-size: 14px">登录时启动</span>
+<button role="switch" aria-checked="true" aria-labelledby="t-login" style="flex: 0 0 auto; width: 38px; height: 22px; padding: 2px; border: 0; border-radius: 999px; background: #5B3FD6; display: flex; justify-content: flex-end"><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span></button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="t-dock" style="flex: 1; font-size: 14px">在 Dock 中显示</span>
+<button role="switch" aria-checked="true" aria-labelledby="t-dock" style="flex: 0 0 auto; width: 38px; height: 22px; padding: 2px; border: 0; border-radius: 999px; background: #5B3FD6; display: flex; justify-content: flex-end"><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span></button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="t-menubar" style="flex: 1; font-size: 14px">在菜单栏显示图标</span>
+<button role="switch" aria-checked="true" aria-labelledby="t-menubar" style="flex: 0 0 auto; width: 38px; height: 22px; padding: 2px; border: 0; border-radius: 999px; background: #5B3FD6; display: flex; justify-content: flex-end"><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span></button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 10px 16px; box-sizing: border-box">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+<span id="t-bg" style="font-size: 14px">关闭窗口后继续在后台运行</span>
+<span style="font-size: 12.5px; color: #6E6E73">关掉后，关闭主窗口会退出 Dict，快捷键也随之失效。</span>
+</div>
+<button role="switch" aria-checked="false" aria-labelledby="t-bg" style="flex: 0 0 auto; width: 38px; height: 22px; padding: 2px; border: 0; border-radius: 999px; background: #E3E3E8; display: flex; justify-content: flex-start"><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span></button>
+</div>
+</div>
+</section>
+
+<section id="language" aria-labelledby="h-language" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-language" style="margin: 0; font-size: 15px; font-weight: 600">语言</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="l-native" style="flex: 1; font-size: 14px">我的语言</span>
+<button aria-haspopup="listbox" aria-labelledby="l-native l-native-v" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 2px rgba(0,0,0,0.06); font-size: 13.5px"><span id="l-native-v">简体中文</span><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#6E6E73" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5L5 1.5l3 3M2 7.5l3 3 3-3"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="l-target" style="flex: 1; font-size: 14px">我在学的语言</span>
+<button aria-haspopup="listbox" aria-labelledby="l-target l-target-v" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 2px rgba(0,0,0,0.06); font-size: 13.5px"><span id="l-target-v">英语</span><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#6E6E73" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5L5 1.5l3 3M2 7.5l3 3 3-3"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px">
+<span id="l-accent" style="flex: 1; font-size: 14px">英语口音</span>
+<button aria-haspopup="listbox" aria-labelledby="l-accent l-accent-v" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 2px rgba(0,0,0,0.06); font-size: 13.5px"><span id="l-accent-v">美式</span><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#6E6E73" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5L5 1.5l3 3M2 7.5l3 3 3-3"></path></svg></button>
+</div>
+</div>
+</section>
+
+<section id="model" aria-labelledby="h-model" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-model" style="margin: 0; font-size: 15px; font-weight: 600">模型</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 16px; min-height: 52px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="m-provider" style="flex: 1; font-size: 14px">服务商</span>
+<div role="radiogroup" aria-labelledby="m-provider" style="display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: #EFEFF2">
+<button role="radio" aria-checked="true" style="height: 26px; padding: 0 14px; border: 0; border-radius: 6px; background: #FFFFFF; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1); font-size: 13px; font-weight: 600; color: #1D1D1F">OpenAI</button>
+<button role="radio" aria-checked="false" style="height: 26px; padding: 0 14px; border: 0; border-radius: 6px; background: none; font-size: 13px; color: #3A3A3C">Ollama</button>
+<button role="radio" aria-checked="false" style="height: 26px; padding: 0 14px; border: 0; border-radius: 6px; background: none; font-size: 13px; color: #3A3A3C">自定义</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border-bottom: 0.5px solid #EDEDF0">
+<div style="display: flex; align-items: center; gap: 16px">
+<label for="m-key" style="flex: 0 0 auto; font-size: 14px">API 密钥</label>
+<div style="flex: 1; display: flex; justify-content: flex-end; gap: 8px; min-width: 0">
+<input id="m-key" type="password" value="sk-proj-8fQw2mT4xLzR9vNc" style="flex: 1 1 auto; max-width: 320px; min-width: 0; height: 28px; box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 7px; background: #F7F7F9; box-shadow: inset 0 0 0 0.5px #D1D1D6; font: 13.5px -apple-system, sans-serif; color: #1D1D1F; outline: none">
+<button style="flex: 0 0 auto; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">显示</button>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 12.5px; color: #6E6E73"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>保存在钥匙串中</div>
+</div>
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; min-height: 52px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span id="m-model" style="flex: 1; font-size: 14px">模型</span>
+<button aria-haspopup="listbox" aria-labelledby="m-model m-model-v" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 2px rgba(0,0,0,0.06); font-size: 13.5px"><span id="m-model-v">gpt-4.1-mini</span><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="#6E6E73" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5L5 1.5l3 3M2 7.5l3 3 3-3"></path></svg></button>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">列出可用模型</button>
+</div>
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 52px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span style="flex: 1; display: flex; align-items: center"><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #E3F4E8; color: #1F7A3A"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"></path></svg>可以使用 · 首字 0.8 秒</span></span>
+<button style="height: 30px; padding: 0 16px; border: 0; border-radius: 999px; background: #5B3FD6; color: #FFFFFF; font-size: 13.5px; font-weight: 600">测试</button>
+</div>
+<button aria-expanded="false" style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border: 0; background: none; text-align: left; border-radius: 0 0 14px 14px">
+<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6E6E73" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+<span style="font-size: 14px">高级</span>
+<span style="flex: 1; font-size: 12.5px; color: #6E6E73; text-align: right">JSON 模式、思考、输出上限</span>
+</button>
+</div>
+<p style="margin: 0; padding: 0 4px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #6E6E73"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.2v4M8 4.8v.1"></path></svg>你查询或翻译的文字会发送给 OpenAI。</p>
+</section>
+
+<section id="shortcuts" aria-labelledby="h-shortcuts" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-shortcuts" style="margin: 0; font-size: 15px; font-weight: 600">快捷键</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 56px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span id="k-read" style="font-size: 14px">读</span>
+<span style="font-size: 12.5px; color: #6E6E73">查词、翻译选中的文字</span>
+</div>
+<div role="group" aria-labelledby="k-read" style="display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 96px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 8px; background: #F7F7F9; box-shadow: inset 0 0 0 0.5px #D1D1D6">
+<kbd style="font: 600 12px -apple-system, sans-serif; color: #1D1D1F; min-width: 14px; text-align: center; padding: 2px 6px; border-radius: 5px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 0 #D1D1D6">⌥</kbd>
+<kbd style="font: 600 12px -apple-system, sans-serif; color: #1D1D1F; min-width: 14px; text-align: center; padding: 2px 6px; border-radius: 5px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 0 #D1D1D6">A</kbd>
+</div>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">录制</button>
+<button style="height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font-size: 12.5px; font-weight: 600; color: #6E6E73">清除</button>
+</div>
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 56px; padding: 0 16px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span id="k-write" style="font-size: 14px">写</span>
+<span style="font-size: 12.5px; color: #6E6E73">纠错、译成外语，并替换原文</span>
+</div>
+<div role="group" aria-labelledby="k-write" style="display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 96px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 8px; background: #F7F7F9; box-shadow: inset 0 0 0 0.5px #D1D1D6">
+<kbd style="font: 600 12px -apple-system, sans-serif; color: #1D1D1F; min-width: 14px; text-align: center; padding: 2px 6px; border-radius: 5px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 0 #D1D1D6">⌥</kbd>
+<kbd style="font: 600 12px -apple-system, sans-serif; color: #1D1D1F; min-width: 14px; text-align: center; padding: 2px 6px; border-radius: 5px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #D1D1D6, 0 1px 0 #D1D1D6">F</kbd>
+</div>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">录制</button>
+<button style="height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font-size: 12.5px; font-weight: 600; color: #6E6E73">清除</button>
+</div>
+</div>
+<p style="margin: 0; padding: 0 4px; font-size: 12.5px; line-height: 1.5; color: #6E6E73">点「录制」后按下组合键；也可以快速连按两次同一个修饰键，比如连按两次 ⌘ 或 ⌥。</p>
+</section>
+
+<section id="writing" aria-labelledby="h-writing" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-writing" style="margin: 0; font-size: 15px; font-weight: 600">写作</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 16px; padding: 12px 16px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+<span id="w-format" style="font-size: 14px">替换时保留格式</span>
+<span style="font-size: 12.5px; line-height: 1.5; color: #6E6E73">替换原文时沿用原来的字体、粗斜体和链接。少数应用不支持时，会退回纯文本。</span>
+</div>
+<button role="switch" aria-checked="true" aria-labelledby="w-format" style="flex: 0 0 auto; width: 38px; height: 22px; padding: 2px; border: 0; border-radius: 999px; background: #5B3FD6; display: flex; justify-content: flex-end"><span style="width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span></button>
+</div>
+</div>
+</section>
+
+<section id="voice" aria-labelledby="h-voice" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-voice" style="margin: 0; font-size: 15px; font-weight: 600">发音</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 52px; padding: 10px 16px; box-sizing: border-box">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px">英语语音 · Ava</span>
+<span style="font-size: 12.5px; color: #6E6E73">当前是标准音质，下载增强语音后发音更自然。</span>
+</div>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">下载增强语音</button>
+</div>
+</div>
+</section>
+
+<section id="permissions" aria-labelledby="h-permissions" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-permissions" style="margin: 0; font-size: 15px; font-weight: 600">权限</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 12px 16px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px">辅助功能</span>
+<span style="font-size: 12.5px; color: #6E6E73">用来读取选中的文字，并替换成纠错后的结果。</span>
+</div>
+<span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #E3F4E8; color: #1F7A3A"><span style="width: 6px; height: 6px; border-radius: 3px; background: #34C759" aria-hidden="true"></span>已打开</span>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">打开系统设置</button>
+</div>
+</div>
+</section>
+
+<section id="privacy" aria-labelledby="h-privacy" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-privacy" style="margin: 0; font-size: 15px; font-weight: 600">数据与隐私</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-bottom: 0.5px solid #EDEDF0">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#5B3FD6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: 0 0 auto; margin-top: 2px"><rect x="1.8" y="3" width="12.4" height="8" rx="1.5"></rect><path d="M5.5 13.5h5M8 11v2.5"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px">查询记录保存在这台 Mac 上</span>
+<span style="font-size: 12.5px; color: #6E6E73">共 1,284 个词、356 句，不会上传到任何服务器。</span>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-bottom: 0.5px solid #EDEDF0">
+<span style="flex: 1; font-size: 14px">导出记录</span>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">导出…</button>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px">
+<span style="flex: 1; font-size: 14px">清除所有记录</span>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #FDECEB; font-size: 12.5px; font-weight: 600; color: #B3261E">清除所有记录…</button>
+</div>
+</div>
+</section>
+
+<section id="about" aria-labelledby="h-about" style="display: flex; flex-direction: column; gap: 10px">
+<h2 id="h-about" style="margin: 0; font-size: 15px; font-weight: 600">关于</h2>
+<div style="border-radius: 14px; background: #FFFFFF; box-shadow: 0 0 0 0.5px #DEDEE3; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-height: 52px; padding: 10px 16px; box-sizing: border-box">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px">Dict 1.4.0</span>
+<span style="font-size: 12.5px; color: #6E6E73">已是最新版本 · 今天 09:12 检查</span>
+</div>
+<button style="height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #F2F2F5; font-size: 12.5px; font-weight: 600; color: #3A3A3C">检查更新</button>
+</div>
+</div>
+</section>
+
+</div>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -159,23 +159,56 @@ struct SourceText: View {
   }
 }
 
-/// A translation, with a spinner at its end while it streams.
+/// A translation, with a spinner after its last word while it streams.
 struct ResultText: View {
   let text: String
   let isStreaming: Bool
 
   var body: some View {
+    let style = Typography.result
     SelectableText(
-      text: text, font: Typography.result.nsFont, color: Palette.textPrimary,
-      lineSpacing: Typography.result.lineSpacing
+      text: text, font: style.nsFont, color: Palette.textPrimary, lineSpacing: style.lineSpacing
     )
-    .overlay(alignment: .bottomTrailing) {
+    // Over the text, so the spinner never adds to the panel's height.
+    .overlay(alignment: .topLeading) {
       if isStreaming {
-        Spinner()
-          .accessibilityLabel(PanelStrings.translating)
+        GeometryReader { proxy in
+          Spinner()
+            .accessibilityLabel(PanelStrings.translating)
+            .offset(
+              Self.spinnerOrigin(after: text, style: style, width: proxy.size.width)
+                .offsetSize)
+        }
       }
     }
   }
+
+  /// Where the spinner's top left goes for `text` laid out as `SelectableText` lays it out
+  /// at `width`: after the last word, centred on its line; at the trailing edge when the
+  /// line is full.
+  static func spinnerOrigin(after text: String, style: TextStyle, width: CGFloat) -> CGPoint {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineSpacing = style.lineSpacing
+    let storage = NSTextStorage(
+      string: text, attributes: [.font: style.nsFont, .paragraphStyle: paragraph])
+    let layout = NSLayoutManager()
+    let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
+    container.lineFragmentPadding = 0
+    layout.addTextContainer(container)
+    storage.addLayoutManager(layout)
+    layout.ensureLayout(for: container)
+
+    let line =
+      layout.numberOfGlyphs > 0
+      ? layout.lineFragmentUsedRect(forGlyphAt: layout.numberOfGlyphs - 1, effectiveRange: nil)
+      : .zero
+    let x = min(line.maxX + Spacing.tight, width - Size.spinner)
+    return CGPoint(x: max(x, 0), y: line.minY + (style.lineHeight - Size.spinner) / 2)
+  }
+}
+
+extension CGPoint {
+  fileprivate var offsetSize: CGSize { CGSize(width: x, height: y) }
 }
 
 /// A remark under a result in a rounded block, with an optional button at its end: grey,

@@ -70,6 +70,31 @@ struct PanelGalleryTests {
     #expect(PanelLayout.trailingPadding(isScrollable: true, scrollerStyle: .legacy) == 22 - legacy)
   }
 
+  /// The streaming spinner sits right after the last word, on its line, and never past the
+  /// trailing edge.
+  @Test func theSpinnerFollowsTheLastWord() {
+    let style = Typography.result
+    let width: CGFloat = 356
+    let line = style.lineHeight
+    let short = ResultText.spinnerOrigin(after: "He turned", style: style, width: width)
+    #expect(short.x > Spacing.tight && short.x < width / 2)
+    #expect(abs(short.y + Size.spinner / 2 - line / 2) < 1)
+
+    let longer = ResultText.spinnerOrigin(after: "He turned it over", style: style, width: width)
+    #expect(longer.x > short.x)
+    #expect(longer.y == short.y)
+
+    let wrapped = ResultText.spinnerOrigin(
+      after: String(repeating: "word ", count: 20) + "end", style: style, width: width)
+    #expect(wrapped.y > line)
+
+    for count in 1...40 {
+      let text = String(repeating: "m", count: count * 2)
+      let origin = ResultText.spinnerOrigin(after: text, style: style, width: width)
+      #expect(origin.x + Size.spinner <= width, "\(count)")
+    }
+  }
+
   /// The back-translation line is there before the back-translation arrives, so a one-line
   /// back-translation, or none, leaves the panel's height as it was; in Latin and Chinese.
   @Test func theBackTranslationKeepsThePanelHeight() {

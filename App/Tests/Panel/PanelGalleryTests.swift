@@ -186,9 +186,14 @@ struct PanelGalleryTests {
     let directory = URL(fileURLWithPath: try #require(renderDirectory))
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let language = PanelGallery.isChineseUI ? "zh" : "en"
-    for (name, state) in PanelGallery.states() {
+    // The long card and translation scroll only on a small screen.
+    let smallScreen = PanelGallery.states()
+      .filter { ["card-long", "translate-out-back-long"].contains($0.name) }
+      .map { (name: "\($0.name)-small-screen", state: $0.state, maxHeight: CGFloat(300)) }
+    let states = PanelGallery.states().map { ($0.name, $0.state, Self.maxHeight) } + smallScreen
+    for (name, state, maxHeight) in states {
       for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-        let png = try #require(Self.render(state, appearance: appearance))
+        let png = try #require(Self.render(state, appearance: appearance, maxHeight: maxHeight))
         try png.write(to: directory.appendingPathComponent("\(language)-\(scheme)-\(name).png"))
       }
     }
@@ -259,9 +264,14 @@ struct PanelGalleryTests {
     let height: CGFloat
   }
 
+  /// The panel's height cap, 60% of the screen, on a laptop screen.
+  private static let maxHeight: CGFloat = 483
+
   /// Lays the panel content out offscreen the way `PanelController` does: one layout pass
   /// reports the content height, then the view takes the capped height.
-  private static func layOut(_ state: PanelState, appearance: NSAppearance.Name) -> Layout {
+  private static func layOut(
+    _ state: PanelState, appearance: NSAppearance.Name, maxHeight: CGFloat = maxHeight
+  ) -> Layout {
     var height: CGFloat = 0
     let model = PanelModel(state: state)
     let view = NSHostingView(rootView: PanelView(model: model, onContentHeight: { height = $0 }))
@@ -269,7 +279,7 @@ struct PanelGalleryTests {
     view.appearance = NSAppearance(named: appearance)
     view.frame = CGRect(x: 0, y: 0, width: PanelLayout.width, height: 900)
     view.layoutSubtreeIfNeeded()
-    let shown = min(height.rounded(.up), 483)
+    let shown = min(height.rounded(.up), maxHeight)
     view.frame.size.height = shown
     model.isScrollable = shown < height
     view.layoutSubtreeIfNeeded()
@@ -278,8 +288,15 @@ struct PanelGalleryTests {
 
   /// Draws the content over the panel's fill, with the panel's corner radius and a shadow,
   /// on a neutral backdrop, at 2x.
-  private static func render(_ state: PanelState, appearance: NSAppearance.Name) -> Data? {
-    let content = layOut(state, appearance: appearance).view
+  private static func render(
+    _ state: PanelState, appearance: NSAppearance.Name, maxHeight: CGFloat
+  ) -> Data? {
+    let content = layOut(state, appearance: appearance, maxHeight: maxHeight).view
+    // The panel's corners clip the content, as `PanelBacking` does.
+    content.wantsLayer = true
+    content.layer?.cornerRadius = ResultPanel.cornerRadius
+    content.layer?.cornerCurve = .continuous
+    content.layer?.masksToBounds = true
     let inset: CGFloat = 32
     let canvas = Canvas(
       frame: CGRect(

@@ -111,7 +111,8 @@ private struct PanelBody: View {
       ResultText(text: text, isStreaming: false)
     case .failure(let notice):
       NoticeView(
-        notice: notice, defaultSymbol: "exclamationmark.triangle", tone: .warning,
+        notice: notice, defaultSymbol: "exclamationmark.triangle",
+        tone: notice.kind == .information ? .neutral : .warning,
         onAction: onAction)
     case .needsSetup(let notice):
       NoticeView(notice: notice, defaultSymbol: "gearshape", tone: .accent, onAction: onAction)

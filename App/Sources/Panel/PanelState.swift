@@ -199,6 +199,10 @@ struct Correction: Sendable, Equatable {
 
 /// A message with optional buttons, for the failure and needs-setup phases.
 struct PanelNotice: Sendable, Equatable {
+  /// Whether something went wrong, in the warning colours, or the notice only says how
+  /// things are, in neutral ones.
+  enum Kind: Sendable { case problem, information }
+
   /// An SF Symbol name; each phase has a default.
   var symbol: String?
   var title: String
@@ -206,12 +210,17 @@ struct PanelNotice: Sendable, Equatable {
   /// Shown as buttons, trailing aligned; the panel reports a click through
   /// `PanelController.onAction` with the action's `id`.
   var actions: [PanelAction]
+  var kind: Kind
 
-  init(symbol: String? = nil, title: String, message: String? = nil, actions: [PanelAction] = []) {
+  init(
+    symbol: String? = nil, title: String, message: String? = nil, actions: [PanelAction] = [],
+    kind: Kind = .problem
+  ) {
     self.symbol = symbol
     self.title = title
     self.message = message
     self.actions = actions
+    self.kind = kind
   }
 }
 

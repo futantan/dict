@@ -90,14 +90,15 @@ enum CardStrings {
 
   /// The selection has no word in it (architecture 5.1).
   static let nothingToLookUp = PanelNotice(
-    symbol: "text.magnifyingglass",
+    symbol: "circle.slash",
     title: String(
       localized: "Nothing to look up", table: "Card",
       comment: "Title when the selection is a number, a link or symbols"),
     message: String(
       localized:
         "The selection is a number, a link or symbols, with no word to look up or translate.",
-      table: "Card", comment: "Why nothing was looked up"))
+      table: "Card", comment: "Why nothing was looked up"),
+    kind: .information)
 
   /// Under a card with no model to explain the word in its sentence.
   static let needsModelNote = PanelNote(

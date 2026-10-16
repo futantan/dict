@@ -222,3 +222,11 @@ struct CardStateTests {
     #expect(adjective == CardLayout.partOfSpeechWidth(["adjective"]))
   }
 }
+
+struct NoticeKindTests {
+  /// A selection with nothing to look up is a fact, not a problem: it gets the neutral disc.
+  @Test func nothingToLookUpIsInformation() {
+    #expect(CardStrings.nothingToLookUp.kind == .information)
+    #expect(PanelNotice(title: "Failed").kind == .problem)
+  }
+}

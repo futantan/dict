@@ -130,8 +130,13 @@ struct CardView: View {
       HStack(alignment: .firstTextBaseline, spacing: Spacing.tight) {
         if let transcription = card.transcription {
           Text(verbatim: transcription == .us ? "US" : "UK")
-            .font(Typography.caption.font)
-            .foregroundStyle(Color(Palette.textSecondary))
+            .font(Typography.tag.font)
+            .foregroundStyle(Tone.neutral.onTint)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(
+              Tone.neutral.tint,
+              in: RoundedRectangle(cornerRadius: Radius.tag, style: .continuous))
         }
         Text(phonetic)
           .font(Typography.secondary.font)
@@ -263,6 +268,8 @@ extension Typography {
   /// A word too long for `headword` on one line.
   static let compactHeadword = TextStyle(size: 22, weight: .bold, tracking: -0.4)
   static let partOfSpeech = TextStyle(size: 12, weight: .semibold)
+  /// The US or UK tag before the pronunciation.
+  static let tag = TextStyle(size: 10.5, weight: .semibold)
   /// A collocation.
   static let phrase = TextStyle(size: 14, weight: .semibold)
 }
@@ -278,6 +285,10 @@ extension Spacing {
 
 extension Size {
   static let partOfSpeechHeight: CGFloat = 18
+}
+
+extension Radius {
+  static let tag: CGFloat = 4
 }
 
 /// A part of speech on its chip, then the sense. The chip keeps its place for a sense with no

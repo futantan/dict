@@ -155,4 +155,7 @@ enum Size {
   static let disabledOpacity: CGFloat = 0.35
   /// A key cap on the primary button: white at this opacity.
   static let keycapOnFill: CGFloat = 0.22
+  /// A key cap on a secondary button: the text colour at this opacity, so it shows on the
+  /// neutral tint in either appearance.
+  static let keycapOnTint: CGFloat = 0.1
 }

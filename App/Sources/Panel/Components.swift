@@ -182,7 +182,9 @@ private struct CapsuleLabel: View {
           .padding(.horizontal, 4)
           .frame(minWidth: Size.keycap, minHeight: Size.keycap)
           .background(
-            onFill ? Color.white.opacity(Size.keycapOnFill) : Color(Palette.separator),
+            onFill
+              ? Color.white.opacity(Size.keycapOnFill)
+              : Color(Palette.textPrimary).opacity(Size.keycapOnTint),
             in: RoundedRectangle(cornerRadius: Radius.keycap, style: .continuous)
           )
           .accessibilityHidden(true)

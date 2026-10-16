@@ -126,27 +126,20 @@ struct ActionBar: View {
 
   // MARK: Card
 
+  /// The encounters from the second lookup on; the star is on the card's header.
   private func cardBar(_ card: CardState) -> some View {
     BottomBar(
-      status: {},
+      status: {
+        if let count = card.shownEncounters {
+          Pill(CardStrings.encounters(count), symbol: "clock.arrow.circlepath")
+        }
+      },
       icons: {
         IconButton(title: CardStrings.pronounce, symbol: "speaker.wave.2", shortcut: "⌘P") {
           onAction(CardStrings.pronounceAction)
         }
         IconButton(title: CardStrings.translateAsSentence, symbol: "translate") {
           onAction(CardStrings.translateAction)
-        }
-        if !card.isLearning {
-          IconButton(title: CardStrings.learn, symbol: "star", shortcut: "⌘S") {
-            onAction(CardStrings.learnAction)
-          }
-        }
-      },
-      primary: {
-        if card.isLearning {
-          PrimaryButton(title: CardStrings.learning, symbol: "star.fill", keys: "⌘S") {
-            onAction(CardStrings.learnAction)
-          }
         }
       })
   }

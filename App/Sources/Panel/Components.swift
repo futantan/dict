@@ -88,7 +88,7 @@ struct IconButton: View {
     let label = [title, shortcut].compactMap(\.self).joined(separator: " ")
     Button(action: action) {
       Image(systemName: symbol)
-        .font(.system(size: Size.symbol))
+        .font(.system(size: Size.symbol, weight: Size.symbolWeight))
         .frame(width: Size.icon, height: Size.icon)
         .foregroundStyle(isOn ? Color(Palette.accent) : Color(Palette.icon))
         .opacity(isEnabled ? 1 : Size.disabledOpacity)

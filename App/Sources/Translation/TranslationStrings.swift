@@ -97,7 +97,7 @@ enum TranslationStrings {
 
   /// No model is set up and Apple Translation has no installed languages for the text.
   static let needsModel = PanelNotice(
-    symbol: "key.fill",
+    symbol: "key",
     title: String(
       localized: "Set up a model to translate", table: "Translation",
       comment: "Title when there is no model to translate with"),

@@ -93,7 +93,7 @@ struct PermissionGuide {
     switch issue {
     case .missing(.accessibility):
       return PanelNotice(
-        symbol: "hand.raised.fill",
+        symbol: "hand.raised",
         title: String(
           localized: "Accessibility permission needed", table: "Permissions",
           comment: "Panel title when the app is not allowed to use accessibility"),
@@ -121,7 +121,7 @@ struct PermissionGuide {
     case .staleAccessibility:
       let command = resetCommand(app)
       return PanelNotice(
-        symbol: "exclamationmark.lock.fill",
+        symbol: "exclamationmark.lock",
         title: String(
           localized: "Accessibility permission needs a reset", table: "Permissions",
           comment: "Panel title when System Settings shows the app as allowed but macOS refuses it"),

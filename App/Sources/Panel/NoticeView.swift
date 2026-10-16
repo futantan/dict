@@ -16,7 +16,7 @@ struct NoticeView: View {
       // A title alone is centred on the disc; with a message it starts at the disc's top.
       HStack(alignment: notice.message == nil ? .center : .top, spacing: Spacing.pill) {
         Image(systemName: notice.symbol ?? defaultSymbol)
-          .font(.system(size: Size.symbol, weight: .medium))
+          .font(.system(size: Size.symbol, weight: Size.symbolWeight))
           .foregroundStyle(tone.onTint)
           .frame(width: Size.disc, height: Size.disc)
           .background(tone.tint, in: Circle())

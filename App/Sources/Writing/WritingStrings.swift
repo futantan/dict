@@ -124,7 +124,7 @@ enum WritingStrings {
 
   /// No model is set up; proofreading needs one.
   static let needsModel = PanelNotice(
-    symbol: "key.fill",
+    symbol: "key",
     title: String(
       localized: "Set up a model to proofread", table: "Writing",
       comment: "Title when there is no model to proofread with"),

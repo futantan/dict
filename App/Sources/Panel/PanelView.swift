@@ -234,8 +234,8 @@ private struct InputField: View {
 
   var body: some View {
     HStack(spacing: Spacing.row) {
-      Image(systemName: "translate")
-        .font(.system(size: Size.symbol))
+      Image(systemName: "character.bubble")
+        .font(.system(size: Size.symbol, weight: Size.symbolWeight))
         .foregroundStyle(Color(Palette.accent))
         .frame(width: Size.icon, height: Size.icon)
         .accessibilityHidden(true)

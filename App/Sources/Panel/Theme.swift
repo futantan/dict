@@ -140,6 +140,8 @@ enum Size {
   /// mockups' stroked icons do.
   static let icon: CGFloat = 18
   static let symbol: CGFloat = 15
+  /// The weight of every icon: light, near the mockups' thin strokes.
+  static let symbolWeight = Font.Weight.light
   static let button: CGFloat = 32
   /// A button inside a note.
   static let compactButton: CGFloat = 26

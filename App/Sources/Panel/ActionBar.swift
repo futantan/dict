@@ -32,8 +32,10 @@ struct ActionBar: View {
       BottomBar(
         status: { Pill(WritingStrings.checking, isBusy: true) },
         icons: {
-          IconButton(title: WritingStrings.copyAction, symbol: "doc.on.doc", shortcut: "⌘C") {}
-            .disabled(true)
+          IconButton(
+            title: WritingStrings.copyAction, symbol: "square.on.square", shortcut: "⌘C", action: {}
+          )
+          .disabled(true)
         })
     case .corrected(let correction):
       correctedBar(correction)
@@ -75,7 +77,7 @@ struct ActionBar: View {
     BottomBar(
       status: { Pill(correction.summary) },
       icons: {
-        IconButton(title: WritingStrings.copyAction, symbol: "doc.on.doc", shortcut: "⌘C") {
+        IconButton(title: WritingStrings.copyAction, symbol: "square.on.square", shortcut: "⌘C") {
           copyToClipboard(correction.text)
         }
       },
@@ -91,7 +93,7 @@ struct ActionBar: View {
     BottomBar(
       status: { Pill(translation.summary) },
       icons: {
-        IconButton(title: WritingStrings.copyAction, symbol: "doc.on.doc", shortcut: "⌘C") {
+        IconButton(title: WritingStrings.copyAction, symbol: "square.on.square", shortcut: "⌘C") {
           copyToClipboard(translation.text)
         }
         .disabled(!translation.isComplete || translation.text.isEmpty)
@@ -124,7 +126,7 @@ struct ActionBar: View {
         IconButton(title: CardStrings.pronounce, symbol: "speaker.wave.2", shortcut: "⌘P") {
           onAction(CardStrings.pronounceAction)
         }
-        IconButton(title: CardStrings.translateAsSentence, symbol: "translate") {
+        IconButton(title: CardStrings.translateAsSentence, symbol: "character.bubble") {
           onAction(CardStrings.translateAction)
         }
       })

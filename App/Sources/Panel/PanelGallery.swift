@@ -334,7 +334,7 @@
           message: "网络连接似乎已断开。已改用 Apple 翻译。",
           actions: [PanelAction(id: "retry", title: "重试", isDefault: true)]),
         setup: PanelNotice(
-          symbol: "hand.raised.fill",
+          symbol: "hand.raised",
           title: "需要辅助功能权限",
           message: "Dict 需要辅助功能权限才能读取你选中的文字。打开系统设置，在“隐私与安全性 → 辅助功能”里打开 Dict。",
           actions: [
@@ -357,7 +357,7 @@
           message: "The network connection appears to be offline. Switched to Apple Translation.",
           actions: [PanelAction(id: "retry", title: "Try Again", isDefault: true)]),
         setup: PanelNotice(
-          symbol: "hand.raised.fill",
+          symbol: "hand.raised",
           title: "Accessibility permission needed",
           message:
             "Dict needs Accessibility permission to read the text you select. Open System "

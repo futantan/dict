@@ -272,7 +272,7 @@ struct Hairline: View {
   }
 }
 
-/// An arc turning on a faint ring, in the accent colour.
+/// An accent arc turning on a lighter ring.
 struct Spinner: View {
   var size = Size.spinner
   @State private var isTurning = false
@@ -280,7 +280,7 @@ struct Spinner: View {
   var body: some View {
     let line = size / 7
     ZStack {
-      Circle().stroke(Color(Palette.accent).opacity(Size.spinnerTrack), lineWidth: line)
+      Circle().stroke(Color(Palette.spinnerTrack), lineWidth: line)
       Circle()
         .trim(from: 0, to: 0.25)
         .stroke(Color(Palette.accent), style: StrokeStyle(lineWidth: line, lineCap: .round))

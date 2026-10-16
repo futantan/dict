@@ -20,6 +20,8 @@ enum Palette {
   static let iconHover = dynamic(light: rgb(0x000000, 0.05), dark: rgb(0xFFFFFF, 0.08))
   /// The current change's underline, focus and links.
   static let accent = dynamic(light: rgb(0x5B3FD6), dark: rgb(0xA897FF))
+  /// The ring a spinner's accent arc turns on; 3:1 or more on the fill, as the arc is.
+  static let spinnerTrack = dynamic(light: rgb(0x9381E4), dark: rgb(0x7167A7))
   /// Under the primary button's white title.
   static let accentFill = dynamic(light: rgb(0x5B3FD6), dark: rgb(0x6D55E8))
   static let accentTint = dynamic(light: rgb(0xECE8FF), dark: rgb(0xA897FF, 0.18))
@@ -151,8 +153,6 @@ enum Size {
   static let spinner: CGFloat = 14
   /// The fade of scrolling content above the bottom bar.
   static let scrollFade: CGFloat = 28
-  /// The spinner's ring, as a share of the accent.
-  static let spinnerTrack: CGFloat = 0.2
   /// A disabled icon button's icon, as a share of its colour.
   static let disabledOpacity: CGFloat = 0.35
   /// A key cap on the primary button: white at this opacity.

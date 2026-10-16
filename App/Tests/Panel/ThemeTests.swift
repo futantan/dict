@@ -28,6 +28,20 @@ struct ThemeTests {
     }
   }
 
+  /// The parts of a control that show its state read at 3:1 or more on the panel's fill
+  /// (non-text contrast), in either appearance: both the spinner's arc and its ring.
+  @Test(arguments: [NSAppearance.Name.aqua, .darkAqua])
+  func theSpinnerIsVisible(_ name: NSAppearance.Name) throws {
+    let appearance = try #require(NSAppearance(named: name))
+    for (label, color) in [("arc", Palette.accent), ("track", Palette.spinnerTrack)] {
+      let ratio = Contrast.ratio(color, on: Palette.panelFill, in: appearance)
+      #expect(ratio >= 3, "\(label) in \(name.rawValue): \(ratio)")
+    }
+    // The arc still stands out from the ring it turns on.
+    let arc = Contrast.ratio(Palette.accent, on: Palette.spinnerTrack, in: appearance)
+    #expect(arc >= 2, "arc on track in \(name.rawValue): \(arc)")
+  }
+
   /// The README's type table lists exactly the shared text styles, with their sizes and
   /// weights, so the design notes and the code cannot drift apart.
   @Test func theReadmeTypeTableMatchesTheTypography() throws {

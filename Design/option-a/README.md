@@ -19,6 +19,7 @@
 | `icon` | #48484A | #C7C7CC | 图标按钮 |
 | `iconHover` | 黑 5% | 白 8% | 图标按钮悬停底 |
 | `accent` | #5B3FD6 | #A897FF | 强调色：当前修改下划线、焦点、链接 |
+| `spinnerTrack` | #9381E4 | #7167A7 | 加载圈的底环，与 `accent` 的弧一样 ≥ 3:1 |
 | `accentFill` | #5B3FD6 | #6D55E8 | 主按钮底，白字 ≥ 4.5:1 |
 | `accentTint` | #ECE8FF | #A897FF 18% | 胶囊底（词性、状态、次数） |
 | `accentOnTint` | #5B3FD6 | #C9BFFF | 胶囊上的字 |

@@ -53,7 +53,7 @@ struct ShortcutRecorder: View {
       if let problem = rejection ?? center.problems[role] {
         Text(problem.message)
           .font(.callout)
-          .foregroundStyle(.red)
+          .foregroundStyle(Color(Palette.failure))
           .fixedSize(horizontal: false, vertical: true)
       } else if !isRecording, let hotkey = center.shortcuts[role],
         let notice = HotkeyRules.notice(for: hotkey)

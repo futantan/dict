@@ -29,7 +29,12 @@ struct ActionBar: View {
     case .partial(let text):
       translationBar(text: text, isPartial: true, isDone: true)
     case .checking:
-      BottomBar(status: { Pill(WritingStrings.checking, isBusy: true) }, icons: {})
+      BottomBar(
+        status: { Pill(WritingStrings.checking, isBusy: true) },
+        icons: {
+          IconButton(title: WritingStrings.copyAction, symbol: "doc.on.doc", shortcut: "⌘C") {}
+            .disabled(true)
+        })
     case .corrected(let correction):
       correctedBar(correction)
     case .translatedOut(let translation):
@@ -68,7 +73,7 @@ struct ActionBar: View {
 
   private func correctedBar(_ correction: Correction) -> some View {
     BottomBar(
-      status: { correctedStatus(correction) },
+      status: { Pill(correction.summary) },
       icons: {
         IconButton(title: WritingStrings.copyAction, symbol: "doc.on.doc", shortcut: "⌘C") {
           copyToClipboard(correction.text)
@@ -82,31 +87,9 @@ struct ActionBar: View {
       })
   }
 
-  @ViewBuilder private func correctedStatus(_ correction: Correction) -> some View {
-    if correction.changeCount == 0 {
-      Pill(WritingStrings.noMistakes, symbol: "checkmark", tone: .success)
-    } else if correction.declinedReturn {
-      Pill(WritingStrings.nothingReplaced, tone: .warning)
-    } else if !correction.canReplace {
-      Pill(WritingStrings.cannotReplace, tone: .neutral)
-    } else if correction.accepted.isEmpty {
-      Pill(WritingStrings.allDeclined, tone: .neutral)
-    } else {
-      Pill(WritingStrings.changes(correction.accepted.count, of: correction.changeCount))
-    }
-  }
-
   private func translatedOutBar(_ translation: TranslateOut) -> some View {
     BottomBar(
-      status: {
-        if translation.isComplete && !translation.issues.isEmpty {
-          Pill(WritingStrings.checkBeforeReplacing, tone: .warning)
-        } else if translation.isComplete && !translation.replaceable {
-          Pill(WritingStrings.cannotReplace, tone: .neutral)
-        } else {
-          Pill(WritingStrings.translateOutTitle)
-        }
-      },
+      status: { Pill(translation.summary) },
       icons: {
         IconButton(title: WritingStrings.copyAction, symbol: "doc.on.doc", shortcut: "⌘C") {
           copyToClipboard(translation.text)
@@ -114,12 +97,15 @@ struct ActionBar: View {
         .disabled(!translation.isComplete || translation.text.isEmpty)
       },
       primary: {
-        if translation.replacesOnReturn {
+        switch translation.replaceButton {
+        case .replace:
           PrimaryButton(title: WritingStrings.replaceAction, keys: "↩") { onConfirm(false) }
-        } else if translation.canReplace {
+        case .replaceAnyway:
           SecondaryButton(title: WritingStrings.replaceAnywayAction, keys: "⌘↩") {
             onConfirm(true)
           }
+        case nil:
+          EmptyView()
         }
       })
   }

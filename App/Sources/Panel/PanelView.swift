@@ -116,19 +116,9 @@ private struct PanelBody: View {
     case .needsSetup(let notice):
       NoticeView(notice: notice, defaultSymbol: "gearshape", tone: .accent, onAction: onAction)
     case .checking(let text):
-      SelectableText(
-        text: text, font: Typography.body.nsFont, color: Palette.textSecondary,
-        lineSpacing: Typography.body.lineSpacing)
+      CheckingView(text: text)
     case .corrected(let correction):
-      SelectableText(
-        text: correction.text,
-        attributed: diffText(
-          correction.proposed.segments, accepted: correction.accepted,
-          current: correction.current),
-        font: Typography.body.nsFont, lineSpacing: Typography.body.lineSpacing,
-        accessibilityLabel: WritingStrings.title, onClickChange: onToggleChange
-      )
-      .help(correction.changeCount > 0 ? WritingStrings.reviewHelp : "")
+      CorrectedView(correction: correction, onToggleChange: onToggleChange)
     case .card(let card):
       CardView(card: card)
     case .translatedOut(let translation):

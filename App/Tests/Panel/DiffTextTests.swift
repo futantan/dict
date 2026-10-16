@@ -17,9 +17,9 @@ struct DiffTextTests {
     #expect(text.string == "Their They're going")
     let gap = text.attributes(at: 5, effectiveRange: nil)
     #expect(gap[.strikethroughStyle] == nil)
-    #expect(gap[.backgroundColor] == nil)
+    #expect(gap[.dictTint] == nil)
     #expect(text.attributes(at: 0, effectiveRange: nil)[.strikethroughStyle] != nil)
-    #expect(text.attributes(at: 6, effectiveRange: nil)[.backgroundColor] != nil)
+    #expect(text.attributes(at: 6, effectiveRange: nil)[.dictTint] != nil)
   }
 
   @Test func pureInsertionsAndDeletionsGetNoGap() {

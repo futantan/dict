@@ -40,6 +40,11 @@
             source: text.source, phase: .partial(text.partial),
             note: TranslationStrings.incompleteNote(ModelTranslationError.interrupted))
         ),
+        // The streamed text fills its last line: the spinner has no room after it there.
+        (
+          "generating-full-line",
+          PanelState(source: text.source, phase: .generating(text.fullLine))
+        ),
       ] + writeStates + translateOutStates + cardStates
     }
 
@@ -315,6 +320,8 @@
     private struct Sample {
       let source: String
       let partial: String
+      /// Streamed so far, up to the end of a line.
+      let fullLine: String
       let result: String
       let longSource: String
       let longResult: String
@@ -326,6 +333,7 @@
       static let chinese = Sample(
         source: "The quick brown fox jumps over the lazy dog, then naps in the afternoon sun.",
         partial: "敏捷的棕色狐狸跳过了那只",
+        fullLine: "语言模型以词元为单位读取文字，一句在人看来很短的话，对模型来说可能很长。结果超过屏幕",
         result: "敏捷的棕色狐狸跳过那只懒狗，然后在午后的阳光下打了个盹。",
         longSource: String(repeating: longEnglish + "\n\n", count: 4).trimmed,
         longResult: String(repeating: longChinese + "\n\n", count: 6).trimmed,
@@ -347,6 +355,9 @@
       static let english = Sample(
         source: "他把一句很长的话翻来覆去地想了好几遍，最后还是决定不说出口。",
         partial: "He turned a long sentence over in his",
+        fullLine:
+          "Language models read text as tokens, and a sentence that looks short to a person "
+          + "may be",
         result:
           "He turned a long sentence over in his mind several times, and in the end decided "
           + "not to say it.",

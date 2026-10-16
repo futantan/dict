@@ -124,6 +124,50 @@ struct PanelGalleryTests {
     }
   }
 
+  /// However the streamed text ends on its line, the spinner covers none of it: a last word
+  /// with no room after it wraps with the spinner.
+  @Test func theSpinnerNeverCoversTheText() {
+    let style = Typography.result
+    let width: CGFloat = 356
+    let texts = (1...60).flatMap { count in
+      [
+        (1...count).map { "词\($0)" }.joined(separator: " "),
+        String(repeating: "m", count: count),
+        String(repeating: "词", count: count),
+        String(repeating: "word ", count: count / 3) + "end ",
+      ]
+    }
+    for text in texts {
+      let origin = ResultText.spinnerOrigin(after: text, style: style, width: width)
+      let spinner = CGRect(origin: origin, size: CGSize(width: Size.spinner, height: Size.spinner))
+      #expect(spinner.maxX <= width, "\(text)")
+
+      let storage = NSTextStorage(
+        attributedString: ResultText.shown(text, isStreaming: true, style: style))
+      let layout = NSLayoutManager()
+      let container = NSTextContainer(
+        size: CGSize(width: width, height: .greatestFiniteMagnitude))
+      container.lineFragmentPadding = 0
+      layout.addTextContainer(container)
+      storage.addLayoutManager(layout)
+      layout.ensureLayout(for: container)
+      let string = storage.string as NSString
+      for glyph in 0..<layout.numberOfGlyphs {
+        let character = layout.characterIndexForGlyph(at: glyph)
+        guard string.substring(with: NSRange(location: character, length: 1)) != " " else {
+          continue
+        }
+        var box = layout.boundingRect(
+          forGlyphRange: NSRange(location: glyph, length: 1), in: container)
+        // The last character's box takes in the room left for the spinner.
+        if storage.attribute(.kern, at: character, effectiveRange: nil) != nil {
+          box.size.width -= ResultText.spinnerRoom
+        }
+        #expect(!box.intersects(spinner), "\(text)")
+      }
+    }
+  }
+
   /// The back-translation line is there before the back-translation arrives, so a one-line
   /// back-translation, or none, leaves the panel's height as it was; in Latin and Chinese.
   @Test func theBackTranslationKeepsThePanelHeight() {

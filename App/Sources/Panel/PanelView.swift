@@ -198,9 +198,10 @@ struct ResultText: View {
   var body: some View {
     let style = Typography.result
     SelectableText(
-      text: text, font: style.nsFont, color: Palette.textPrimary, lineSpacing: style.lineSpacing
+      text: text, attributed: Self.shown(text, isStreaming: isStreaming, style: style),
+      font: style.nsFont, color: Palette.textPrimary, lineSpacing: style.lineSpacing
     )
-    // Over the text, so the spinner never adds to the panel's height.
+    // Over the room the text leaves for it, so the spinner never adds to the panel's height.
     .overlay(alignment: .topLeading) {
       if isStreaming {
         GeometryReader { proxy in
@@ -214,14 +215,30 @@ struct ResultText: View {
     }
   }
 
-  /// Where the spinner's top left goes for `text` laid out as `SelectableText` lays it out
-  /// at `width`: after the last word, centred on its line; at the trailing edge when the
-  /// line is full.
-  static func spinnerOrigin(after text: String, style: TextStyle, width: CGFloat) -> CGPoint {
+  /// The room after the last word for the spinner, and the gap before it.
+  static let spinnerRoom = Spacing.tight + Size.spinner
+
+  /// `text` as `SelectableText` shows it. While it streams, its last visible character is
+  /// followed by room for the spinner, so a word with no room left on its line wraps with
+  /// the spinner rather than being covered by it.
+  static func shown(_ text: String, isStreaming: Bool, style: TextStyle) -> NSAttributedString {
     let paragraph = NSMutableParagraphStyle()
     paragraph.lineSpacing = style.lineSpacing
-    let storage = NSTextStorage(
-      string: text, attributes: [.font: style.nsFont, .paragraphStyle: paragraph])
+    let shown = NSMutableAttributedString(
+      string: text,
+      attributes: [
+        .font: style.nsFont, .foregroundColor: Palette.textPrimary, .paragraphStyle: paragraph,
+      ])
+    if isStreaming, let last = lastVisibleCharacter(of: text) {
+      shown.addAttribute(.kern, value: spinnerRoom, range: NSRange(location: last, length: 1))
+    }
+    return shown
+  }
+
+  /// Where the spinner's top left goes for `text` streaming at `width`: in the room after
+  /// its last word, centred on that word's line.
+  static func spinnerOrigin(after text: String, style: TextStyle, width: CGFloat) -> CGPoint {
+    let storage = NSTextStorage(attributedString: shown(text, isStreaming: true, style: style))
     let layout = NSLayoutManager()
     let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
     container.lineFragmentPadding = 0
@@ -229,12 +246,21 @@ struct ResultText: View {
     storage.addLayoutManager(layout)
     layout.ensureLayout(for: container)
 
-    let line =
-      layout.numberOfGlyphs > 0
-      ? layout.lineFragmentUsedRect(forGlyphAt: layout.numberOfGlyphs - 1, effectiveRange: nil)
-      : .zero
-    let x = min(line.maxX + Spacing.tight, width - Size.spinner)
+    guard let last = lastVisibleCharacter(of: text) else {
+      return CGPoint(x: 0, y: (style.lineHeight - Size.spinner) / 2)
+    }
+    let glyph = layout.glyphIndexForCharacter(at: last)
+    // The glyph's box takes in the room after it.
+    let box = layout.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: container)
+    let line = layout.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+    let x = min(box.maxX - Size.spinner, width - Size.spinner)
     return CGPoint(x: max(x, 0), y: line.minY + (style.lineHeight - Size.spinner) / 2)
+  }
+
+  /// The UTF-16 offset of the last unit of `text` that is not white space.
+  private static func lastVisibleCharacter(of text: String) -> Int? {
+    guard let index = text.lastIndex(where: { !$0.isWhitespace }) else { return nil }
+    return NSRange(index...index, in: text).upperBound - 1
   }
 }
 

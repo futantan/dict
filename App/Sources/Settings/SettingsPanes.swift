@@ -356,6 +356,8 @@ struct ModelSections: View {
         destination: help
       )
       .font(.footnote)
+      // The app's accent is the darker fill colour; a link takes the lighter text accent.
+      .foregroundStyle(Color(Palette.accent))
     }
   }
 
@@ -397,16 +399,16 @@ struct ModelSections: View {
           String(
             localized: "Dict can use this model.", table: "Settings",
             comment: "Test finished and every check passed"),
-          symbol: "checkmark.circle.fill", color: .green)
+          symbol: "checkmark.circle.fill", color: Color(Palette.successOnTint))
       } else {
         statusLabel(
           String(
             localized: "Some checks failed.", table: "Settings",
             comment: "Test finished and a check failed"),
-          symbol: "xmark.octagon.fill", color: .red)
+          symbol: "xmark.octagon.fill", color: Color(Palette.failure))
       }
     case .failed(let failure):
-      statusLabel(failure.message, symbol: "xmark.octagon.fill", color: .red)
+      statusLabel(failure.message, symbol: "xmark.octagon.fill", color: Color(Palette.failure))
         .textSelection(.enabled)
     }
   }
@@ -540,7 +542,8 @@ private struct ConnectionChecks: View {
     LabeledContent {
       switch report.isThinking {
       case .some(true):
-        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(
+          Color(Palette.warningOnTint))
       case .some(false): icon(.passed)
       case nil:
         icon(report.isRunning ? (report.translation == .passed ? .running : .waiting) : .skipped)
@@ -577,9 +580,9 @@ private struct ConnectionChecks: View {
     case .running:
       ProgressView().controlSize(.small)
     case .passed:
-      Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+      Image(systemName: "checkmark.circle.fill").foregroundStyle(Color(Palette.successOnTint))
     case .failed:
-      Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
+      Image(systemName: "xmark.octagon.fill").foregroundStyle(Color(Palette.failure))
     }
   }
 
@@ -600,7 +603,7 @@ private func statusLabel(_ text: String, symbol: String, color: Color) -> some V
 }
 
 private func warningLabel(_ text: String) -> some View {
-  statusLabel(text, symbol: "exclamationmark.triangle.fill", color: .orange)
+  statusLabel(text, symbol: "exclamationmark.triangle.fill", color: Color(Palette.warningOnTint))
 }
 
 // MARK: - Shortcuts

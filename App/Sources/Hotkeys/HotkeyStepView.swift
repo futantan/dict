@@ -39,13 +39,11 @@ struct HotkeyStepView: View {
               HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(role.title).font(.headline)
                 if role == .write {
-                  Text(
+                  Pill(
                     String(
                       localized: "Optional", table: "Hotkeys",
-                      comment: "Next to the Write shortcut in onboarding: it can be left empty")
-                  )
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
+                      comment: "Next to the Write shortcut in onboarding: it can be left empty"),
+                    tone: .neutral, size: .small)
                 }
               }
               Text(role.summary).font(.callout).foregroundStyle(.secondary)

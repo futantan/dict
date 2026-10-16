@@ -96,6 +96,9 @@ targets:
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         PRODUCT_MODULE_NAME: DictApp
         PRODUCT_BUNDLE_IDENTIFIER: $(DICT_APP_BUNDLE_ID)
+        # Option A's accent fill (Design/option-a/README.md, `Palette.accentFill`), so native
+        # controls such as the default button and switches match the panel.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: YES
         # Sparkle's keys, which have no INFOPLIST_KEY_ setting; merged with the generated ones.
         INFOPLIST_FILE: App/Info.plist

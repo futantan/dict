@@ -78,42 +78,51 @@ final class ToastController {
 
 @MainActor
 @Observable
-private final class ToastModel {
+final class ToastModel {
   var message = ToastMessage.replaced
   @ObservationIgnored var lifetime = ToastLifetime(shownAt: .now)
   var copied = false
 }
 
-private struct ToastView: View {
+struct ToastView: View {
   let model: ToastModel
 
   var body: some View {
     let message = model.message
-    HStack(spacing: 10) {
-      Image(
-        systemName: message.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-      )
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundStyle(message.isSuccess ? Color.green : Color.orange)
-      .accessibilityHidden(true)
+    let tone = message.isSuccess ? Tone.success : .warning
+    let shape = RoundedRectangle(cornerRadius: Radius.panel, style: .continuous)
+    HStack(spacing: Spacing.row) {
+      Image(systemName: message.isSuccess ? "checkmark" : "exclamationmark")
+        .font(.system(size: Size.toastSymbol, weight: .bold))
+        .foregroundStyle(tone.onTint)
+        .frame(width: Size.toastDisc, height: Size.toastDisc)
+        .background(tone.tint, in: Circle())
+        .accessibilityHidden(true)
       Text(message.text)
-        .font(.system(size: 13))
+        .font(Typography.secondary.font)
+        .lineSpacing(Typography.secondary.lineSpacing)
+        .foregroundStyle(Color(Palette.textPrimary))
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: 320, alignment: .leading)
+        .frame(maxWidth: Size.toastText, alignment: .leading)
       if let result = message.copyableResult {
-        Button(model.copied ? "✓" : WritingStrings.copyResult) {
+        SecondaryButton(title: model.copied ? "✓" : WritingStrings.copyResult, isCompact: true) {
           NSPasteboard.general.clearContents()
           NSPasteboard.general.setString(result, forType: .string)
           model.copied = true
         }
-        .controlSize(.small)
-        .fixedSize()
       }
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 10)
-    .background(.regularMaterial, in: Capsule())
-    .overlay(Capsule().strokeBorder(.separator, lineWidth: 0.5))
+    // The disc and the button sit as far from the ends as from the top and bottom.
+    .padding(.leading, (Size.toast - Size.toastDisc) / 2)
+    .padding(
+      .trailing,
+      message.copyableResult == nil
+        ? Spacing.blockHorizontal : (Size.toast - Size.compactButton) / 2
+    )
+    .padding(.vertical, Spacing.tight)
+    .frame(minHeight: Size.toast)
+    .background(Color(Palette.panelFill), in: shape)
+    .overlay(shape.strokeBorder(Color(Palette.separator), lineWidth: 0.5))
     .fixedSize()
     .onHover { model.lifetime.setHovering($0, at: .now) }
   }

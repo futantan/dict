@@ -19,7 +19,7 @@ extension Size {
   /// The toast's height on one line, and the tinted disc behind its icon.
   static let toast: CGFloat = 40
   static let toastDisc: CGFloat = 24
-  static let toastSymbol: CGFloat = 11
+  static let toastSymbol: CGFloat = 13
   /// The widest the toast's message gets before it wraps.
   static let toastText: CGFloat = 400
 }

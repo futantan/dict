@@ -93,7 +93,7 @@ struct ToastView: View {
     let shape = RoundedRectangle(cornerRadius: Radius.panel, style: .continuous)
     HStack(spacing: Spacing.row) {
       Image(systemName: message.isSuccess ? "checkmark" : "exclamationmark")
-        .font(.system(size: Size.toastSymbol, weight: .bold))
+        .font(.system(size: Size.toastSymbol, weight: Size.symbolWeight))
         .foregroundStyle(tone.onTint)
         .frame(width: Size.toastDisc, height: Size.toastDisc)
         .background(tone.tint, in: Circle())

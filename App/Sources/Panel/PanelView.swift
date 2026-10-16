@@ -59,6 +59,9 @@ struct PanelView: View {
       }
       .scrollDisabled(!model.isScrollable)
       .scrollIndicators(model.isScrollable ? .automatic : .never)
+      // A scroller runs beside the content only, clear of the panel's rounded top.
+      .contentMargins(.top, Spacing.panel, for: .scrollIndicators)
+      .contentMargins(.bottom, model.state.bottomPadding, for: .scrollIndicators)
       .onScrollGeometryChange(
         for: Bool.self, of: { $0.visibleRect.maxY >= $0.contentSize.height - 1 }
       ) { isScrolledToEnd = $1 }

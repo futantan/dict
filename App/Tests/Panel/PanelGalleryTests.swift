@@ -99,6 +99,30 @@ struct PanelGalleryTests {
     #expect(document + bar == contentHeight)
   }
 
+  /// A scroller that always shows runs beside the content, inset from the panel's top and
+  /// from the bar as the content is, not from the panel's rounded top edge down.
+  @Test func theScrollerTrackKeepsTheContentMargins() throws {
+    let state = try #require(PanelGallery.states().first { $0.name == "result-long" }).state
+    let model = PanelModel(state: state)
+    let hosting = NSHostingView(rootView: PanelView(model: model))
+    hosting.sizingOptions = []
+    let panel = ResultPanel(content: hosting)
+    panel.setFrame(CGRect(x: 0, y: 0, width: PanelLayout.width, height: 300), display: false)
+    model.isScrollable = true
+    panel.contentView?.layoutSubtreeIfNeeded()
+    let scrollView = try #require(Self.firstView(NSScrollView.self, in: hosting))
+    scrollView.scrollerStyle = .legacy
+    panel.contentView?.layoutSubtreeIfNeeded()
+
+    let scroller = try #require(scrollView.verticalScroller)
+    #expect(!scroller.isHidden)
+    let track = scroller.convert(scroller.bounds, to: scrollView)
+    let top = scrollView.isFlipped ? track.minY : scrollView.bounds.height - track.maxY
+    let bottom = scrollView.isFlipped ? scrollView.bounds.height - track.maxY : track.minY
+    #expect(top == Spacing.panel)
+    #expect(bottom == Spacing.section)
+  }
+
   /// The streaming spinner sits right after the last word, on its line, and never past the
   /// trailing edge.
   @Test func theSpinnerFollowsTheLastWord() {
@@ -270,6 +294,16 @@ struct PanelGalleryTests {
         try png.write(to: directory.appendingPathComponent("\(language)-\(scheme)-\(name).png"))
       }
     }
+    // The scrolling states again with scroll bars set to always show. The content keeps
+    // the trailing margin of the machine's own scroller style.
+    for (name, state, maxHeight) in smallScreen {
+      for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+        let png = try #require(
+          Self.render(state, appearance: appearance, maxHeight: maxHeight, scroller: .legacy))
+        try png.write(
+          to: directory.appendingPathComponent("\(language)-\(scheme)-\(name)-legacy-scroller.png"))
+      }
+    }
   }
 
   @Test(.enabled(if: showsDemo))
@@ -362,7 +396,8 @@ struct PanelGalleryTests {
   /// Draws the content over the panel's fill, with the panel's corner radius and a shadow,
   /// on a neutral backdrop, at 2x.
   private static func render(
-    _ state: PanelState, appearance: NSAppearance.Name, maxHeight: CGFloat
+    _ state: PanelState, appearance: NSAppearance.Name, maxHeight: CGFloat,
+    scroller: NSScroller.Style? = nil
   ) -> Data? {
     let content = layOut(state, appearance: appearance, maxHeight: maxHeight).view
     // The panel's corners clip the content, as `PanelBacking` does.
@@ -383,6 +418,13 @@ struct PanelGalleryTests {
     content.frame.origin = canvas.panelRect.origin
     canvas.addSubview(content)
     canvas.layoutSubtreeIfNeeded()
+    // In the window, where the scroll view tiles its scroller.
+    var shownScroller: NSScroller?
+    if let scroller, let scrollView = firstView(NSScrollView.self, in: content) {
+      scrollView.scrollerStyle = scroller
+      canvas.layoutSubtreeIfNeeded()
+      shownScroller = scrollView.verticalScroller
+    }
 
     guard
       let bitmap = NSBitmapImageRep(
@@ -393,6 +435,22 @@ struct PanelGalleryTests {
     else { return nil }
     bitmap.size = canvas.bounds.size
     canvas.cacheDisplay(in: canvas.bounds, to: bitmap)
+    // A scroller draws in its own layers, which the cache leaves out; drawn by hand.
+    if let scroller = shownScroller, !scroller.isHidden,
+      let context = NSGraphicsContext(bitmapImageRep: bitmap)
+    {
+      NSGraphicsContext.saveGraphicsState()
+      NSGraphicsContext.current = context
+      let frame = scroller.convert(scroller.bounds, to: canvas)
+      let transform = NSAffineTransform()
+      transform.translateX(by: frame.minX, yBy: scroller.isFlipped ? frame.maxY : frame.minY)
+      if scroller.isFlipped { transform.scaleX(by: 1, yBy: -1) }
+      transform.concat()
+      scroller.appearance = NSAppearance(named: appearance)
+      scroller.drawKnobSlot(in: scroller.rect(for: .knobSlot), highlight: false)
+      scroller.drawKnob()
+      NSGraphicsContext.restoreGraphicsState()
+    }
     return bitmap.representation(using: .png, properties: [:])
   }
 

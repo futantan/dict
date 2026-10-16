@@ -78,13 +78,13 @@ final class ToastController {
 
 @MainActor
 @Observable
-private final class ToastModel {
+final class ToastModel {
   var message = ToastMessage.replaced
   @ObservationIgnored var lifetime = ToastLifetime(shownAt: .now)
   var copied = false
 }
 
-private struct ToastView: View {
+struct ToastView: View {
   let model: ToastModel
 
   var body: some View {

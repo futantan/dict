@@ -84,7 +84,8 @@ private struct PanelContent: View {
           ActionBar(state: state, onAction: onAction, onConfirm: onConfirm)
         }
       }
-      .padding([.top, .horizontal], Spacing.panel)
+      .padding([.top, .leading], Spacing.panel)
+      .padding(.trailing, PanelLayout.trailingPadding(isScrollable: model.isScrollable))
       // Buttons at the bottom are taller than a line of text, so less space under them.
       .padding(.bottom, state.hasButtonsAtTheBottom ? Spacing.panelBottom : Spacing.panel)
     }
@@ -261,6 +262,18 @@ private struct InputField: View {
     .padding(.horizontal, Spacing.input)
     .frame(height: Size.inputHeight)
     .task(id: model.presentation) { focused = true }
+  }
+}
+
+extension PanelLayout {
+  /// The content's trailing margin. A legacy scroller, shown when scroll bars always show
+  /// or a mouse is attached, takes its width from the scroll view's content; the margin
+  /// gives it back, so the content keeps one width and one trailing edge either way.
+  @MainActor static func trailingPadding(
+    isScrollable: Bool, scrollerStyle: NSScroller.Style = NSScroller.preferredScrollerStyle
+  ) -> CGFloat {
+    guard isScrollable, scrollerStyle == .legacy else { return Spacing.panel }
+    return Spacing.panel - NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
   }
 }
 

@@ -61,6 +61,15 @@ struct PanelGalleryTests {
     }
   }
 
+  /// A legacy scroller's width comes out of the trailing margin, so a scrolling panel's
+  /// content keeps the width and the right edge of one that does not scroll.
+  @Test func aScrollerKeepsTheContentWidth() {
+    #expect(PanelLayout.trailingPadding(isScrollable: false, scrollerStyle: .legacy) == 22)
+    #expect(PanelLayout.trailingPadding(isScrollable: true, scrollerStyle: .overlay) == 22)
+    let legacy = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
+    #expect(PanelLayout.trailingPadding(isScrollable: true, scrollerStyle: .legacy) == 22 - legacy)
+  }
+
   /// The back-translation line is there before the back-translation arrives, so a one-line
   /// back-translation, or none, leaves the panel's height as it was; in Latin and Chinese.
   @Test func theBackTranslationKeepsThePanelHeight() {

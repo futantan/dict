@@ -100,9 +100,74 @@
         lookup(
           "run", pos: "verb", sense: "经营；管理",
           sentence: "She ran a small bakery in the old town.", surface: "ran",
+          translation: "她在老城区经营一家小面包店。", url: historySourceURL,
           app: "com.apple.Safari", day: today, minutes: 14 * 60 + 20))
       try await store.setTier(.learning, termID: run.id, on: today)
+
+      // MARK: History (Design/main-app/history.html)
+      // `run` met twice before, recorded last so its full card is the one kept; yesterday a
+      // correction left unreplaced; on 15 October a translation.
+      for (days, minutes) in [(-4, 9 * 60 + 30), (-2, 19 * 60 + 5)] {
+        let day = today.adding(days: days)
+        _ = try await store.recordLookup(
+          LookupRecord(
+            language: "en", lemma: "run", surface: "run",
+            sentence: "We run a small team of designers.", sense: "经营；管理",
+            source: .accessibility, sourceApp: "com.apple.Safari", card: runCard, day: day,
+            seenAt: date(day, minutes: minutes)))
+      }
+      try await store.recordSentence(
+        SentenceRecord(
+          kind: .corrected, source: "I look forward to hear from you.",
+          result: "I look forward to hearing from you.", applied: false, sourceLanguage: "en",
+          resultLanguage: "en", sourceApp: "com.apple.mail", day: today.adding(days: -1),
+          createdAt: date(today.adding(days: -1), minutes: 16 * 60 + 2)))
+      try await store.recordSentence(
+        SentenceRecord(
+          kind: .translated, source: "Rates are expected to remain elevated through the spring.",
+          result: "预计利率在整个春季都将保持高位。", sourceLanguage: "en", resultLanguage: "zh-Hans",
+          sourceApp: "com.apple.Safari", day: today.adding(days: -2),
+          createdAt: date(today.adding(days: -2), minutes: 9 * 60 + 12)))
       return store
+    }
+
+    /// The page `run` was met on today.
+    static let historySourceURL = URL(
+      string: "https://www.nytimes.com/2026/10/17/nyregion/queens-bakery.html")
+
+    /// `run`'s card as the model writes it, with other senses and collocations.
+    private static var runCard: StoredCard? {
+      let card = WordCard(
+        status: .ok, lemma: "run", phonetic: "/rʌn/", partOfSpeech: "verb",
+        definition: "经营；管理", contextTranslation: "",
+        otherSenses: [
+          .init(partOfSpeech: "verb", definition: "（机器、程序）运行"),
+          .init(partOfSpeech: "noun", definition: "跑步；一段路程"),
+        ],
+        examples: [],
+        collocations: [
+          .init(phrase: "run a business", meaning: "经营生意"),
+          .init(phrase: "run out of", meaning: "用完"),
+          .init(phrase: "run late", meaning: "晚点"),
+        ], level: "")
+      guard let data = try? JSONEncoder().encode(card) else { return nil }
+      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
+    }
+
+    /// The dictionary layer the History page's card shows for `run`, so the renders do not
+    /// depend on the dictionary being built.
+    static func lexicon(_ term: String, context: String?) -> [LexiconEntry] {
+      guard ["run", "ran"].contains(term.lowercased()) else { return [] }
+      return [
+        LexiconEntry(
+          lemma: "run", ipaUS: "/rʌn/", ipaUK: "/rʌn/", band: .common,
+          senses: [
+            LexiconSense(pos: "verb", gloss: "跑；奔跑", source: "zh"),
+            LexiconSense(pos: "verb", gloss: "经营；管理", source: "zh"),
+            LexiconSense(pos: "verb", gloss: "（机器、程序）运行", source: "zh"),
+            LexiconSense(pos: "noun", gloss: "跑步；一段路程", source: "zh"),
+          ])
+      ]
     }
 
     // MARK: Samples
@@ -130,7 +195,8 @@
 
     private static func lookup(
       _ lemma: String, pos: String, sense: String?, sentence: String? = nil,
-      surface: String? = nil, app: String = "com.apple.Safari", day: LocalDay, minutes: Int
+      surface: String? = nil, translation: String? = nil, url: URL? = nil,
+      app: String = "com.apple.Safari", day: LocalDay, minutes: Int
     ) -> LookupRecord {
       let surface = surface ?? lemma
       let start = sentence.flatMap { text in
@@ -140,8 +206,9 @@
       }
       return LookupRecord(
         language: "en", lemma: lemma, surface: surface, sentence: sentence, termStart: start,
-        termLength: start.map { _ in surface.utf16.count }, sense: sense, source: .accessibility,
-        sourceApp: app, card: card(lemma, pos: pos, definition: sense ?? ""), day: day,
+        termLength: start.map { _ in surface.utf16.count }, sense: sense,
+        sentenceTranslation: translation, source: .accessibility, sourceApp: app,
+        sourceURL: url, card: card(lemma, pos: pos, definition: sense ?? ""), day: day,
         seenAt: date(day, minutes: minutes))
     }
 

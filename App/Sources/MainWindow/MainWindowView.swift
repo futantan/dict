@@ -12,6 +12,8 @@ struct MainWindowContext {
   let services: SettingsServices
   /// The Today page's search: the text and the field's rect in the window's content.
   let lookUp: (String, CGRect) -> Void
+  /// The History page's dictionary, speech, pasteboard and browser.
+  var history = HistoryServices()
 }
 
 /// The window's root: the fixed sidebar and the selected page (Design/main-app/README.md).
@@ -45,7 +47,7 @@ struct MainWindowView: View {
     switch section {
     case .today:
       TodayPage(data: context.data, navigation: context.navigation, lookUp: context.lookUp)
-    case .history: HistoryPage(data: context.data)
+    case .history: HistoryPage(data: context.data, services: context.history)
     case .saved: SavedPage(data: context.data)
     case .review: ReviewPage(data: context.data)
     case .settings:

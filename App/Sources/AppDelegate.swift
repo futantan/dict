@@ -241,7 +241,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     let context = MainWindowContext(
       navigation: navigation, data: data, settings: settings, hotkeys: hotkeys,
       services: services,
-      lookUp: { [weak self] text, rect in self?.lookUpFromWindow(text, fieldRect: rect) })
+      lookUp: { [weak self] text, rect in self?.lookUpFromWindow(text, fieldRect: rect) },
+      history: HistoryServices(
+        lookUpTerm: { [lexicon] term, context in
+          await lexicon?.lookup(term, context: context) ?? []
+        },
+        accent: { PreferencesStore(defaults: .standard).load().accent },
+        pronounce: { [speaker] text, language, rate in
+          speaker.accent = PreferencesStore(defaults: .standard).load().accent
+          speaker.say(text, language: language, rate: rate)
+        },
+        copy: { text in
+          NSPasteboard.general.clearContents()
+          NSPasteboard.general.setString(text, forType: .string)
+        },
+        openURL: { NSWorkspace.shared.open($0) }))
     let controller = MainWindowController(context: context)
     controller.onClose = { [weak self] in
       guard let self, !self.settings.preferences.keepsRunningAfterClose else { return }

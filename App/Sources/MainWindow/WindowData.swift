@@ -17,6 +17,15 @@ protocol WindowVocab: Sendable {
   func setTier(_ tier: Tier, termID: Int64, on day: LocalDay) async throws
   func deleteAll() async throws
   func exportAnkiTSV() async throws -> Data
+
+  // MARK: - History
+
+  func history(_ filter: HistoryFilter, after cursor: HistoryCursor?, limit: Int) async throws
+    -> HistorySlice
+  func historySourceApps() async throws -> [String]
+  func historyCounts(since day: LocalDay) async throws -> HistoryCounts
+  func deleteEncounter(_ id: Int64) async throws
+  func deleteSentenceEvent(_ id: Int64) async throws
 }
 
 extension VocabStore: WindowVocab {}
@@ -116,4 +125,9 @@ final class WindowData {
   func exportAnki() async throws -> Data? {
     try await vocab?.exportAnkiTSV()
   }
+
+  // MARK: - History
+
+  /// The History page's filters, entries and selection.
+  @ObservationIgnored private(set) lazy var history = HistoryModel(data: self)
 }

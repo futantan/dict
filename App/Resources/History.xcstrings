@@ -1,0 +1,518 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld changes" : {
+      "comment" : "How many changes a correction in History made",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld change"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld changes"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 处修改"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld entries" : {
+      "comment" : "Above the History title: how many lookups and sentences there are in all",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld entry"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld entries"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "共 %lld 条"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld this week" : {
+      "comment" : "Above the History title: how many lookups and sentences this week",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本周 %lld 条"
+          }
+        }
+      }
+    },
+    "All" : {
+      "comment" : "History source app filter: every app",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部"
+          }
+        }
+      }
+    },
+    "as “%@”" : {
+      "comment" : "After the word in History's detail: the form it was met in",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原文 %@"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "comment" : "History detail button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制"
+          }
+        }
+      }
+    },
+    "Corrections" : {
+      "comment" : "History type filter: corrections and rewrites",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纠错"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "comment" : "Confirms deleting a History entry",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除"
+          }
+        }
+      }
+    },
+    "Delete This Entry" : {
+      "comment" : "History detail button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除这条记录"
+          }
+        }
+      }
+    },
+    "Delete this entry?" : {
+      "comment" : "Title of the confirmation before deleting a History entry",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除这条记录？"
+          }
+        }
+      }
+    },
+    "Entry Type" : {
+      "comment" : "Accessibility label of the History page's type filter",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录类型"
+          }
+        }
+      }
+    },
+    "Fix" : {
+      "comment" : "Short tag of a correction in History; fits a 44 pt chip",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纠错"
+          }
+        }
+      }
+    },
+    "Learn" : {
+      "comment" : "History detail button: mark to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要学"
+          }
+        }
+      }
+    },
+    "Learning" : {
+      "comment" : "Accessibility label of the filled star of a word marked to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要学"
+          }
+        }
+      }
+    },
+    "Looked up" : {
+      "comment" : "Accessibility label of the outlined star of a word not marked to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查过"
+          }
+        }
+      }
+    },
+    "Met %lld times" : {
+      "comment" : "Pill in History's detail: how many times the word has been met",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Met once"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Met %lld times"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "第 %lld 次遇到"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "No changes" : {
+      "comment" : "A correction in History that changed nothing",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有修改"
+          }
+        }
+      }
+    },
+    "No entries match." : {
+      "comment" : "The History list when the search or filters match nothing",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有符合的记录。"
+          }
+        }
+      }
+    },
+    "Not replaced" : {
+      "comment" : "The result did not replace the text in the other app",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未替换"
+          }
+        }
+      }
+    },
+    "Nothing recorded yet. Select a word in any app and press the Read shortcut." : {
+      "comment" : "The History list when nothing has been recorded",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有记录。在任意应用里选中一个词，按读的快捷键。"
+          }
+        }
+      }
+    },
+    "Open Source" : {
+      "comment" : "History detail button: opens the web page the word was met on",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开来源"
+          }
+        }
+      }
+    },
+    "Original" : {
+      "comment" : "Small heading of the text before a translation or correction",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原文"
+          }
+        }
+      }
+    },
+    "Out" : {
+      "comment" : "Short tag of a translation into the language being learnt; fits a 44 pt chip",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外译"
+          }
+        }
+      }
+    },
+    "Pronounce" : {
+      "comment" : "History detail button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发音"
+          }
+        }
+      }
+    },
+    "Replaced" : {
+      "comment" : "The result replaced the text in the other app",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已替换"
+          }
+        }
+      }
+    },
+    "Result" : {
+      "comment" : "Small heading of the translation or corrected text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结果"
+          }
+        }
+      }
+    },
+    "Rewrite" : {
+      "comment" : "Short tag of a rewrite in History; fits a 44 pt chip",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改写"
+          }
+        }
+      }
+    },
+    "Search History" : {
+      "comment" : "Accessibility label of the History page's search field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索查询记录"
+          }
+        }
+      }
+    },
+    "Search words and sentences" : {
+      "comment" : "Placeholder of the History page's search field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索词、原句或译文"
+          }
+        }
+      }
+    },
+    "Select an entry to see it here." : {
+      "comment" : "The History detail pane when nothing is selected",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择一条记录，在这里查看。"
+          }
+        }
+      }
+    },
+    "Source" : {
+      "comment" : "Small heading in History's detail",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来源"
+          }
+        }
+      }
+    },
+    "Source App: %@" : {
+      "comment" : "History source app filter button; the argument is the app or All",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来源应用：%@"
+          }
+        }
+      }
+    },
+    "This entry is removed from History." : {
+      "comment" : "Message of the confirmation before deleting a translation or correction",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条记录会从查询记录中删除。"
+          }
+        }
+      }
+    },
+    "This lookup is removed from History. The word stays in your Word List if you are learning it." : {
+      "comment" : "Message of the confirmation before deleting a lookup",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这次查询会从查询记录中删除。如果这个词标了要学，它仍留在生词本里。"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "Heading of today's entries in History",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
+          }
+        }
+      }
+    },
+    "Translate" : {
+      "comment" : "Short tag of a translated sentence in History; fits a 44 pt chip",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译"
+          }
+        }
+      }
+    },
+    "Translations" : {
+      "comment" : "History type filter: sentences translated into my language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译"
+          }
+        }
+      }
+    },
+    "Translations Out" : {
+      "comment" : "History type filter: texts translated into the language being learnt",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译成外语"
+          }
+        }
+      }
+    },
+    "Words" : {
+      "comment" : "History type filter: lookups",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词"
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "comment" : "Heading of yesterday's entries in History",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨天"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

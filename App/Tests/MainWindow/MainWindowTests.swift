@@ -68,7 +68,7 @@ struct MainWindowTests {
     #expect(data.learningCount == 12)
     #expect(data.today.frequent.map(\.lemma) == ["leverage", "nuance", "tentative"])
     #expect(data.today.recent.count == TodaySnapshot.recentLimit)
-    #expect(data.totals.sentences == 12)
+    #expect(data.totals.sentences == 14)
   }
 
   @Test func markingToLearnFromTodayRefreshes() async throws {

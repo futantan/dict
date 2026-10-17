@@ -275,6 +275,14 @@ final class SessionCoordinator {
       text, as: readRoute(text, pair: environment.languagePair()), origin: .typed, why: "typed")
   }
 
+  /// Looks up or translates `text` typed into the main window's search field, in a newly
+  /// shown panel near `anchor`; routed like text typed into the panel. Nothing is read.
+  func lookUpTyped(_ text: String, near anchor: PanelAnchor) {
+    cancel()
+    panel.show(PanelState(phase: .reading), near: anchor)
+    submitted(text)
+  }
+
   /// Translates `text` in a newly shown panel without reading any selection, for the
   /// onboarding window's sample: a capture in Dict's own window reads nothing.
   func translateSample(_ text: String, near anchor: PanelAnchor) {

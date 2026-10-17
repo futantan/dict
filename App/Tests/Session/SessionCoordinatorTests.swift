@@ -686,6 +686,22 @@ struct SessionCoordinatorTests {
       ])
   }
 
+  /// The main window's search field opens the panel at the field and translates a sentence
+  /// as typed text, without reading a selection.
+  @Test func textTypedInTheWindowIsTranslatedNearTheField() async {
+    let harness = Harness([])
+    let anchor = PanelAnchor.selection(CGRect(x: 300, y: 600, width: 800, height: 52))
+    harness.coordinator.lookUpTyped("Bonjour à tous.", near: anchor)
+    await harness.coordinator.settle()
+
+    #expect(harness.reader.calls == 0)
+    #expect(harness.panel.calls.first == .show(PanelState(phase: .reading), anchor))
+    #expect(harness.translator.requests.map(\.text) == ["Bonjour à tous."])
+    #expect(
+      harness.panel.calls.last
+        == .update(PanelState(source: "Bonjour à tous.", phase: .result("你好"))))
+  }
+
   @Test func permissionActionsGoToTheGuide() async {
     let harness = Harness([(.failure(.noAccessibilityPermission), nil)])
     harness.status = PermissionStatus(accessibility: false, postEvent: false)
@@ -1423,5 +1439,17 @@ struct SessionLookupTests {
     let encounter = try await harness.vocab?.day(today).lookups.first?.encounter
     #expect(encounter?.source == .typed)
     #expect(encounter?.sentence == nil)
+  }
+
+  @Test func aWordTypedInTheWindowIsLookedUpAndRecordedAsTyped() async throws {
+    let harness = Harness([])
+    harness.entries = [runEntry]
+    harness.coordinator.lookUpTyped("ran", near: .mouse(.zero))
+    await harness.coordinator.settle()
+
+    #expect(harness.reader.calls == 0)
+    #expect(harness.panel.lastCard?.lemma == "run")
+    let encounter = try await harness.vocab?.day(today).lookups.first?.encounter
+    #expect(encounter?.source == .typed)
   }
 }

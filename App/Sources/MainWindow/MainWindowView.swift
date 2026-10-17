@@ -12,6 +12,8 @@ struct MainWindowContext {
   let services: SettingsServices
   /// The Today page's search: the text and the field's rect in the window's content.
   let lookUp: (String, CGRect) -> Void
+  /// Speaks a word on the review page; silent in tests and renders.
+  var pronounce: (String, Locale.Language, SpeechRate) -> Void = { _, _, _ in }
 }
 
 /// The window's root: the fixed sidebar and the selected page (Design/main-app/README.md).
@@ -47,7 +49,9 @@ struct MainWindowView: View {
       TodayPage(data: context.data, navigation: context.navigation, lookUp: context.lookUp)
     case .history: HistoryPage(data: context.data)
     case .saved: SavedPage(data: context.data)
-    case .review: ReviewPage(data: context.data)
+    case .review:
+      ReviewPage(
+        data: context.data, navigation: context.navigation, pronounce: context.pronounce)
     case .settings:
       SettingsPage(
         model: context.settings, hotkeys: context.hotkeys, data: context.data,

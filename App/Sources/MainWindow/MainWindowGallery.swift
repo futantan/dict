@@ -102,7 +102,52 @@
           sentence: "She ran a small bakery in the old town.", surface: "ran",
           app: "com.apple.Safari", day: today, minutes: 14 * 60 + 20))
       try await store.setTier(.learning, termID: run.id, on: today)
+      try await addReviewSamples(to: store)
       return store
+    }
+
+    // MARK: Review samples
+
+    /// Two sentences with translations for 「candid」, the fourth word due, and a review of it
+    /// three days ago that it failed, so it is still due today; the other due words have no
+    /// sentence and ask with the word.
+    private static func addReviewSamples(to store: VocabStore) async throws {
+      let samples: [(sentence: String, translation: String, app: String, url: URL?, days: Int)] =
+        [
+          (
+            "She gave a candid account of what went wrong at launch.", "她坦率地讲述了发布时出了什么问题。",
+            "com.apple.mail", nil, -8
+          ),
+          (
+            "Thanks for being so candid about the delays on your side.", "谢谢你这么坦率地说明你们那边的延误。",
+            "com.apple.Safari", URL(string: "https://example.com/notes"), -1
+          ),
+        ]
+      var termID: Int64?
+      for sample in samples {
+        let day = today.adding(days: sample.days)
+        var record = lookup(
+          "candid", pos: "adjective", sense: "坦率的", sentence: sample.sentence, app: sample.app,
+          day: day, minutes: 16 * 60)
+        record.sentenceTranslation = sample.translation
+        record.sourceURL = sample.url
+        record.card = reviewCard(phonetic: "/ˈkændɪd/")
+        termID = try await store.recordLookup(record).id
+      }
+      if let termID {
+        try await store.recordReview(
+          termID: termID, encounterID: nil, rating: .again, on: today.adding(days: -3),
+          at: date(today.adding(days: -3), minutes: 21 * 60))
+      }
+    }
+
+    private static func reviewCard(phonetic: String) -> StoredCard? {
+      let card = WordCard(
+        status: .ok, lemma: "candid", phonetic: phonetic, partOfSpeech: "adjective",
+        definition: "坦率的", contextTranslation: "", otherSenses: [], examples: [],
+        collocations: [], level: "")
+      guard let data = try? JSONEncoder().encode(card) else { return nil }
+      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
     }
 
     // MARK: Samples

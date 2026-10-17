@@ -1,0 +1,351 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld of %lld" : {
+      "comment" : "Accessibility value of the review progress: words rated of the session's words",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "%lld words still due today." : {
+      "comment" : "After ending a session early; the argument is how many words are still due",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld word is still due today."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld words are still due today."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "今天还有 %lld 个词到期。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Also met · %@" : {
+      "comment" : "Heading over another sentence the word was met in; the argument is app and date",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另一次遇到 · %@"
+          }
+        }
+      }
+    },
+    "Continue Review" : {
+      "comment" : "Button that starts another session with the words still due",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续复习"
+          }
+        }
+      }
+    },
+    "End" : {
+      "comment" : "Button that ends the review session",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束"
+          }
+        }
+      }
+    },
+    "Forgot" : {
+      "comment" : "Review rating button and the count of words rated so",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "忘了"
+          }
+        }
+      }
+    },
+    "Forgotten words come back once at the end of this session." : {
+      "comment" : "Note in the review summary",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "忘了的词会在本轮最后再出现一次。"
+          }
+        }
+      }
+    },
+    "Last time: %@ · %@" : {
+      "comment" : "Under the review card: the word's previous rating and how long ago",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次：%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Next review: %@." : {
+      "comment" : "When the next words are due; the argument is a day",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一次复习：%@。"
+          }
+        }
+      }
+    },
+    "Nothing to review today" : {
+      "comment" : "Title of the Review page when no word is due",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天没有要复习的词"
+          }
+        }
+      }
+    },
+    "Open Word List ›" : {
+      "comment" : "Link from the Review page to the Word List",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开生词本 ›"
+          }
+        }
+      }
+    },
+    "Pronounce" : {
+      "comment" : "Speaker button and key hint on the review card",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发音"
+          }
+        }
+      }
+    },
+    "Remembered" : {
+      "comment" : "Review rating button and the count of words rated so",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记得"
+          }
+        }
+      }
+    },
+    "Review card" : {
+      "comment" : "Accessibility label of the review card",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复习卡片"
+          }
+        }
+      }
+    },
+    "Review progress" : {
+      "comment" : "Accessibility label of the review session's progress bar",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复习进度"
+          }
+        }
+      }
+    },
+    "Reviewed today" : {
+      "comment" : "Review summary label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天已复习"
+          }
+        }
+      }
+    },
+    "Show Answer" : {
+      "comment" : "Button that reveals the review card",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示答案"
+          }
+        }
+      }
+    },
+    "Space" : {
+      "comment" : "The space bar on a key cap",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空格"
+          }
+        }
+      }
+    },
+    "Stopped for now" : {
+      "comment" : "Title after ending a review session with words still due",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先复习到这里"
+          }
+        }
+      }
+    },
+    "This sentence" : {
+      "comment" : "Small heading over the translation of the review card's sentence",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本句译文"
+          }
+        }
+      }
+    },
+    "Today’s review" : {
+      "comment" : "Accessibility label of the review page's summary",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天的复习"
+          }
+        }
+      }
+    },
+    "Today’s review is done" : {
+      "comment" : "Title when every word due today is reviewed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天的复习做完了"
+          }
+        }
+      }
+    },
+    "Word List · %lld words due today" : {
+      "comment" : "Line above the Review page's title; the argument is how many words are due",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Word List · %lld word due today"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Word List · %lld words due today"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "生词本 · 今天到期 %lld 个词"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Words you mark to learn in the Word List come up here the next day." : {
+      "comment" : "Review page when nothing is learnt yet",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在生词本里标为要学的词，第二天会出现在这里。"
+          }
+        }
+      }
+    },
+    "blank" : {
+      "comment" : "Read out in place of the hidden word in the review card's sentence",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空白"
+          }
+        }
+      }
+    },
+    "word" : {
+      "comment" : "Unit after the big number 1 of words reviewed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个词"
+          }
+        }
+      }
+    },
+    "words" : {
+      "comment" : "Unit after the big number of words reviewed, other than 1",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个词"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

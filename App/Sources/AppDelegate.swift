@@ -237,24 +237,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     if updater != nil {
       services.checkForUpdates = { [weak self] in self?.updater?.checkForUpdates() }
     }
+    // Review, Word List and History speak with the same voice and accent as the panel.
+    let pronounce: (String, Locale.Language, SpeechRate) -> Void = {
+      [speaker] text, language, rate in
+      speaker.accent = PreferencesStore(defaults: .standard).load().accent
+      speaker.say(text, language: language, rate: rate)
+    }
     let navigation = MainNavigation()
     let context = MainWindowContext(
       navigation: navigation, data: data, settings: settings, hotkeys: hotkeys,
       services: services,
       lookUp: { [weak self] text, rect in self?.lookUpFromWindow(text, fieldRect: rect) },
-      pronounce: { [speaker] text, language, rate in
-        speaker.accent = PreferencesStore(defaults: .standard).load().accent
-        speaker.say(text, language: language, rate: rate)
-      },
+      pronounce: pronounce,
       history: HistoryServices(
         lookUpTerm: { [lexicon] term, context in
           await lexicon?.lookup(term, context: context) ?? []
         },
         accent: { PreferencesStore(defaults: .standard).load().accent },
-        pronounce: { [speaker] text, language, rate in
-          speaker.accent = PreferencesStore(defaults: .standard).load().accent
-          speaker.say(text, language: language, rate: rate)
-        },
+        pronounce: pronounce,
         copy: { text in
           NSPasteboard.general.clearContents()
           NSPasteboard.general.setString(text, forType: .string)

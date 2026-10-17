@@ -39,6 +39,8 @@ enum WindowType {
   static let pageTitle = Typography.headword
   /// The date above the title.
   static let pageSubtitle = TextStyle(size: 13)
+  /// After the title: 「48 个词」.
+  static let pageTitleNote = TextStyle(size: 15, weight: .medium)
   /// 「最近查询」, a settings section.
   static let heading = Typography.title
   static let sidebarItem = TextStyle(size: 14)
@@ -79,6 +81,8 @@ enum WindowLayout {
   static let shadowRoom: CGFloat = 4
   /// Between the title and the subtitle of a page.
   static let titleSpacing: CGFloat = 6
+  /// Between the title and the note after it.
+  static let titleNoteSpacing: CGFloat = 8
   /// Between a heading and its card.
   static let headingSpacing: CGFloat = 10
   static let cardRadius: CGFloat = 14

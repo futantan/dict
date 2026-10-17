@@ -36,6 +36,11 @@ protocol WindowVocab: Sendable {
   func historyCounts(since day: LocalDay) async throws -> HistoryCounts
   func deleteEncounter(_ id: Int64) async throws
   func deleteSentenceEvent(_ id: Int64) async throws
+
+  // MARK: - Saved
+
+  func savedTerms() async throws -> [SavedTerm]
+  func exportSavedCSV() async throws -> Data
 }
 
 extension VocabStore: WindowVocab {}
@@ -100,7 +105,9 @@ final class WindowData {
         due: try await vocab.dueCount(on: day))
       let learning = try await vocab.learningCount()
       let totals = try await vocab.totals()
+      let saved = try await vocab.savedTerms()
       today = snapshot
+      self.saved = saved
       dueCount = snapshot.due
       learningCount = learning
       self.totals = totals
@@ -145,4 +152,14 @@ final class WindowData {
 
   /// The History page's filters, entries and selection.
   @ObservationIgnored private(set) lazy var history = HistoryModel(data: self)
+
+  // MARK: - Saved
+
+  /// 生词本: every 要学 term, the most recently met first; read with the rest by `refresh()`,
+  /// so the page and the sidebar's count never disagree.
+  private(set) var saved: [SavedTerm] = []
+
+  func exportSavedCSV() async throws -> Data? {
+    try await vocab?.exportSavedCSV()
+  }
 }

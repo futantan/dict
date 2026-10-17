@@ -117,9 +117,10 @@ struct ReviewTests {
     #expect(data.dueCount == 0)
     #expect(model.phase == .finished(try #require(model.session), nextDue: today.adding(days: 1)))
     let vocab = try #require(data.vocab)
-    // Tomorrow: the forgotten word, and the three marked to learn today.
+    // Tomorrow: the forgotten word, and two of the three marked to learn today; the third,
+    // `resilient`, 生词本's samples remembered up to the top of the ladder.
     let tomorrow = try await vocab.dueReviews(on: today.adding(days: 1), limit: 20)
-    #expect(tomorrow.map(\.term.lemma).sorted() == ["mitigate", "resilient", "run", "ubiquitous"])
+    #expect(tomorrow.map(\.term.lemma).sorted() == ["mitigate", "run", "ubiquitous"])
     // Leaving and coming back the same day keeps the finished session.
     await model.appear()
     #expect(model.session?.reviewed == 9)

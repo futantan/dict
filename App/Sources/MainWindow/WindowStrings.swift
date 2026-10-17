@@ -106,10 +106,4 @@ enum WindowStrings {
       localized: "Seen \(count) times", table: "MainWindow",
       comment: "Pill: how many times a word has been met")
   }
-
-  // MARK: Placeholder pages
-
-  static let comingSoon = String(
-    localized: "This page is on its way.", table: "MainWindow",
-    comment: "Shown on a page that is not built yet")
 }

@@ -94,17 +94,18 @@ final class MainNavigation {
 
   // MARK: - Review
 
-  /// The term a review was asked to start with; the review page starts its session with it
-  /// and clears it with `didStartReview()`.
+  /// The term a review was asked to start with; the review page starts its session with it,
+  /// due or not, then the rest due, and clears it with `didStartReview()`.
   private(set) var reviewTermRequest: Int64?
 
-  /// Opens 复习 on a new session with `termID` first, due or not (生词本's 「现在复习」); nil
-  /// only opens the page.
-  func startReview(with termID: Int64? = nil) {
+  /// 「现在复习」 on 生词本: opens 复习 on a new session with `termID` first.
+  func startReview(with termID: Int64) {
     section = .review
     reviewTermRequest = termID
   }
 
+  /// The review page took `reviewTermRequest`; it is cleared so the same term can be asked
+  /// for again.
   func didStartReview() {
     reviewTermRequest = nil
   }

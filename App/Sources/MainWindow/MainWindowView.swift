@@ -12,7 +12,7 @@ struct MainWindowContext {
   let services: SettingsServices
   /// The Today page's search: the text and the field's rect in the window's content.
   let lookUp: (String, CGRect) -> Void
-  /// Speaks a word on the review page; silent in tests and renders.
+  /// Speaks a word on the Review and Word List pages; silent in tests and renders.
   var pronounce: (String, Locale.Language, SpeechRate) -> Void = { _, _, _ in }
   /// The History page's dictionary, speech, pasteboard and browser.
   var history = HistoryServices()
@@ -50,7 +50,8 @@ struct MainWindowView: View {
     case .today:
       TodayPage(data: context.data, navigation: context.navigation, lookUp: context.lookUp)
     case .history: HistoryPage(data: context.data, services: context.history)
-    case .saved: SavedPage(data: context.data)
+    case .saved:
+      SavedPage(data: context.data, navigation: context.navigation, pronounce: context.pronounce)
     case .review:
       ReviewPage(
         data: context.data, navigation: context.navigation, pronounce: context.pronounce)

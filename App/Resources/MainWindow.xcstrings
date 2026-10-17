@@ -239,17 +239,6 @@
         }
       }
     },
-    "This page is on its way." : {
-      "comment" : "Shown on a page that is not built yet",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这一页还在做。"
-          }
-        }
-      }
-    },
     "To review" : {
       "comment" : "Today page figure label",
       "localizations" : {

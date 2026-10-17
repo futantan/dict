@@ -5,10 +5,12 @@ import SwiftUI
 /// The main window's shared pieces (Design/main-app/*.html), built from `WindowTheme` and
 /// the panel's components.
 
-/// A page's title, with an optional line above it: 「10 月 17 日 星期六」 / 「今天」.
+/// A page's title, with an optional line above it: 「10 月 17 日 星期六」 / 「今天」, and an
+/// optional quieter note after it: 「生词本 48 个词」.
 struct PageHeader: View {
   let title: String
   var subtitle: String?
+  var titleNote: String?
 
   var body: some View {
     VStack(alignment: .leading, spacing: WindowLayout.titleSpacing) {
@@ -17,11 +19,18 @@ struct PageHeader: View {
           .font(WindowType.pageSubtitle.font)
           .foregroundStyle(Color(Palette.textSecondary))
       }
-      Text(title)
-        .font(WindowType.pageTitle.font)
-        .tracking(WindowType.pageTitle.tracking)
-        .foregroundStyle(Color(Palette.textPrimary))
-        .accessibilityAddTraits(.isHeader)
+      HStack(alignment: .firstTextBaseline, spacing: WindowLayout.titleNoteSpacing) {
+        Text(title)
+          .font(WindowType.pageTitle.font)
+          .tracking(WindowType.pageTitle.tracking)
+          .foregroundStyle(Color(Palette.textPrimary))
+          .accessibilityAddTraits(.isHeader)
+        if let titleNote {
+          Text(titleNote)
+            .font(WindowType.pageTitleNote.font)
+            .foregroundStyle(Color(Palette.textSecondary))
+        }
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
@@ -299,17 +308,25 @@ extension View {
 /// A page: its header fixed in the top margin, then its content scrolling in the page
 /// margins. The scroll view starts below the header, so nothing scrolls under the traffic
 /// lights; one that reaches the title bar also draws blank offscreen on macOS 26.
-struct PageScaffold<Content: View>: View {
+///
+/// An accessory, such as 生词本's export menu, sits at the header's trailing edge, on the
+/// title's bottom.
+struct PageScaffold<Content: View, Accessory: View>: View {
   let title: String
   var subtitle: String?
+  var titleNote: String?
+  @ViewBuilder let accessory: Accessory
   @ViewBuilder let content: Content
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      PageHeader(title: title, subtitle: subtitle)
-        .padding(.top, WindowLayout.pageTop)
-        .padding(.horizontal, WindowLayout.pageSide)
-        .padding(.bottom, WindowLayout.pageSpacing - WindowLayout.shadowRoom)
+      HStack(alignment: .bottom, spacing: Spacing.input) {
+        PageHeader(title: title, subtitle: subtitle, titleNote: titleNote)
+        accessory
+      }
+      .padding(.top, WindowLayout.pageTop)
+      .padding(.horizontal, WindowLayout.pageSide)
+      .padding(.bottom, WindowLayout.pageSpacing - WindowLayout.shadowRoom)
       ScrollView {
         content
           .padding(.top, WindowLayout.shadowRoom)
@@ -318,5 +335,11 @@ struct PageScaffold<Content: View>: View {
           .frame(maxWidth: .infinity, alignment: .topLeading)
       }
     }
+  }
+}
+
+extension PageScaffold where Accessory == EmptyView {
+  init(title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+    self.init(title: title, subtitle: subtitle, accessory: { EmptyView() }, content: content)
   }
 }

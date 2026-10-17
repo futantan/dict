@@ -36,7 +36,9 @@ struct HistoryTests {
       locale: english, appName: { _ in nil })
 
     #expect(
-      sections.map(\.title) == ["Today", "Yesterday", "Oct 15", "Oct 14", "Oct 13", "Oct 12", "Oct 9"])
+      sections.map(\.title) == [
+        "Today", "Yesterday", "Oct 15", "Oct 14", "Oct 13", "Oct 12", "Oct 9",
+      ])
     #expect(sections.map(\.lines.count).reduce(0, +) == history.items.count)
     #expect(history.counts.total == history.items.count)
     #expect(!history.hasMore)

@@ -90,6 +90,8 @@ struct MainWindowGalleryTests {
       (
         "history-empty", try await Self.historyData(empty: true) { _ in }, { $0.section = .history }
       ),
+      ("saved", sample, { $0.section = .saved }),
+      ("saved-empty", try await MainWindowGallery.emptyData(), { $0.section = .saved }),
     ]
     let reviewStates = try await ReviewGalleryTests.states()
     for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {

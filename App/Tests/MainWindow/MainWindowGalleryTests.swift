@@ -44,6 +44,30 @@ struct MainWindowGalleryTests {
     #expect(!window.isVisible)
   }
 
+  /// At the smallest size, what does not fit scrolls: every scroll view of every page lies
+  /// inside the window, so its end can be scrolled into view rather than cut off.
+  @Test(arguments: MainWindowDemo.State.allCases)
+  func everyScrollViewEndsInsideTheWindow(_ state: MainWindowDemo.State) async throws {
+    let controller = try await MainWindowDemo.makeController(state, width: nil)
+    let window = try #require(controller.window)
+    let content = try #require(window.contentView)
+    window.setContentSize(WindowLayout.minimumSize)
+    content.layoutSubtreeIfNeeded()
+    try await Task.sleep(for: .milliseconds(100))
+    content.layoutSubtreeIfNeeded()
+    func scrollViews(in view: NSView) -> [NSScrollView] {
+      (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+    }
+    let found = scrollViews(in: content)
+    #expect(!found.isEmpty)
+    for scroll in found {
+      let frame = scroll.convert(scroll.bounds, to: content)
+      #expect(
+        content.bounds.insetBy(dx: -0.5, dy: -0.5).contains(frame),
+        "\(state.rawValue): \(frame) in \(content.bounds)")
+    }
+  }
+
   /// The gallery's windows keep their settings in the temporary directory, so test runs
   /// leave no files in ~/Library/Preferences.
   @Test func theGalleryDefaultsStayInTheTemporaryDirectory() throws {

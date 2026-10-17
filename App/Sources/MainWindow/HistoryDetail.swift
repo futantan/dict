@@ -50,13 +50,15 @@ struct HistoryDetail: View {
       VStack(alignment: .leading, spacing: Spacing.section) {
         switch activity {
         case .lookup(let lookup):
-          LookupDetail(
-            lookup: lookup, model: model, services: services, timeZone: timeZone,
-            requestDelete: requestDelete)
+          LookupDetail(lookup: lookup, model: model, services: services, timeZone: timeZone)
         case .sentence(let event):
-          SentenceDetail(
-            event: event, services: services, timeZone: timeZone, requestDelete: requestDelete)
+          SentenceDetail(event: event, services: services, timeZone: timeZone)
         }
+        // On a line of its own for every kind, away from the actions, so it never wraps
+        // under them on its own.
+        CardDivider()
+        DeleteButton(action: requestDelete)
+          .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .padding(.top, HistoryLayout.detailPadding)
       .padding(.horizontal, HistoryLayout.detailPadding)
@@ -71,7 +73,6 @@ private struct LookupDetail: View {
   let model: HistoryModel
   let services: HistoryServices
   let timeZone: TimeZone
-  let requestDelete: () -> Void
 
   /// The dictionary entry of the encounter it was looked up for.
   @State private var entry: (id: Int64, entry: LexiconEntry?)?
@@ -114,7 +115,6 @@ private struct LookupDetail: View {
           services.openURL(url)
         }
       }
-      DeleteButton(action: requestDelete)
     }
     .padding(.top, Spacing.tight)
   }
@@ -130,7 +130,6 @@ private struct SentenceDetail: View {
   let event: SentenceEvent
   let services: HistoryServices
   let timeZone: TimeZone
-  let requestDelete: () -> Void
 
   var body: some View {
     let line = HistoryLine(.sentence(event), timeZone: timeZone, locale: SettingsText.uiLocale)
@@ -172,7 +171,6 @@ private struct SentenceDetail: View {
       SecondaryButton(title: HistoryStrings.copy, symbol: "doc.on.doc") {
         services.copy(event.result)
       }
-      DeleteButton(action: requestDelete)
     }
     .padding(.top, Spacing.tight)
   }
@@ -249,7 +247,7 @@ private struct SourceSection: View {
   }
 }
 
-/// 「删除这条记录」: red text on no fill, pushed to the trailing edge when the row has room.
+/// 「删除这条记录」: red text on no fill.
 private struct DeleteButton: View {
   let action: () -> Void
 
@@ -268,26 +266,18 @@ private struct DeleteButton: View {
     }
     .buttonStyle(.plain)
     .focusRing(Capsule())
-    .layoutValue(key: FlowLayout.PushesToEnd.self, value: true)
   }
 }
 
-/// Lays its views out in rows like words, wrapping when a row is full. A view marked
-/// `PushesToEnd` goes to the trailing edge of its row.
+/// Lays its views out in rows like words, wrapping when a row is full.
 struct FlowLayout: Layout {
-  struct PushesToEnd: LayoutValueKey {
-    static let defaultValue = false
-  }
-
   var spacing: CGFloat
 
   func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
     let rows = rows(for: subviews, width: proposal.width ?? .infinity)
     let width = rows.map(\.width).max() ?? 0
     let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
-    // The whole width offered, so a view pushed to the end reaches the trailing edge.
-    let offered = proposal.width.flatMap { $0.isFinite ? $0 : nil }
-    return CGSize(width: offered ?? width, height: height)
+    return CGSize(width: width, height: height)
   }
 
   func placeSubviews(
@@ -298,9 +288,6 @@ struct FlowLayout: Layout {
       var x = bounds.minX
       for index in row.indices {
         let size = subviews[index].sizeThatFits(.unspecified)
-        if subviews[index][PushesToEnd.self], index == row.indices.last {
-          x = max(x, bounds.maxX - size.width)
-        }
         subviews[index].place(
           at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
         x += size.width + spacing

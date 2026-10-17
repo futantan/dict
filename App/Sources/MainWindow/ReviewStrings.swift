@@ -12,6 +12,13 @@ enum ReviewStrings {
       comment: "Line above the Review page's title; the argument is how many words are due")
   }
 
+  /// 「生词本 · 本轮 9 个词」: the N of 「n / N」, while the sidebar counts what is still due.
+  static func thisSession(_ count: Int) -> String {
+    String(
+      localized: "Word List · \(count) words this session", table: "Review",
+      comment: "Line above the Review page's title in a session; the argument is its word count")
+  }
+
   static let end = String(
     localized: "End", table: "Review", comment: "Button that ends the review session")
   static let progress = String(

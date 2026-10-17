@@ -302,6 +302,41 @@
         }
       }
     },
+    "Word List · %lld words this session" : {
+      "comment" : "Line above the Review page's title in a session; the argument is its word count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Word List · %lld word this session"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Word List · %lld words this session"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "生词本 · 本轮 %lld 个词"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Words you mark to learn in the Word List come up here the next day." : {
       "comment" : "Review page when nothing is learnt yet",
       "localizations" : {

@@ -181,6 +181,27 @@ struct ReviewTests {
 
   // MARK: Wording
 
+  /// The hints under the card name only the keys that work: Space before the answer shows,
+  /// 1 and 2 after; P where pronouncing does not give the answer away.
+  @Test func theKeyHintsFollowTheCard() {
+    let keys = { (isRevealed: Bool, canPronounce: Bool) in
+      KeyHint.current(isRevealed: isRevealed, canPronounce: canPronounce).map(\.key)
+    }
+    #expect(keys(false, false) == [ReviewStrings.spaceKey])
+    #expect(keys(false, true) == [ReviewStrings.spaceKey, "P"])
+    #expect(keys(true, true) == ["1", "2", "P"])
+    #expect(
+      KeyHint.current(isRevealed: true, canPronounce: true).map(\.title)
+        == [ReviewStrings.forgot, ReviewStrings.remembered, ReviewStrings.pronounce])
+  }
+
+  /// During a session the header counts the session's words, as 「3 / 9」 does; the sidebar's
+  /// badge and the header out of a session count what is still due.
+  @Test func theHeaderCountsTheSession() {
+    #expect(ReviewStrings.thisSession(9) == "Word List · 9 words this session")
+    #expect(ReviewStrings.thisSession(1) == "Word List · 1 word this session")
+  }
+
   @Test func daysReadAsTheInterfaceSaysThem() {
     let english = Locale(identifier: "en_US")
     let threeDaysAgo = MainWindowGallery.now.addingTimeInterval(-3 * 86_400 - 3600)

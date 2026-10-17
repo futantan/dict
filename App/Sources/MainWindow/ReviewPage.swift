@@ -75,9 +75,10 @@ struct ReviewPage: View {
   }
 
   private var subtitle: String {
-    // The session's words while reviewing, then what is still due.
+    // The session's words while reviewing, as 「3 / 9」 counts them; otherwise what is still
+    // due, as the sidebar's badge counts it.
     if case .reviewing(let session) = model.phase {
-      return ReviewStrings.dueToday(session.total)
+      return ReviewStrings.thisSession(session.total)
     }
     return ReviewStrings.dueToday(data.dueCount)
   }
@@ -148,7 +149,8 @@ struct ReviewPage: View {
           .font(WindowType.footnote.font)
           .foregroundStyle(Color(Palette.textSecondary))
         }
-        KeyHints()
+        KeyHints(
+          hints: KeyHint.current(isRevealed: session.isRevealed, canPronounce: canPronounce))
       }
       .background {
         Button("") { if canPronounce { say(card) } }
@@ -457,14 +459,32 @@ private struct RatingButton: View {
   }
 }
 
-/// 空格 显示答案 · 1 忘了 · 2 记得 · P 发音.
+/// A key and what it does on the card now: 「空格 显示答案」.
+struct KeyHint: Equatable {
+  let key: String
+  let title: String
+
+  /// Space to reveal before the answer shows, then 1 and 2 to rate; P wherever pronouncing
+  /// gives nothing away: always after the reveal, before it only when the card asks with
+  /// the word itself.
+  static func current(isRevealed: Bool, canPronounce: Bool) -> [KeyHint] {
+    var hints =
+      isRevealed
+      ? [KeyHint(key: "1", title: ReviewStrings.forgot),
+        KeyHint(key: "2", title: ReviewStrings.remembered)]
+      : [KeyHint(key: ReviewStrings.spaceKey, title: ReviewStrings.showAnswer)]
+    if canPronounce { hints.append(KeyHint(key: "P", title: ReviewStrings.pronounce)) }
+    return hints
+  }
+}
+
+/// The keys that work on the card now: 空格 显示答案, then 1 忘了 · 2 记得 · P 发音.
 private struct KeyHints: View {
+  let hints: [KeyHint]
+
   var body: some View {
     HStack(spacing: Spacing.pill + 2) {
-      hint(ReviewStrings.spaceKey, ReviewStrings.showAnswer)
-      hint("1", ReviewStrings.forgot)
-      hint("2", ReviewStrings.remembered)
-      hint("P", ReviewStrings.pronounce)
+      ForEach(hints, id: \.key) { hint($0.key, $0.title) }
     }
     .font(WindowType.detail.font)
     .foregroundStyle(Color(Palette.textSecondary))

@@ -49,5 +49,7 @@ struct WindowStringsTests {
     #expect(try chinese("word", table: "MainWindow") == "个词")
     #expect(try chinese("words", table: "MainWindow") == "个词")
     #expect(try chinese("Seen %lld times", table: "MainWindow", 5) == "第 5 次")
+    #expect(
+      try chinese("Word List · %lld words this session", table: "Review", 9) == "生词本 · 本轮 9 个词")
   }
 }

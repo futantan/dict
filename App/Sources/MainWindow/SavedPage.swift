@@ -228,7 +228,8 @@ private struct FilterBar: View {
         }
         .buttonStyle(.plain)
         .focusRing(
-          RoundedRectangle(cornerRadius: WindowLayout.segmentRadius, style: .continuous))
+          RoundedRectangle(cornerRadius: WindowLayout.segmentRadius, style: .continuous)
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }

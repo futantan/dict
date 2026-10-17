@@ -470,8 +470,10 @@ struct KeyHint: Equatable {
   static func current(isRevealed: Bool, canPronounce: Bool) -> [KeyHint] {
     var hints =
       isRevealed
-      ? [KeyHint(key: "1", title: ReviewStrings.forgot),
-        KeyHint(key: "2", title: ReviewStrings.remembered)]
+      ? [
+        KeyHint(key: "1", title: ReviewStrings.forgot),
+        KeyHint(key: "2", title: ReviewStrings.remembered),
+      ]
       : [KeyHint(key: ReviewStrings.spaceKey, title: ReviewStrings.showAnswer)]
     if canPronounce { hints.append(KeyHint(key: "P", title: ReviewStrings.pronounce)) }
     return hints

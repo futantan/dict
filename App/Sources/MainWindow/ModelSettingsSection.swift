@@ -366,7 +366,8 @@ private struct ProviderPicker: View {
         }
         .buttonStyle(.plain)
         .focusRing(
-          RoundedRectangle(cornerRadius: ModelCardLayout.segmentRadius, style: .continuous))
+          RoundedRectangle(cornerRadius: ModelCardLayout.segmentRadius, style: .continuous)
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }

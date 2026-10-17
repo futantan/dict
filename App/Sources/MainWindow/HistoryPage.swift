@@ -399,7 +399,8 @@ private struct KindPicker: View {
         }
         .buttonStyle(.plain)
         .focusRing(
-          RoundedRectangle(cornerRadius: HistoryLayout.segmentRadius, style: .continuous))
+          RoundedRectangle(cornerRadius: HistoryLayout.segmentRadius, style: .continuous)
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }

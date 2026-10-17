@@ -230,7 +230,8 @@ private struct SourceSection: View {
           Button(site) { openURL(url) }
             .buttonStyle(.plain)
             .focusRing(
-              RoundedRectangle(cornerRadius: Radius.partOfSpeech, style: .continuous))
+              RoundedRectangle(cornerRadius: Radius.partOfSpeech, style: .continuous)
+            )
             .foregroundStyle(Color(Palette.accent))
             .help(url.absoluteString)))
     }

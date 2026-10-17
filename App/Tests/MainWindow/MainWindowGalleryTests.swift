@@ -46,7 +46,7 @@ struct MainWindowGalleryTests {
     let context = MainWindowContext(
       navigation: MainNavigation(), data: data, settings: settings,
       hotkeys: HotkeyCenter(defaults: defaults), services: services, lookUp: { _, _ in })
-    return MainWindowController(context: context)
+    return MainWindowController(context: context, frameName: nil)
   }
 
   @Test func everyPageLaysOutAtTheMinimumSize() async throws {

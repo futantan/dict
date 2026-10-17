@@ -238,14 +238,14 @@ let settingsIndex: ([AXUIElement]) -> Int? = { items in
   items.firstIndex { attribute($0, kAXMenuItemCmdCharAttribute) as? String == "," }
 }
 for (what, pick) in [
-  ("Settings window", settingsIndex),
+  ("main window on Settings", settingsIndex),
   ("About panel", { settingsIndex($0).map { $0 + 1 } }),
 ] {
   previous = frontApp()
   let app = launch(["--no-onboarding"])
   pressMenuItem(app, what, pick)
   passed.append(expectFrontAndKey(app, what))
-  if what == "Settings window" { passed.append(expectFocusReturns(app, to: previous, what)) }
+  // With its Dock icon Dict is a regular app and stays active when its window closes.
   quitLaunched()
 }
 
@@ -253,7 +253,7 @@ for (what, pick) in [
 // event is what Finder, Spotlight and `open` send to a running app. It goes to this
 // instance's pid, because another copy of the app may be running too.
 for (completed, what) in [
-  ("NO", "first-run window on reopen"), ("YES", "Settings window on reopen"),
+  ("NO", "first-run window on reopen"), ("YES", "main window on reopen"),
 ] {
   let app = launch(["--no-onboarding", "-onboarding.completed", completed])
   _ = waitFor(

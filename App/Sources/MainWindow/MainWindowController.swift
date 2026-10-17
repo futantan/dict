@@ -13,8 +13,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
   let context: MainWindowContext
   /// Called after the window closed.
   var onClose: () -> Void = {}
+  private let focus = FocusReturn()
 
-  init(context: MainWindowContext) {
+  /// - Parameter frameName: where the window's frame is remembered in the user defaults;
+  ///   nil for windows that are only rendered, so they leave the user's alone.
+  init(context: MainWindowContext, frameName: String? = "MainWindow") {
     self.context = context
     let hosting = NSHostingController(rootView: MainWindowView(context: context))
     hosting.sizingOptions = []
@@ -36,8 +39,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     window.isReleasedWhenClosed = false
     window.center()
     // Where the user left it last time, if anywhere.
-    window.setFrameUsingName(Self.frameName)
-    window.setFrameAutosaveName(Self.frameName)
+    if let frameName {
+      window.setFrameUsingName(frameName)
+      window.setFrameAutosaveName(frameName)
+    }
     super.init(window: window)
     window.delegate = self
   }
@@ -57,9 +62,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     present()
   }
 
-  private static let frameName = "MainWindow"
-
   private func present() {
+    focus.remember()
     window?.makeKeyAndOrderFront(nil)
     NSApp.activateFromFrontApp()
   }
@@ -79,6 +83,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
   func windowWillClose(_ notification: Notification) {
     window?.makeFirstResponder(nil)
     context.settings.commitKey()
+    // Without a Dock icon Dict has nothing left to show, so the app the user came from gets
+    // the focus back; a regular app stays active with no windows, as on any Mac.
+    if let window, NSApp.activationPolicy() == .accessory { focus.restore(closing: window) }
     onClose()
   }
 }

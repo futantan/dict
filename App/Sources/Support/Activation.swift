@@ -21,8 +21,8 @@ extension NSApplication {
 }
 
 /// Gives focus back to the app that was in front before one of Dict's windows opened, once
-/// that window closes. Dict has no Dock icon and no other windows, so without this it stays
-/// the active app with nothing to type into until the user clicks somewhere.
+/// that window closes. Without a Dock icon Dict has no other windows, so without this it
+/// stays the active app with nothing to type into until the user clicks somewhere.
 @MainActor
 final class FocusReturn {
   private var previous: NSRunningApplication?

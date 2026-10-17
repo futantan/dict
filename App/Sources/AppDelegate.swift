@@ -105,10 +105,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     permissions.start()
     observeOwnWindows()
 
-    // `--no-onboarding` launches in the background for scripts: no window at all.
-    if showingOnboarding {
-      if onboardingCompleted { openMainWindow() } else { showOnboarding() }
-    }
     // Silent: renders one word so the first ⌘P on a card speaks at once (architecture 9).
     let preferences = PreferencesStore(defaults: .standard).load()
     speaker.accent = preferences.accent
@@ -124,6 +120,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     Log.ui.info(
       "started: accessibility \(self.permissions.status.accessibility, privacy: .public), shortcuts \(self.hotkeys.shortcuts.count, privacy: .public)"
     )
+    // Last, once the updater and everything the window shows are wired. `--no-onboarding`
+    // launches in the background for scripts: no window at all.
+    if showingOnboarding {
+      if onboardingCompleted { openMainWindow() } else { showOnboarding() }
+    }
   }
 
   private func makeCoordinator(reader: AccessibilitySelectionReader) -> SessionCoordinator {

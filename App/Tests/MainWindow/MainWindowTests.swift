@@ -49,7 +49,7 @@ struct MainWindowTests {
       WindowLayout.minimumSize.width - WindowLayout.sidebarWidth - 0.5 - WindowLayout.pageSide
       * 2 - WindowLayout.settingsListWidth - WindowLayout.settingsSpacing
       - NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
-    let center = HotkeyCenter(defaults: MainWindowGallery.scratchDefaults())
+    let center = HotkeyCenter(defaults: .scratch("MainWindowTests"))
     func height(_ subtitle: String) -> CGFloat {
       let row = SettingsRow(title: "写", subtitle: subtitle) {
         ShortcutRecorder(

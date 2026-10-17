@@ -33,6 +33,24 @@ struct MainWindowGalleryTests {
     #expect(!window.isVisible)
   }
 
+  /// The gallery's windows keep their settings in the temporary directory, so test runs
+  /// leave no files in ~/Library/Preferences.
+  @Test func theGalleryDefaultsStayInTheTemporaryDirectory() throws {
+    let preferences = FileManager.default.homeDirectoryForCurrentUser.appending(
+      path: "Library/Preferences")
+    func galleryFiles() throws -> Set<String> {
+      Set(
+        try FileManager.default.contentsOfDirectory(atPath: preferences.path())
+          .filter { $0.hasPrefix("MainWindowGallery") })
+    }
+    let before = try galleryFiles()
+    let defaults = MainWindowGallery.scratchDefaults()
+    defaults.set(true, forKey: "written")
+    defaults.synchronize()
+    #expect(defaults.bool(forKey: "written"))
+    #expect(try galleryFiles() == before)
+  }
+
   @Test func everyDemoStateOpensOnItsPage() async throws {
     for state in MainWindowDemo.State.allCases {
       let controller = try await MainWindowDemo.makeController(state, width: 960)

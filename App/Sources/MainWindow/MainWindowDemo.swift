@@ -10,9 +10,7 @@
     /// A window over `data` with settings that never touch the user's defaults or keychain:
     /// a defaults suite of its own and a placeholder key in memory.
     static func makeController(data: WindowData) -> MainWindowController {
-      let suite = "MainWindowGallery.\(UUID().uuidString)"
-      let defaults = UserDefaults(suiteName: suite) ?? UserDefaults()
-      defaults.removePersistentDomain(forName: suite)
+      let defaults = scratchDefaults()
       var preferences = Preferences()
       preferences.model.providerID = "openai"
       PreferencesStore(defaults: defaults).save(preferences)
@@ -40,6 +38,15 @@
         hotkeys: HotkeyCenter(defaults: defaults), services: services, lookUp: { _, _ in },
         history: HistoryServices(lookUpTerm: { lexicon($0, context: $1) }))
       return MainWindowController(context: context, frameName: nil)
+    }
+
+    /// A new, empty defaults suite in the temporary directory. A suite named by an absolute
+    /// path is kept in that file; one named otherwise lands in ~/Library/Preferences and
+    /// stays there, as removing its domain leaves the file behind.
+    static func scratchDefaults() -> UserDefaults {
+      let file = FileManager.default.temporaryDirectory.appending(
+        path: "MainWindowGallery-\(UUID().uuidString)-defaults")
+      return UserDefaults(suiteName: file.path()) ?? UserDefaults()
     }
 
     /// The sample data on the Review page after answering `answers`.

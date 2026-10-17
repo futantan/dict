@@ -18,6 +18,16 @@ struct SavedRowContext {
     return [encounter.sourceApp.flatMap(appName), when].compactMap(\.self)
       .joined(separator: " · ")
   }
+
+  /// The table's 最近遇到: 「10 月 15 日 · Safari 浏览器」, the day first, so a long app name
+  /// is what the column cuts.
+  func lastSeen(_ encounter: Encounter?) -> String {
+    guard let encounter else { return "" }
+    let when = SavedStrings.when(
+      encounter.seenAt, now: now, timeZone: timeZone, locale: locale, withTime: false)
+    return [when, encounter.sourceApp.flatMap(appName)].compactMap(\.self)
+      .joined(separator: " · ")
+  }
 }
 
 /// The table of 要学 words in its card; it scrolls sideways when narrower than its columns.
@@ -94,18 +104,24 @@ struct SavedTable: View {
     let isSelected = saved.term.id == selectedID
     return HStack(spacing: 0) {
       cell(width: WindowLayout.savedWordColumn) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(saved.term.lemma)
-            .font(WindowType.term.font)
-            .foregroundStyle(Color(Palette.textPrimary))
-          // A blank line without a phonetic, so every row is as tall.
-          let phonetic = saved.card?.phonetic ?? ""
+        let lemma = Text(saved.term.lemma)
+          .font(WindowType.term.font)
+          .foregroundStyle(Color(Palette.textPrimary))
+          .lineLimit(1)
+        let phonetic = saved.card?.phonetic ?? ""
+        let lines = VStack(alignment: .leading, spacing: 2) {
+          lemma
           Text(phonetic.isEmpty ? " " : phonetic)
             .font(WindowType.savedPhonetic.font)
             .foregroundStyle(Color(Palette.textSecondary))
-            .accessibilityHidden(phonetic.isEmpty)
+            .lineLimit(1)
         }
-        .lineLimit(1)
+        if phonetic.isEmpty {
+          // As tall as a word with its phonetic, so every row is, with the word centred.
+          lines.hidden().overlay(alignment: .leading) { lemma }
+        } else {
+          lines
+        }
       }
       cell {
         HStack(spacing: Spacing.buttons) {
@@ -122,7 +138,7 @@ struct SavedTable: View {
         TablePill(text: SavedStrings.timesSeen(saved.term.encounterCount))
       }
       cell(width: WindowLayout.savedLastSeenColumn) {
-        Text(context.seen(saved.encounters.first, withTime: false))
+        Text(context.lastSeen(saved.encounters.first))
           .font(WindowType.footnote.font)
           .foregroundStyle(Color(Palette.textSecondary))
           .lineLimit(1)

@@ -119,6 +119,23 @@ struct SavedPageTests {
         == marked.index(marked.startIndex, offsetByCharacters: 13))
   }
 
+  /// The table's 最近遇到 puts the day before the app, so a long app name never hides it.
+  @Test func theTableShowsTheDayBeforeTheApp() async throws {
+    let store = try MainWindowGallery.makeStore()
+    let term = try await store.recordLookup(
+      LookupRecord(
+        language: "en", lemma: "run", surface: "run", source: .typed,
+        sourceApp: "com.apple.Safari", day: monday, seenAt: start))
+    try await store.setTier(.learning, termID: term.id, on: monday)
+    let encounter = try await store.savedTerms().first?.encounters.first
+    let context = SavedRowContext(
+      now: start.addingTimeInterval(3 * 86_400), timeZone: .gmt,
+      locale: Locale(identifier: "en_US"), appName: { _ in "Safari" })
+
+    #expect(context.lastSeen(encounter) == "Oct 5 · Safari")
+    #expect(context.seen(encounter, withTime: false) == "Safari · Oct 5")
+  }
+
   @Test func datesSayTodayAndYesterday() {
     let now = MainWindowGallery.now
     let zone = MainWindowGallery.timeZone

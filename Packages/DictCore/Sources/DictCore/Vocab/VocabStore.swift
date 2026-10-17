@@ -31,9 +31,14 @@ public actor VocabStore {
   /// Records one lookup and returns the term with the count including it. The term is keyed by
   /// `normalizedKey(lookup.lemma)`; the first lemma seen keeps being its display form.
   public func recordLookup(_ lookup: LookupRecord) throws -> TermSummary {
+    try record(lookup).term
+  }
+
+  /// `recordLookup` that also returns the new encounter, for `completeLookup`.
+  public func record(_ lookup: LookupRecord) throws -> RecordedLookup {
     let key = normalizedKey(lookup.lemma)
     guard !key.isEmpty else { throw VocabError.emptyLemma }
-    return try db.transaction { () throws(VocabError) -> TermSummary in
+    return try db.transaction { () throws(VocabError) -> RecordedLookup in
       let seenAt = VocabValue.integer(Self.seconds(lookup.seenAt))
       let termID = try db.scalar(
         """
@@ -72,7 +77,25 @@ public actor VocabStore {
       if let rule = autoPromotion, try reachesPromotion(termID, encounterID, rule) {
         try promote(termID, on: lookup.day)
       }
-      return try summary(termID).orThrow()
+      return RecordedLookup(term: try summary(termID).orThrow(), encounterID: encounterID)
+    }
+  }
+
+  /// Adds what the model's card brings to a lookup recorded before it arrived: the sense and
+  /// sentence translation to the encounter, the card to its term as the latest one. Does
+  /// nothing when the encounter has been deleted meanwhile.
+  public func completeLookup(
+    encounterID: Int64, card: StoredCard, sense: String?, sentenceTranslation: String?
+  ) throws {
+    try db.transaction { () throws(VocabError) in
+      try db.rows(
+        "UPDATE encounter SET sense = ?, sentence_translation = ? WHERE id = ?",
+        [sense.vocabValue, sentenceTranslation.vocabValue, .integer(encounterID)])
+      try db.rows(
+        """
+        UPDATE term SET card_json = ?, card_version = ?
+        WHERE id = (SELECT term_id FROM encounter WHERE id = ?)
+        """, [.text(card.json), .integer(Int64(card.version)), .integer(encounterID)])
     }
   }
 

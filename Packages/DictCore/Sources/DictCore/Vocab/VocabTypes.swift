@@ -203,6 +203,12 @@ public struct TermSummary: Hashable, Sendable {
   public var lastSeenAt: Date
 }
 
+/// A lookup just recorded: its term, the count including it, and the new encounter.
+public struct RecordedLookup: Hashable, Sendable {
+  public var term: TermSummary
+  public var encounterID: Int64
+}
+
 public struct Encounter: Hashable, Sendable {
   public var id: Int64
   public var termID: Int64

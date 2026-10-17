@@ -242,6 +242,42 @@ struct VocabStoreLookupTests {
     #expect(try await store.recordLookup(lookup("run", minute: 3, card: newer)).card == newer)
   }
 
+  @Test func completesALookupWithItsCardLater() async throws {
+    let url = try temporaryDirectory().appending(path: "vocab.sqlite")
+    let store = try VocabStore(url: url)
+    let card = StoredCard(json: #"{"lemma":"run"}"#, version: 1)
+    let first = try await store.record(lookup("run", sentence: "She ran a bakery.", sense: nil))
+    let latest = try await store.record(lookup("run", minute: 1))
+    _ = try await store.recordLookup(lookup("walk", minute: 2))
+    #expect(first.term.encounterCount == 1)
+    #expect(latest.term.encounterCount == 2)
+
+    try await store.completeLookup(
+      encounterID: first.encounterID, card: card, sense: "经营", sentenceTranslation: "她经营面包店。")
+
+    let lookups = try await store.day(monday).lookups
+    #expect(lookups.map(\.encounter.id) == [first.encounterID, latest.encounterID, 3])
+    #expect(lookups[0].encounter.sense == "经营")
+    #expect(lookups[0].encounter.sentenceTranslation == "她经营面包店。")
+    // Only that encounter changes, and the term keeps the card as the latest one.
+    #expect(lookups[1].encounter.sense == nil)
+    #expect(lookups.map(\.term.card) == [card, card, nil])
+    #expect(lookups.map(\.term.encounterCount) == [2, 2, 1])
+  }
+
+  @Test func completingAMissingLookupDoesNothing() async throws {
+    let url = try temporaryDirectory().appending(path: "vocab.sqlite")
+    let store = try VocabStore(url: url)
+    let recorded = try await store.record(lookup("run"))
+    try await store.deleteDay(monday)
+
+    try await store.completeLookup(
+      encounterID: recorded.encounterID, card: StoredCard(json: "{}", version: 1), sense: "跑",
+      sentenceTranslation: nil)
+    #expect(try count(url, "encounter") == 0)
+    #expect(try count(url, "term") == 0)
+  }
+
   @Test func searchesLemmasAndSensesPrefixFirst() async throws {
     let url = try temporaryDirectory().appending(path: "vocab.sqlite")
     let store = try VocabStore(url: url)

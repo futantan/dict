@@ -87,6 +87,9 @@ public struct WordCard: Codable, Sendable, Equatable {
   public static let maxOtherSenses = 3
   public static let maxExamples = 2
   public static let maxCollocations = 3
+  /// The `StoredCard.version` a card is kept with in the vocabulary log; it changes when this
+  /// structure does.
+  public static let storedVersion = 1
 }
 
 /// Why a card answer is unusable.

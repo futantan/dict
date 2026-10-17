@@ -14,6 +14,7 @@ struct TodayPage: View {
 
   @State private var query = ""
   @State private var fieldFrame = CGRect.zero
+  @State private var width: CGFloat = 0
   @FocusState private var isSearchFocused: Bool
 
   var body: some View {
@@ -21,14 +22,25 @@ struct TodayPage: View {
       VStack(alignment: .leading, spacing: WindowLayout.pageSpacing) {
         searchField
         figures
-        HStack(alignment: .top, spacing: WindowLayout.pageSpacing) {
+        if WindowLayout.showsSideColumn(width: width) {
+          HStack(alignment: .top, spacing: WindowLayout.pageSpacing) {
+            recent
+              .frame(maxWidth: .infinity)
+              .layoutPriority(1)
+            frequent
+              .frame(
+                minWidth: WindowLayout.sideColumnMinWidth,
+                maxWidth: WindowLayout.sideColumnMaxWidth)
+          }
+        } else {
           recent
-            .frame(maxWidth: .infinity)
-            .layoutPriority(1)
           frequent
-            .frame(
-              minWidth: WindowLayout.sideColumnMinWidth, maxWidth: WindowLayout.sideColumnMaxWidth)
         }
+      }
+      .onGeometryChange(for: CGFloat.self) {
+        $0.size.width
+      } action: {
+        width = $0
       }
     }
     .onChange(of: navigation.searchFocusRequest, initial: true) { _, request in

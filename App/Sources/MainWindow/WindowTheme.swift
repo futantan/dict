@@ -98,6 +98,15 @@ enum WindowLayout {
   /// The narrower column beside a list: 「反复遇到，还没标要学」.
   static let sideColumnMinWidth: CGFloat = 280
   static let sideColumnMaxWidth: CGFloat = 340
+  /// The list beside it at its narrowest: the word, tag, app and time and star, and about
+  /// 200 pt for the meaning. Narrower, the side column goes under the list.
+  static let recentMinWidth: CGFloat = 580
+
+  /// Whether the Today page's content, `width` wide, has room for the side column beside
+  /// the recent list.
+  static func showsSideColumn(width: CGFloat) -> Bool {
+    width >= recentMinWidth + pageSpacing + sideColumnMinWidth
+  }
   /// A small capsule button in a card.
   static let cardButtonHeight: CGFloat = 28
   static let cardButtonPadding: CGFloat = 12

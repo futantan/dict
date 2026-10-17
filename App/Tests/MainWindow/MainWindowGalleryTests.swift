@@ -3,6 +3,7 @@
 import AppKit
 import DictCore
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import DictApp
@@ -12,8 +13,8 @@ private let renderDirectory = ProcessInfo.processInfo.environment["DICT_MAINWIND
 /// The real main window over the gallery's sample data, built but never ordered on screen.
 ///
 /// `TEST_RUNNER_DICT_MAINWINDOW_RENDER_DIR=<dir> xcodebuild test … -only-testing:
-/// DictAppTests/MainWindowGalleryTests` writes one PNG per page, state and appearance into
-/// `<dir>` at 1280×800; add `-testLanguage zh-Hans` for the Chinese UI.
+/// DictAppTests/MainWindowGalleryTests` writes one PNG per page, state, appearance and width
+/// into `<dir>`, at 1280 and 960 points wide; add `-testLanguage zh-Hans` for the Chinese UI.
 @MainActor
 struct MainWindowGalleryTests {
   /// A window over `data` with settings that never touch the user's defaults or keychain.
@@ -21,14 +22,24 @@ struct MainWindowGalleryTests {
     MainWindowGallery.makeController(data: data)
   }
 
-  @Test func everyPageLaysOutAtTheMinimumSize() async throws {
-    let controller = try Self.makeController(data: try await MainWindowGallery.sampleData())
+  /// Every page and state fits the window from its smallest width up: what the window's
+  /// content asks for when offered the window's width, sidebar included, is no wider. A page
+  /// that asks for more is laid out wider than the window and clipped at both edges.
+  @Test(arguments: MainWindowDemo.State.allCases)
+  func everyPageFitsTheWindowWidth(_ state: MainWindowDemo.State) async throws {
+    let controller = try await MainWindowDemo.makeController(state, width: nil)
     let window = try #require(controller.window)
-    window.setContentSize(WindowLayout.minimumSize)
-    for section in MainSection.allCases {
-      controller.context.navigation.section = section
+    let hosting = try #require(
+      window.contentViewController as? NSHostingController<MainWindowView>)
+    for width in [WindowLayout.minimumSize.width, 1000, 1100, 1280] {
+      let size = CGSize(width: width, height: WindowLayout.minimumSize.height)
+      window.setContentSize(size)
       window.contentView?.layoutSubtreeIfNeeded()
-      #expect(window.contentView?.fittingSize.width ?? 0 <= WindowLayout.minimumSize.width)
+      // The pages that measure their width lay out again on the next turn of the run loop.
+      try await Task.sleep(for: .milliseconds(100))
+      window.contentView?.layoutSubtreeIfNeeded()
+      let fitting = hosting.sizeThatFits(in: size)
+      #expect(fitting.width <= width, "\(state.rawValue) at \(width): \(fitting.width)")
     }
     #expect(!window.isVisible)
   }
@@ -111,27 +122,16 @@ struct MainWindowGalleryTests {
         let controller = try Self.makeController(data: data)
         let window = try #require(controller.window)
         window.appearance = NSAppearance(named: appearance)
-        window.setContentSize(WindowLayout.defaultSize)
         navigate(controller.context.navigation)
-        let png = try #require(Self.render(window))
-        try png.write(to: directory.appendingPathComponent("\(language)-\(scheme)-\(name).png"))
-        // The History page also at the smallest width, where its columns are tightest.
-        if name.hasPrefix("history") {
-          window.setContentSize(WindowLayout.minimumSize)
-          let narrow = try #require(Self.render(window))
-          try narrow.write(
-            to: directory.appendingPathComponent("\(language)-\(scheme)-\(name)-narrow.png"))
+        // The default width, and the smallest, where the columns wrap or shrink.
+        for width in [WindowLayout.defaultSize.width, WindowLayout.minimumSize.width] {
+          window.setContentSize(CGSize(width: width, height: WindowLayout.defaultSize.height))
+          let png = try #require(Self.render(window))
+          try png.write(
+            to: directory.appendingPathComponent(
+              "\(language)-\(scheme)-\(name)-\(Int(width)).png"))
         }
       }
-      // The model section at the narrowest width, where its rows must shrink or stack.
-      let controller = try Self.makeController(data: sample)
-      let window = try #require(controller.window)
-      window.appearance = NSAppearance(named: appearance)
-      window.setContentSize(WindowLayout.minimumSize)
-      controller.context.navigation.show(.model)
-      let png = try #require(Self.render(window))
-      try png.write(
-        to: directory.appendingPathComponent("\(language)-\(scheme)-settings-model-narrow.png"))
     }
   }
 

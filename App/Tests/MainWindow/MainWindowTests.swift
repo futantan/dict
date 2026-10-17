@@ -29,6 +29,17 @@ struct MainWindowTests {
     }
   }
 
+  /// The Today page keeps 「反复遇到」 beside the recent list only where the list's meaning
+  /// still has room: at the default width, not at 1100 or less.
+  @Test func theTodaySideColumnWrapsUnderTheListWhenNarrow() {
+    func content(window: CGFloat) -> CGFloat {
+      window - WindowLayout.sidebarWidth - 0.5 - WindowLayout.pageSide * 2
+    }
+    #expect(WindowLayout.showsSideColumn(width: content(window: WindowLayout.defaultSize.width)))
+    #expect(!WindowLayout.showsSideColumn(width: content(window: 1100)))
+    #expect(!WindowLayout.showsSideColumn(width: content(window: WindowLayout.minimumSize.width)))
+  }
+
   @Test func presenceFollowsTheDockAndMenuBarSwitches() {
     var preferences = Preferences()
     #expect(AppPresence(preferences) == AppPresence(policy: .regular, statusItem: true))

@@ -7,11 +7,8 @@ import Testing
 
 @testable import DictApp
 
-private let renderDirectory = ProcessInfo.processInfo.environment["DICT_MAINWINDOW_RENDER_DIR"]
-
 /// The review page's states for the window gallery (`MainWindowGalleryTests.renderWindow()`
-/// renders them at the default size); this renders them again at the minimum width, where
-/// the summary goes under the card.
+/// renders them at the default and the minimum width).
 @MainActor
 struct ReviewGalleryTests {
   /// Each state over a store of its own, as rating writes to it.
@@ -38,26 +35,5 @@ struct ReviewGalleryTests {
 
   private static func reviewing(answers: [Rating]) async throws -> WindowData {
     try await MainWindowGallery.reviewingData(answers: answers)
-  }
-
-  @Test(.enabled(if: renderDirectory != nil))
-  func renderReviewAtTheMinimumWidth() async throws {
-    let directory = URL(fileURLWithPath: try #require(renderDirectory))
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    let language = Bundle.main.preferredLocalizations.first?.hasPrefix("zh") == true ? "zh" : "en"
-    let size = CGSize(
-      width: WindowLayout.minimumSize.width, height: WindowLayout.defaultSize.height)
-    for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-      for (name, data, navigate) in try await Self.states() {
-        let controller = try MainWindowGalleryTests.makeController(data: data)
-        let window = try #require(controller.window)
-        window.appearance = NSAppearance(named: appearance)
-        window.setContentSize(size)
-        navigate(controller.context.navigation)
-        let png = try #require(MainWindowGalleryTests.render(window))
-        try png.write(
-          to: directory.appendingPathComponent("\(language)-\(scheme)-\(name)-960.png"))
-      }
-    }
   }
 }

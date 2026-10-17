@@ -114,14 +114,24 @@ struct HistoryPage: View {
 
   // MARK: Filters
 
+  /// The kinds and the app menu on one line, or the menu under the kinds where the line
+  /// would be wider than the page, as in English at the smallest width.
   private var filters: some View {
-    HStack(spacing: Spacing.row) {
-      KindPicker(selection: history.filter.kind) { kind in
-        Task { await history.setKind(kind) }
+    let kinds = KindPicker(selection: history.filter.kind) { kind in
+      Task { await history.setKind(kind) }
+    }
+    let apps = SourceAppMenu(apps: history.apps, selection: history.filter.sourceApp) { app in
+      Task { await history.setSourceApp(app) }
+    }
+    return ViewThatFits(in: .horizontal) {
+      HStack(spacing: Spacing.row) {
+        kinds
+        Spacer(minLength: 0)
+        apps
       }
-      Spacer(minLength: 0)
-      SourceAppMenu(apps: history.apps, selection: history.filter.sourceApp) { app in
-        Task { await history.setSourceApp(app) }
+      VStack(alignment: .leading, spacing: Spacing.pill) {
+        kinds
+        apps
       }
     }
   }

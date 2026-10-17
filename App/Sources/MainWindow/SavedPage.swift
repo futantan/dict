@@ -84,17 +84,17 @@ struct SavedPage: View {
 
   // MARK: Toolbar
 
-  @ViewBuilder
+  /// The search field, filters and order on one line, or the filters and the order under
+  /// the field where the line would be wider than the page.
   private func toolbar(counts: [SavedFilter: Int]) -> some View {
     let filters = FilterBar(selection: $filter, counts: counts)
     let sortMenu = SortMenu(selection: $sort)
-    if width >= WindowLayout.savedToolbarWrapWidth {
+    return ViewThatFits(in: .horizontal) {
       HStack(spacing: Spacing.pill) {
         searchField
         filters
         sortMenu
       }
-    } else {
       VStack(alignment: .leading, spacing: Spacing.pill) {
         searchField
         HStack(spacing: Spacing.pill) {
@@ -140,8 +140,6 @@ extension WindowLayout {
   static let savedDetailWidth: CGFloat = 300
   /// Below this the table scrolls sideways.
   static let savedTableMinWidth: CGFloat = 600
-  /// Below this the filters and the order go under the search field.
-  static let savedToolbarWrapWidth: CGFloat = 700
   static let savedControlHeight: CGFloat = 36
   static let savedSearchMinWidth: CGFloat = 220
   static let savedFieldRadius: CGFloat = 10

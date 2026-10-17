@@ -7,8 +7,6 @@ import Testing
 
 @testable import DictApp
 
-private let renderDirectory = ProcessInfo.processInfo.environment["DICT_MAINWINDOW_RENDER_DIR"]
-
 /// 生词本: what its search, filters and orders keep, its details, and how it stays in step
 /// with the sidebar.
 @MainActor
@@ -163,23 +161,5 @@ struct SavedPageTests {
     #expect(lines.first?.hasPrefix("term,phonetic,") == true)
     // A header, twelve words and the empty string after the last line break.
     #expect(lines.count == 14)
-  }
-
-  /// 生词本 at the window's smallest size, where the details go under the table.
-  @Test(.enabled(if: renderDirectory != nil))
-  func renderNarrow() async throws {
-    let directory = URL(fileURLWithPath: try #require(renderDirectory))
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    let language = Bundle.main.preferredLocalizations.first?.hasPrefix("zh") == true ? "zh" : "en"
-    let data = try await MainWindowGallery.sampleData()
-    for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-      let controller = try MainWindowGalleryTests.makeController(data: data)
-      let window = try #require(controller.window)
-      window.appearance = NSAppearance(named: appearance)
-      window.setContentSize(WindowLayout.minimumSize)
-      controller.context.navigation.section = .saved
-      let png = try #require(MainWindowGalleryTests.render(window))
-      try png.write(to: directory.appendingPathComponent("\(language)-\(scheme)-saved-960.png"))
-    }
   }
 }

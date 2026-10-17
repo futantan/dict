@@ -140,9 +140,9 @@ public actor VocabStore {
 
   // MARK: Tiers and review
 
-  /// Moves a term between 查过 and 要学 (architecture 8.3). Promoting creates its review state,
-  /// step 0 and due the day after `day`, unless it is already being learnt; demoting drops the
-  /// review state and keeps the review log.
+  /// Moves a term between 查过 and 要学 (architecture 8.3). Promoting records `day` as the day
+  /// it became 要学 and creates its review state, step 0 and due the day after `day`, unless it
+  /// is already being learnt; demoting drops both and keeps the review log.
   public func setTier(_ tier: Tier, termID: Int64, on day: LocalDay) throws {
     try db.transaction { () throws(VocabError) in
       guard try db.scalar("SELECT 1 FROM term WHERE id = ?", [.integer(termID)]) != .null else {
@@ -152,7 +152,8 @@ public actor VocabStore {
       case .learning:
         try promote(termID, on: day)
       case .seen:
-        try db.rows("UPDATE term SET tier = 'seen' WHERE id = ?", [.integer(termID)])
+        try db.rows(
+          "UPDATE term SET tier = 'seen', learning_day = NULL WHERE id = ?", [.integer(termID)])
         try db.rows("DELETE FROM review_state WHERE term_id = ?", [.integer(termID)])
       }
     }
@@ -301,7 +302,13 @@ public actor VocabStore {
   }
 
   private func promote(_ termID: Int64, on day: LocalDay) throws(VocabError) {
-    try db.rows("UPDATE term SET tier = 'learning' WHERE id = ?", [.integer(termID)])
+    try db.rows(
+      """
+      UPDATE term SET
+        learning_day = iif(tier = 'learning', coalesce(learning_day, ?2), ?2),
+        tier = 'learning'
+      WHERE id = ?1
+      """, [.integer(termID), .text(day.description)])
     try db.rows(
       "INSERT OR IGNORE INTO review_state (term_id, step, due_day) VALUES (?, 0, ?)",
       [.integer(termID), .text(day.adding(days: reviewIntervals[0]).description)])

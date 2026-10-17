@@ -66,5 +66,12 @@ let migrations = [
     reviewed_at  INTEGER NOT NULL
   );
   CREATE INDEX review_log_term ON review_log (term_id, reviewed_at);
+  """,
+  // The day a term became 要学, for 生词本's 「本周新加」 and 「加入时间」. Terms already being
+  // learnt get the day they were first met: the earliest it can be, and a day the user saw.
   """
+  ALTER TABLE term ADD COLUMN learning_day TEXT;
+  UPDATE term SET learning_day = (SELECT min(day) FROM encounter e WHERE e.term_id = term.id)
+  WHERE tier = 'learning';
+  """,
 ]

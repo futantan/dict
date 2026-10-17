@@ -78,7 +78,7 @@ private func count(_ url: URL, _ table: String) throws -> Int {
 }
 
 struct VocabStoreSchemaTests {
-  @Test func createsAllTablesAndIndexesAtVersionOne() async throws {
+  @Test func createsAllTablesAndIndexesAtTheLatestVersion() async throws {
     let url = try temporaryDirectory().appending(path: "vocab.sqlite")
     let store = try VocabStore(url: url)
     _ = try await store.term(language: "en", lemmaKey: "run")
@@ -92,9 +92,9 @@ struct VocabStoreSchemaTests {
       indexes.map { $0[0] } == [
         "encounter_day", "encounter_term", "review_log_term", "sentence_event_day",
       ])
-    #expect(try query(url, "PRAGMA user_version") == [["1"]])
+    #expect(try query(url, "PRAGMA user_version") == [["2"]])
     #expect(try query(url, "PRAGMA journal_mode") == [["wal"]])
-    #expect(VocabStore.schemaVersion == 1)
+    #expect(VocabStore.schemaVersion == 2)
   }
 
   @Test func reopensAnExistingFileWithoutLosingRows() async throws {
@@ -106,7 +106,7 @@ struct VocabStoreSchemaTests {
     let store = try VocabStore(url: url)
     let term = try await store.recordLookup(lookup("run", minute: 1))
     #expect(term.encounterCount == 2)
-    #expect(try query(url, "PRAGMA user_version") == [["1"]])
+    #expect(try query(url, "PRAGMA user_version") == [["2"]])
   }
 
   @Test func refusesAFileFromANewerVersion() throws {
@@ -138,7 +138,7 @@ struct VocabStoreSchemaTests {
     let moved = try #require(names.first { $0.hasPrefix("vocab.sqlite.bad-") })
     #expect(try Data(contentsOf: directory.appending(path: moved)) == contents)
     #expect(try count(url, "term") == 1)
-    #expect(try query(url, "PRAGMA user_version") == [["1"]])
+    #expect(try query(url, "PRAGMA user_version") == [["2"]])
   }
 
   @Test func throwsWhenTheDirectoryIsMissing() throws {

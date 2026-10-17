@@ -39,16 +39,39 @@ public struct Preferences: Codable, Sendable, Equatable {
   public var model: ModelPreferences
   /// Whether a replacement keeps the source's formatting (architecture 4.7). On by default.
   public var keepsFormatting: Bool
+  /// The Dock icon and the menu bar icon (Design/main-app/README.md). At least one stays on,
+  /// so they change through `setShowsDockIcon` and `setShowsMenuBarIcon`.
+  public private(set) var showsDockIcon: Bool
+  public private(set) var showsMenuBarIcon: Bool
+  /// Whether closing the main window leaves Dict running with its shortcuts.
+  public var keepsRunningAfterClose: Bool
 
   public init(
     myLanguage: String = "zh-Hans", learningLanguage: String = "en", accent: Accent = .american,
-    model: ModelPreferences = ModelPreferences(), keepsFormatting: Bool = true
+    model: ModelPreferences = ModelPreferences(), keepsFormatting: Bool = true,
+    showsDockIcon: Bool = true, showsMenuBarIcon: Bool = true, keepsRunningAfterClose: Bool = true
   ) {
     self.myLanguage = myLanguage
     self.learningLanguage = learningLanguage
     self.accent = accent
     self.model = model
     self.keepsFormatting = keepsFormatting
+    // Both off would leave no way back to the app.
+    self.showsDockIcon = showsDockIcon || !showsMenuBarIcon
+    self.showsMenuBarIcon = showsMenuBarIcon
+    self.keepsRunningAfterClose = keepsRunningAfterClose
+  }
+
+  /// Hiding the Dock icon is refused while the menu bar icon is hidden.
+  public mutating func setShowsDockIcon(_ shows: Bool) {
+    guard shows || showsMenuBarIcon else { return }
+    showsDockIcon = shows
+  }
+
+  /// Hiding the menu bar icon is refused while the Dock icon is hidden.
+  public mutating func setShowsMenuBarIcon(_ shows: Bool) {
+    guard shows || showsDockIcon else { return }
+    showsMenuBarIcon = shows
   }
 
   public var languagePair: LanguagePair {
@@ -70,7 +93,8 @@ public struct Preferences: Codable, Sendable, Equatable {
   }
 
   private enum CodingKeys: String, CodingKey {
-    case myLanguage, learningLanguage, accent, model, keepsFormatting
+    case myLanguage, learningLanguage, accent, model, keepsFormatting, showsDockIcon,
+      showsMenuBarIcon, keepsRunningAfterClose
   }
 
   public init(from decoder: any Decoder) throws {
@@ -86,5 +110,11 @@ public struct Preferences: Codable, Sendable, Equatable {
     keepsFormatting =
       (try? container.decodeIfPresent(Bool.self, forKey: .keepsFormatting))
       ?? defaults.keepsFormatting
+    let flag = { (key: CodingKeys, fallback: Bool) in
+      (try? container.decodeIfPresent(Bool.self, forKey: key)) ?? fallback
+    }
+    showsMenuBarIcon = flag(.showsMenuBarIcon, defaults.showsMenuBarIcon)
+    showsDockIcon = flag(.showsDockIcon, defaults.showsDockIcon) || !showsMenuBarIcon
+    keepsRunningAfterClose = flag(.keepsRunningAfterClose, defaults.keepsRunningAfterClose)
   }
 }

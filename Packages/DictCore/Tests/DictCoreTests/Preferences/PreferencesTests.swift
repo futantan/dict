@@ -18,7 +18,28 @@ struct PreferencesTests {
     #expect(preferences.accent == .american)
     #expect(preferences.model.providerID == nil)
     #expect(preferences.keepsFormatting)
+    #expect(preferences.showsDockIcon)
+    #expect(preferences.showsMenuBarIcon)
+    #expect(preferences.keepsRunningAfterClose)
     #expect(preferences.languagePair == LanguagePair())
+  }
+
+  @Test func theDockAndMenuBarIconsAreNeverBothHidden() throws {
+    var preferences = Preferences()
+    preferences.setShowsDockIcon(false)
+    #expect(!preferences.showsDockIcon)
+    preferences.setShowsMenuBarIcon(false)
+    #expect(preferences.showsMenuBarIcon)
+
+    preferences.setShowsDockIcon(true)
+    preferences.setShowsMenuBarIcon(false)
+    #expect(preferences.showsDockIcon && !preferences.showsMenuBarIcon)
+    preferences.setShowsDockIcon(false)
+    #expect(preferences.showsDockIcon)
+
+    #expect(Preferences(showsDockIcon: false, showsMenuBarIcon: false).showsDockIcon)
+    let saved = try decode(#"{"showsDockIcon": false, "showsMenuBarIcon": false}"#)
+    #expect(saved.showsDockIcon && !saved.showsMenuBarIcon)
   }
 
   @Test func roundTrips() throws {
@@ -29,6 +50,8 @@ struct PreferencesTests {
     preferences.model = ModelPreferences(
       providerID: "custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1")
     preferences.keepsFormatting = false
+    preferences.setShowsDockIcon(false)
+    preferences.keepsRunningAfterClose = false
 
     let data = try JSONEncoder().encode(preferences)
 
@@ -45,8 +68,9 @@ struct PreferencesTests {
 
     #expect(
       json
-        == #"{"accent":"american","keepsFormatting":true,"learningLanguage":"en","#
-        + #""model":{"baseURL":"","model":"","providerID":"openai"},"myLanguage":"zh-Hans"}"#)
+        == #"{"accent":"american","keepsFormatting":true,"keepsRunningAfterClose":true,"#
+        + #""learningLanguage":"en","model":{"baseURL":"","model":"","providerID":"openai"},"#
+        + #""myLanguage":"zh-Hans","showsDockIcon":true,"showsMenuBarIcon":true}"#)
   }
 
   @Test func missingFieldsTakeDefaults() throws {

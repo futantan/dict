@@ -1,6 +1,50 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ %@" : {
+      "comment" : "About: the app name and version",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ voice · %@" : {
+      "comment" : "Settings row: the voice used; the arguments are the language and voice name",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@语音 · %2$@"
+          }
+        }
+      }
+    },
+    "%lld words and %lld sentences, never uploaded to any server." : {
+      "comment" : "Data and privacy: what is kept on this Mac",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共 %1$lld 个词、%2$lld 句，不会上传到任何服务器。"
+          }
+        }
+      }
+    },
+    "A file Anki can import, with each word’s meaning and the sentence you met it in." : {
+      "comment" : "Under the export row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anki 可以导入的文件，含每个词的释义和遇到它的原句。"
+          }
+        }
+      }
+    },
     "API key" : {
       "comment" : "Settings field label",
       "localizations" : {
@@ -8,6 +52,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "API 密钥"
+          }
+        }
+      }
+    },
+    "About" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
           }
         }
       }
@@ -23,6 +78,17 @@
         }
       }
     },
+    "Accessibility" : {
+      "comment" : "Settings row: the permission",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助功能"
+          }
+        }
+      }
+    },
     "Advanced" : {
       "comment" : "Settings section title",
       "localizations" : {
@@ -30,6 +96,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "高级"
+          }
+        }
+      }
+    },
+    "Allow Dict in System Settings → General → Login Items." : {
+      "comment" : "Under the launch at login switch when macOS waits for the user's approval",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在“系统设置 → 通用 → 登录项”中允许 Dict。"
+          }
+        }
+      }
+    },
+    "Allowed" : {
+      "comment" : "Pill: the permission is granted",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打开"
           }
         }
       }
@@ -111,6 +199,17 @@
         }
       }
     },
+    "Check for Updates" : {
+      "comment" : "Button in the About section",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查更新"
+          }
+        }
+      }
+    },
     "Choose a listed model" : {
       "comment" : "Help tag of the menu of listed models",
       "localizations" : {
@@ -140,6 +239,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请从上面列出的模型中选一个。"
+          }
+        }
+      }
+    },
+    "Clear All" : {
+      "comment" : "Destructive button of the confirmation",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部清除"
+          }
+        }
+      }
+    },
+    "Clear All Records…" : {
+      "comment" : "Button that deletes all records",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除所有记录…"
+          }
+        }
+      }
+    },
+    "Clear all records" : {
+      "comment" : "Settings row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除所有记录"
+          }
+        }
+      }
+    },
+    "Clear all records?" : {
+      "comment" : "Title of the confirmation",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除所有记录？"
           }
         }
       }
@@ -177,6 +320,17 @@
         }
       }
     },
+    "Couldn’t export the records." : {
+      "comment" : "Shown when writing the export file failed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法导出记录。"
+          }
+        }
+      }
+    },
     "Couldn’t reach Ollama. Check that it is running on this Mac." : {
       "comment" : "Listing Ollama models failed to connect",
       "localizations" : {
@@ -199,6 +353,17 @@
         }
       }
     },
+    "Data & Privacy" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数据与隐私"
+          }
+        }
+      }
+    },
     "Dict can use this model, but it is slow." : {
       "comment" : "Test finished; every check passed but the model thinks",
       "localizations" : {
@@ -217,6 +382,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dict 可以使用这个模型。"
+          }
+        }
+      }
+    },
+    "Dict checks for a new version once a day." : {
+      "comment" : "About: what the updater does",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dict 每天检查一次新版本。"
           }
         }
       }
@@ -276,6 +452,39 @@
         }
       }
     },
+    "Every word, sentence and review is deleted from this Mac, with your word list. This can’t be undone." : {
+      "comment" : "Message of the confirmation before deleting all records",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 Mac 上的所有查词、句子和复习记录都会删除，生词本也会清空。此操作无法撤销。"
+          }
+        }
+      }
+    },
+    "Export records" : {
+      "comment" : "Settings row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出记录"
+          }
+        }
+      }
+    },
+    "Export…" : {
+      "comment" : "Button that exports the records for Anki",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出…"
+          }
+        }
+      }
+    },
     "Found %lld models. Choose one from the menu next to the model name." : {
       "comment" : "Listing models succeeded. The argument is how many",
       "localizations" : {
@@ -307,6 +516,17 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "General" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通用"
           }
         }
       }
@@ -366,6 +586,17 @@
         }
       }
     },
+    "Keep running after the window closes" : {
+      "comment" : "Settings switch",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭窗口后继续在后台运行"
+          }
+        }
+      }
+    },
     "Language I’m learning" : {
       "comment" : "Settings field label",
       "localizations" : {
@@ -384,6 +615,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "语言"
+          }
+        }
+      }
+    },
+    "Launch at login" : {
+      "comment" : "Settings switch",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录时启动"
           }
         }
       }
@@ -443,6 +685,17 @@
         }
       }
     },
+    "No voice" : {
+      "comment" : "Settings row title when no installed voice speaks the language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有语音"
+          }
+        }
+      }
+    },
     "None" : {
       "comment" : "Model provider choice meaning no model is used",
       "localizations" : {
@@ -450,6 +703,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不使用"
+          }
+        }
+      }
+    },
+    "Not allowed" : {
+      "comment" : "Pill: the permission is not granted",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未打开"
           }
         }
       }
@@ -487,6 +751,28 @@
         }
       }
     },
+    "One of the two stays on, so you can always get back to Dict." : {
+      "comment" : "Under the Dock or menu bar switch that cannot be turned off",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "两项至少保留一项，这样总能回到 Dict。"
+          }
+        }
+      }
+    },
+    "Open System Settings" : {
+      "comment" : "Button in a settings row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开系统设置"
+          }
+        }
+      }
+    },
     "Optional" : {
       "comment" : "Placeholder of an optional field",
       "localizations" : {
@@ -509,6 +795,28 @@
         }
       }
     },
+    "Permissions" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "权限"
+          }
+        }
+      }
+    },
+    "Pronunciation" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发音"
+          }
+        }
+      }
+    },
     "Provider" : {
       "comment" : "Settings field label",
       "localizations" : {
@@ -516,6 +824,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务商"
+          }
+        }
+      }
+    },
+    "Reads the text you select and replaces it with the corrected result." : {
+      "comment" : "Under the accessibility permission row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用来读取选中的文字，并替换成纠错后的结果。"
           }
         }
       }
@@ -593,6 +912,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示 API 密钥"
+          }
+        }
+      }
+    },
+    "Show icon in menu bar" : {
+      "comment" : "Settings switch",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在菜单栏显示图标"
+          }
+        }
+      }
+    },
+    "Show in Dock" : {
+      "comment" : "Settings switch",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Dock 中显示"
           }
         }
       }
@@ -927,6 +1268,17 @@
         }
       }
     },
+    "This voice sounds natural." : {
+      "comment" : "Under the voice row when an enhanced or premium voice is used",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前语音音质自然。"
+          }
+        }
+      }
+    },
     "Traditional Chinese" : {
       "comment" : "Language name",
       "localizations" : {
@@ -971,6 +1323,17 @@
         }
       }
     },
+    "Updates are off in this build." : {
+      "comment" : "About: this build has no updater",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个版本没有开启自动更新。"
+          }
+        }
+      }
+    },
     "Use https://. Plain http:// is only allowed for services on this Mac." : {
       "comment" : "The base URL uses http to another computer",
       "localizations" : {
@@ -989,6 +1352,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dict 朗读英文单词和句子时使用。"
+          }
+        }
+      }
+    },
+    "When this is off, closing the main window quits Dict and its shortcuts stop working." : {
+      "comment" : "Under the keep running switch",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关掉后，关闭主窗口会退出 Dict，快捷键也随之失效。"
+          }
+        }
+      }
+    },
+    "Writing" : {
+      "comment" : "Settings section title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写作"
+          }
+        }
+      }
+    },
+    "Your history stays on this Mac" : {
+      "comment" : "Data and privacy: title of the note about where records are kept",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查询记录保存在这台 Mac 上"
           }
         }
       }

@@ -100,6 +100,17 @@
         }
       }
     },
+    "Close" : {
+      "comment" : "Window menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
+          }
+        }
+      }
+    },
     "Continue" : {
       "comment" : "Onboarding button",
       "localizations" : {
@@ -107,6 +118,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "comment" : "Edit menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷贝"
           }
         }
       }
@@ -122,6 +144,17 @@
         }
       }
     },
+    "Cut" : {
+      "comment" : "Edit menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪切"
+          }
+        }
+      }
+    },
     "Done" : {
       "comment" : "Onboarding button that finishes it",
       "localizations" : {
@@ -129,6 +162,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完成"
+          }
+        }
+      }
+    },
+    "Edit" : {
+      "comment" : "Menu title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑"
+          }
+        }
+      }
+    },
+    "Hide %@" : {
+      "comment" : "Menu item that hides the app",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏 %@"
+          }
+        }
+      }
+    },
+    "Hide Others" : {
+      "comment" : "Menu item that hides other apps",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏其他"
+          }
+        }
+      }
+    },
+    "Minimize" : {
+      "comment" : "Window menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最小化"
           }
         }
       }
@@ -144,6 +221,17 @@
         }
       }
     },
+    "Open %@" : {
+      "comment" : "Menu item that shows the main window",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 %@"
+          }
+        }
+      }
+    },
     "Open System Settings" : {
       "comment" : "Onboarding button that opens the Accessibility settings",
       "localizations" : {
@@ -151,6 +239,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开系统设置"
+          }
+        }
+      }
+    },
+    "Paste" : {
+      "comment" : "Edit menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "粘贴"
           }
         }
       }
@@ -166,6 +265,17 @@
         }
       }
     },
+    "Redo" : {
+      "comment" : "Edit menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重做"
+          }
+        }
+      }
+    },
     "See a translation in the panel before you start." : {
       "comment" : "Onboarding sample explanation when no Read shortcut is set",
       "localizations" : {
@@ -177,6 +287,17 @@
         }
       }
     },
+    "Select All" : {
+      "comment" : "Edit menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全选"
+          }
+        }
+      }
+    },
     "Select text in any app and press %@. Or translate this sample now:" : {
       "comment" : "Onboarding sample explanation; the argument is the Read shortcut, such as ⌃⌥D",
       "localizations" : {
@@ -184,6 +305,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在任意应用里选中文字，然后按 %@。也可以现在翻译下面这段示例："
+          }
+        }
+      }
+    },
+    "Show All" : {
+      "comment" : "Menu item that shows all apps",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部显示"
           }
         }
       }
@@ -221,6 +353,17 @@
         }
       }
     },
+    "Undo" : {
+      "comment" : "Edit menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撤销"
+          }
+        }
+      }
+    },
     "Welcome to %@" : {
       "comment" : "Title of the first-run window; the argument is the app name",
       "localizations" : {
@@ -228,6 +371,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "欢迎使用 %@"
+          }
+        }
+      }
+    },
+    "Window" : {
+      "comment" : "Menu title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口"
+          }
+        }
+      }
+    },
+    "Zoom" : {
+      "comment" : "Window menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缩放"
           }
         }
       }

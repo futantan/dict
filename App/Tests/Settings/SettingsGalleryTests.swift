@@ -10,18 +10,22 @@ import Testing
 
 private let renderDirectory = ProcessInfo.processInfo.environment["DICT_SETTINGS_RENDER_DIR"]
 
-/// Renders each Settings pane in sample states offscreen.
+/// Renders the settings page's cards in sample states offscreen, at a fixed width: the
+/// languages and shortcuts cards and every state of the model form. The whole page is
+/// rendered by `MainWindowGalleryTests`.
 ///
 /// `TEST_RUNNER_DICT_SETTINGS_RENDER_DIR=<dir> xcodebuild test … -only-testing:
 /// DictAppTests/SettingsGalleryTests` writes one PNG per state and appearance into `<dir>`;
 /// add `-testLanguage zh-Hans` for the Chinese UI. Nothing is shown on screen.
 @MainActor
 struct SettingsGalleryTests {
-  /// Every pane has a sensible height at the fixed width, without a layout loop.
+  static let width: CGFloat = 520
+
+  /// Every sample has a sensible height at the fixed width, without a layout loop.
   @Test func panesFitTheirContent() {
     for (name, view) in Self.samples() {
       let size = Self.host(view, appearance: .aqua).fittingSize
-      #expect(size.width == SettingsPane.width, "\(name)")
+      #expect(size.width == Self.width, "\(name)")
       #expect(size.height > 80 && size.height < 900, "\(name)")
     }
   }
@@ -63,17 +67,17 @@ struct SettingsGalleryTests {
     let key = "sk-proj-sample-not-a-real-key"
 
     return [
-      ("languages", AnyView(LanguagesPane(model: model(Preferences())))),
+      ("languages", card { LanguageRows(model: model(Preferences())) }),
       (
         "languages-japanese",
-        AnyView(LanguagesPane(model: model(Preferences(myLanguage: "en", learningLanguage: "ja"))))
+        card { LanguageRows(model: model(Preferences(myLanguage: "en", learningLanguage: "ja"))) }
       ),
-      ("model-none", AnyView(ModelPane(model: model(Preferences())))),
-      ("model-openai-nokey", AnyView(ModelPane(model: model(provider("openai"))))),
+      ("model-none", AnyView(ModelForm(model: model(Preferences())))),
+      ("model-openai-nokey", AnyView(ModelForm(model: model(provider("openai"))))),
       (
         "model-openai-ok",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("openai"), key: key,
               connection: .checked(.translated(after: .milliseconds(840))))))
@@ -81,7 +85,7 @@ struct SettingsGalleryTests {
       (
         "model-openai-testing",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("openai"), key: key,
               connection: .checked(ConnectionReport(translation: .running)))))
@@ -89,14 +93,14 @@ struct SettingsGalleryTests {
       (
         "model-openai-unauthorized",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("openai"), key: key, connection: .checked(.failed(.model(.unauthorized))))))
       ),
       (
         "model-ollama",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("ollama", model: "qwen3:4b"),
               connection: .checked(.failed(.model(.network(code: -1004)))),
@@ -105,19 +109,19 @@ struct SettingsGalleryTests {
       (
         "model-ollama-listed",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("ollama", model: "qwen3:4b"),
               list: .loaded(["gemma3:1b", "llama3.2:3b", "qwen3:4b"]))))
       ),
       (
         "model-ollama-none-installed",
-        AnyView(ModelPane(model: model(provider("ollama"), list: .loaded([]))))
+        AnyView(ModelForm(model: model(provider("ollama"), list: .loaded([]))))
       ),
       (
         "model-openai-notfound",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("openai", model: "gpt-9"), key: key,
               connection: .checked(.failed(.model(.modelNotFound))),
@@ -126,7 +130,7 @@ struct SettingsGalleryTests {
       (
         "model-openai-structured",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("openai"), key: key,
               connection: .checked(
@@ -137,7 +141,7 @@ struct SettingsGalleryTests {
       (
         "model-ollama-thinking",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("ollama", model: "qwen3:4b"),
               connection: .checked(.translated(after: .milliseconds(4200), sawThinking: true)))))
@@ -145,7 +149,7 @@ struct SettingsGalleryTests {
       (
         "model-custom-json-failed",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
               key: key,
@@ -157,14 +161,14 @@ struct SettingsGalleryTests {
       (
         "model-custom-insecure",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "http://api.deepseek.com/v1"))))
       ),
       (
         "model-custom-badrequest",
         AnyView(
-          ModelPane(
+          ModelForm(
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
               key: key,
@@ -178,15 +182,18 @@ struct SettingsGalleryTests {
       ),
       (
         "shortcuts-empty",
-        AnyView(ShortcutsPane(model: model(Preferences()), center: hotkeys(assigned: false)))
+        card { ShortcutRows(center: hotkeys(assigned: false)) }
       ),
       (
         "shortcuts",
-        AnyView(
-          ShortcutsPane(
-            model: model(Preferences(keepsFormatting: false)), center: hotkeys(assigned: true)))
+        card { ShortcutRows(center: hotkeys(assigned: true)) }
       ),
     ]
+  }
+
+  /// Rows in a card, as on the settings page.
+  private static func card(@ViewBuilder _ rows: () -> some View) -> AnyView {
+    AnyView(WindowCard { rows() }.padding(20))
   }
 
   /// A center that loads sample combinations from a throwaway defaults suite and never
@@ -208,7 +215,7 @@ struct SettingsGalleryTests {
 
   private static func host(_ view: AnyView, appearance: NSAppearance.Name) -> NSHostingView<AnyView>
   {
-    let host = NSHostingView(rootView: view)
+    let host = NSHostingView(rootView: AnyView(view.frame(width: width)))
     host.appearance = NSAppearance(named: appearance)
     host.frame.size = host.fittingSize
     host.layoutSubtreeIfNeeded()
@@ -238,10 +245,10 @@ struct SettingsGalleryTests {
     return bitmap.representation(using: .png, properties: [:])
   }
 
-  /// The window background, which the grouped form draws its sections on.
+  /// The settings page's background.
   private final class Backdrop: NSView {
     override func draw(_ dirtyRect: CGRect) {
-      NSColor.windowBackgroundColor.setFill()
+      Palette.panelFill.setFill()
       bounds.fill()
     }
   }

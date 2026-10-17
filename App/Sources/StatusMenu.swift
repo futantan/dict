@@ -2,9 +2,15 @@
 
 import AppKit
 
-/// Builds the menu shown from the menu bar icon, in the order of architecture 11.4.
+/// Builds the menu shown from the menu bar icon, in the order of architecture 11.4, with
+/// the main window first.
 @MainActor
 enum StatusMenu {
+  /// 「打开 Dict」: shows the main window.
+  static func openTitle(_ appName: String) -> String {
+    String(localized: "Open \(appName)", comment: "Menu item that shows the main window")
+  }
+
   /// - Parameter warnings: problems with the shortcuts, shown first; each opens the
   ///   shortcut settings.
   static func make(appName: String, warnings: [String] = []) -> NSMenu {
@@ -20,6 +26,9 @@ enum StatusMenu {
     if !warnings.isEmpty { menu.addItem(.separator()) }
 
     // A nil target sends the action up the responder chain, which ends at the app delegate.
+    menu.addItem(
+      withTitle: openTitle(appName), action: #selector(AppDelegate.showMainWindow(_:)),
+      keyEquivalent: "")
     menu.addItem(
       withTitle: String(
         localized: "Settings…", table: "Settings", comment: "Menu item that opens Settings"),

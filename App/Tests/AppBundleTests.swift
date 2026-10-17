@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import AppKit
 import DictCore
 import Foundation
 import Testing
@@ -8,11 +9,15 @@ import Testing
 
 /// Checks the built app bundle that hosts these tests.
 struct AppBundleTests {
-  @Test func infoPlistDescribesAMenuBarApp() throws {
+  /// Dict starts as an agent and `AppPresence` makes it a regular app with a Dock icon at
+  /// launch when the setting is on, so the test host, which is the app, never shows a Dock
+  /// icon or takes focus, and stays an agent while the tests run.
+  @Test func infoPlistStartsAsAnAgentAndTheDockIconIsASetting() throws {
     let info = try #require(Bundle.main.infoDictionary)
 
     #expect(AppIdentity(infoDictionary: info) != nil)
     #expect(info["LSUIElement"] as? Bool == true)
+    #expect(NSApplication.shared.activationPolicy() == .accessory)
   }
 
   @Test(arguments: [

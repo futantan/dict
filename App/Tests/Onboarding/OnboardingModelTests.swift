@@ -143,6 +143,6 @@ struct OnboardingModelTests {
 struct ReopenTargetTests {
   @Test func unfinishedOnboardingComesBackElseSettings() {
     #expect(ReopenTarget(onboardingCompleted: false) == .onboarding)
-    #expect(ReopenTarget(onboardingCompleted: true) == .settings)
+    #expect(ReopenTarget(onboardingCompleted: true) == .mainWindow)
   }
 }

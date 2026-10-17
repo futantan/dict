@@ -1,0 +1,369 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "All History ›" : {
+      "comment" : "Link from the Today page to the History page",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部记录 ›"
+          }
+        }
+      }
+    },
+    "Corrected and translated out today" : {
+      "comment" : "Today page figure label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天纠错与外译"
+          }
+        }
+      }
+    },
+    "Correction" : {
+      "comment" : "A corrected text in a list",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纠错"
+          }
+        }
+      }
+    },
+    "History" : {
+      "comment" : "Sidebar item and page title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查询记录"
+          }
+        }
+      }
+    },
+    "Learn" : {
+      "comment" : "Button that marks a word to learn, on the Today page",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要学"
+          }
+        }
+      }
+    },
+    "Look up a word, or type text to translate" : {
+      "comment" : "Placeholder of the search field on the Today page",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查词，或输入一段文字翻译"
+          }
+        }
+      }
+    },
+    "Looked up today" : {
+      "comment" : "Today page figure label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天查了"
+          }
+        }
+      }
+    },
+    "Mark to Learn" : {
+      "comment" : "Star button of a recent lookup",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标为要学"
+          }
+        }
+      }
+    },
+    "Marked to Learn" : {
+      "comment" : "Star button of a recent lookup that is marked to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已标要学"
+          }
+        }
+      }
+    },
+    "Met again and again, not learning yet" : {
+      "comment" : "Heading of the Today page's list of words met often but not marked to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反复遇到，还没标要学"
+          }
+        }
+      }
+    },
+    "None" : {
+      "comment" : "Sidebar shortcut card: the shortcut is not set",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置"
+          }
+        }
+      }
+    },
+    "Nothing yet today. Select a word in any app and press the Read shortcut." : {
+      "comment" : "The Today page's recent list when it is empty",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天还没有记录。在任意应用里选中一个词，按下「读」的快捷键。"
+          }
+        }
+      }
+    },
+    "Read" : {
+      "comment" : "Short tag on a translated sentence in a list: it came from the Read shortcut",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读"
+          }
+        }
+      }
+    },
+    "Read: look up, translate" : {
+      "comment" : "Sidebar shortcut card: what the Read shortcut does",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读：查词、翻译"
+          }
+        }
+      }
+    },
+    "Recent" : {
+      "comment" : "Heading of the Today page's recent lookups",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近查询"
+          }
+        }
+      }
+    },
+    "Review" : {
+      "comment" : "Sidebar item and page title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复习"
+          }
+        }
+      }
+    },
+    "Rewrite" : {
+      "comment" : "A rewritten text in a list",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "润色"
+          }
+        }
+      }
+    },
+    "Seen %lld times" : {
+      "comment" : "Pill: how many times a word has been met",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 次"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "comment" : "Sidebar item and page title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        }
+      }
+    },
+    "Start Review" : {
+      "comment" : "Button on the Today page",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始复习"
+          }
+        }
+      }
+    },
+    "This page is on its way." : {
+      "comment" : "Shown on a page that is not built yet",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这一页还在做。"
+          }
+        }
+      }
+    },
+    "To review" : {
+      "comment" : "Today page figure label",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待复习"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "Sidebar item and page title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
+          }
+        }
+      }
+    },
+    "Today at a glance" : {
+      "comment" : "Accessibility label of the Today page's figures",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日概况"
+          }
+        }
+      }
+    },
+    "Translation" : {
+      "comment" : "A translated sentence in a list",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻译"
+          }
+        }
+      }
+    },
+    "Translation out" : {
+      "comment" : "A text translated into the language being learnt, in a list",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "译成外语"
+          }
+        }
+      }
+    },
+    "Word List" : {
+      "comment" : "Sidebar item and page title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生词本"
+          }
+        }
+      }
+    },
+    "Words you meet more than once show up here." : {
+      "comment" : "The Today page's list of frequent words when it is empty",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遇到不止一次的词会出现在这里。"
+          }
+        }
+      }
+    },
+    "Write" : {
+      "comment" : "Short tag on a correction in a list: it came from the Write shortcut",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写"
+          }
+        }
+      }
+    },
+    "Write: fix, translate out" : {
+      "comment" : "Sidebar shortcut card: what the Write shortcut does",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写：纠错、译成外语"
+          }
+        }
+      }
+    },
+    "times · replaced %lld" : {
+      "comment" : "Unit after the number of corrections and translations out today",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次 · 替换 %lld 次"
+          }
+        }
+      }
+    },
+    "words" : {
+      "comment" : "Unit after the big number of words to review",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个词"
+          }
+        }
+      }
+    },
+    "words · %lld sentences" : {
+      "comment" : "Unit after the big number of words looked up today; the argument is sentences",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个词 · %lld 句"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

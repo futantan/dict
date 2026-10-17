@@ -4,94 +4,11 @@ import AppKit
 import DictCore
 import SwiftUI
 
-/// The tabs of the Settings window, in toolbar order.
-enum SettingsPane: String, CaseIterable {
-  case languages, model, shortcuts
-
-  /// Every pane has this width, so the window does not jump sideways between tabs.
-  static let width: CGFloat = 520
-
-  var title: String {
-    switch self {
-    case .languages:
-      String(localized: "Languages", table: "Settings", comment: "Settings tab title")
-    case .model:
-      String(localized: "Model", table: "Settings", comment: "Settings tab title")
-    case .shortcuts:
-      String(localized: "Shortcuts", table: "Settings", comment: "Settings tab title")
-    }
-  }
-
-  var symbol: String {
-    switch self {
-    case .languages: "globe"
-    case .model: "cpu"
-    case .shortcuts: "keyboard"
-    }
-  }
-}
-
-// MARK: - Languages
-
-struct LanguagesPane: View {
-  let model: SettingsModel
-
-  var body: some View {
-    Form {
-      Section {
-        Picker(
-          String(localized: "My language", table: "Settings", comment: "Settings field label"),
-          selection: binding(\.myLanguage) { $0.setMyLanguage($1) }
-        ) { languageOptions }
-        Picker(
-          String(
-            localized: "Language I’m learning", table: "Settings", comment: "Settings field label"),
-          selection: binding(\.learningLanguage) { $0.setLearningLanguage($1) }
-        ) { languageOptions }
-      } footer: {
-        footnote(
-          String(
-            localized:
-              "Text in your language is translated into the language you’re learning, and everything else into your language.",
-            table: "Settings", comment: "Footer under the language pickers"))
-      }
-
-      if model.preferences.learningLanguage == "en" {
-        Section {
-          Picker(
-            String(localized: "Accent", table: "Settings", comment: "Settings field label"),
-            selection: binding(\.accent) { $0.accent = $1 }
-          ) {
-            ForEach(Accent.allCases, id: \.self) { Text($0.title).tag($0) }
-          }
-        } footer: {
-          footnote(
-            String(
-              localized: "Used when Dict reads English words and sentences aloud.",
-              table: "Settings", comment: "Footer under the accent picker"))
-        }
-      }
-    }
-    .formStyle(.grouped)
-    .settingsPaneLayout()
-  }
-
-  private var languageOptions: some View {
-    ForEach(Preferences.languages, id: \.self) { Text(SettingsText.languageName($0)).tag($0) }
-  }
-
-  private func binding<Value>(
-    _ keyPath: KeyPath<Preferences, Value>, set: @escaping (inout Preferences, Value) -> Void
-  ) -> Binding<Value> {
-    Binding(
-      get: { model.preferences[keyPath: keyPath] },
-      set: { value in model.update { set(&$0, value) } })
-  }
-}
-
 // MARK: - Model
 
-struct ModelPane: View {
+/// The model settings as a grouped form that is as tall as its content, for the settings
+/// page's model section.
+struct ModelForm: View {
   let model: SettingsModel
 
   var body: some View {
@@ -99,12 +16,14 @@ struct ModelPane: View {
       ModelSections(model: model)
     }
     .formStyle(.grouped)
-    .settingsPaneLayout()
+    .scrollDisabled(true)
+    .scrollContentBackground(.hidden)
+    .fixedSize(horizontal: false, vertical: true)
   }
 }
 
-/// The provider, model, key and "Test" sections of a grouped form, shared by the Model pane
-/// and the onboarding window. The key is saved when its field loses focus or the sections go
+/// The provider, model, key and "Test" sections of a grouped form, shared by the settings
+/// page and the onboarding window. The key is saved when its field loses focus or the sections go
 /// away.
 struct ModelSections: View {
   let model: SettingsModel
@@ -606,54 +525,6 @@ private func warningLabel(_ text: String) -> some View {
   statusLabel(text, symbol: "exclamationmark.triangle.fill", color: Color(Palette.warningOnTint))
 }
 
-// MARK: - Shortcuts
-
-struct ShortcutsPane: View {
-  let model: SettingsModel
-  let center: HotkeyCenter
-
-  var body: some View {
-    Form {
-      Section {
-        ForEach(HotkeyRole.allCases, id: \.self) { role in
-          LabeledContent {
-            ShortcutRecorder(role: role, center: center)
-          } label: {
-            Text(role.title)
-            Text(role.summary)
-          }
-        }
-      } footer: {
-        footnote(
-          String(
-            localized:
-              "Click a shortcut and press the new keys, or press a modifier key twice. Press Delete to remove it, or Esc to cancel.",
-            table: "Settings", comment: "Footer under the shortcut fields"))
-      }
-
-      Section {
-        Toggle(
-          isOn: Binding(
-            get: { model.preferences.keepsFormatting },
-            set: { value in model.update { $0.keepsFormatting = value } })
-        ) {
-          Text(
-            String(
-              localized: "Keep formatting when replacing", table: "Settings",
-              comment: "Settings toggle label"))
-          Text(
-            String(
-              localized:
-                "Return keeps bold, italics and links when it writes a correction or translation back. Only in native Mac apps.",
-              table: "Settings", comment: "Subtitle under the keep formatting toggle"))
-        }
-      }
-    }
-    .formStyle(.grouped)
-    .settingsPaneLayout()
-  }
-}
-
 // MARK: - Shared
 
 private func footnote(_ text: String) -> some View {
@@ -661,13 +532,4 @@ private func footnote(_ text: String) -> some View {
     .font(.footnote)
     .foregroundStyle(.secondary)
     .fixedSize(horizontal: false, vertical: true)
-}
-
-extension View {
-  /// A fixed-width pane that is as tall as its content.
-  fileprivate func settingsPaneLayout() -> some View {
-    scrollDisabled(true)
-      .frame(width: SettingsPane.width)
-      .fixedSize(horizontal: false, vertical: true)
-  }
 }

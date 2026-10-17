@@ -25,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   /// nil when updates are off for this build (`UpdateFeed`).
   private var updater: Updater?
   private var observers: [any NSObjectProtocol] = []
+  /// The settings the main window's Settings page and the onboarding window edit.
+  private let settings = SettingsModel()
+  /// Built on first use, after the session is wired.
+  private var mainWindow: MainWindowController?
 
   static func main() {
     let app = NSApplication.shared
@@ -41,23 +45,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     let identity = AppIdentity(infoDictionary: Bundle.main.infoDictionary ?? [:])
     appName = identity?.name ?? appName
 
-    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    item.button?.image = NSImage(
-      systemSymbolName: "character.book.closed", accessibilityDescription: appName)
-    item.menu = makeMenu()
-    statusItem = item
-
     switch LaunchMode.current {
     case .unitTests, .endToEnd:
-      // The test host and the e2e runner drive their own objects; no shortcuts or windows.
+      // The test host and the e2e runner drive their own objects; no shortcuts or windows,
+      // and they stay agents without a Dock icon.
+      setStatusItemShown(true)
       return
     case .normal(let onboarding):
+      apply(AppPresence(settings.preferences))
       start(showingOnboarding: onboarding)
     }
   }
 
-  /// Opening Dict again while it runs (Finder, Spotlight, `open`): with no Dock icon, a
-  /// window is the only sign that it heard. Unfinished onboarding comes back, else Settings.
+  /// Opening Dict again while it runs (Dock, Finder, Spotlight, `open`): unfinished
+  /// onboarding comes back, else the main window.
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool)
     -> Bool
   {
@@ -65,7 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     guard coordinator != nil else { return false }
     switch ReopenTarget(onboardingCompleted: onboardingCompleted) {
     case .onboarding: showOnboarding()
-    case .settings: SettingsWindowController.shared.show()
+    case .mainWindow: openMainWindow()
     }
     return false
   }
@@ -78,9 +79,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   // MARK: - Wiring
 
   private func start(showingOnboarding: Bool) {
-    // The Shortcuts pane must record into the registered center, not a copy that never runs.
-    SettingsWindowController.shared.hotkeys = hotkeys
-
     let reader = AccessibilitySelectionReader()
     reader.start()
     self.reader = reader
@@ -107,8 +105,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     permissions.start()
     observeOwnWindows()
 
-    if showingOnboarding && !onboardingCompleted {
-      showOnboarding()
+    // `--no-onboarding` launches in the background for scripts: no window at all.
+    if showingOnboarding {
+      if onboardingCompleted { openMainWindow() } else { showOnboarding() }
     }
     // Silent: renders one word so the first ⌘P on a card speaks at once (architecture 9).
     let preferences = PreferencesStore(defaults: .standard).load()
@@ -142,7 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         refreshPermissions: { [permissions] in permissions.refresh() },
         permissionNotice: { guide.notice(for: $0) },
         performPermissionAction: { guide.perform($0) },
-        openSettings: { SettingsWindowController.shared.show(.model) },
+        openSettings: { [weak self] in self?.openMainWindow(settings: .model) },
         mouseLocation: { NSEvent.mouseLocation },
         makeProofreader: {
           makeProofreader(
@@ -204,6 +203,114 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
       })
   }
 
+  // MARK: - Main window
+
+  private func openMainWindow(settings section: SettingsSection? = nil) {
+    let controller = mainWindow ?? makeMainWindow()
+    mainWindow = controller
+    if let section {
+      controller.show(settings: section)
+    } else {
+      controller.show()
+    }
+  }
+
+  private func makeMainWindow() -> MainWindowController {
+    let data = WindowData(vocab: vocab)
+    var services = SettingsServices(
+      appName: appName,
+      version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        ?? "",
+      loginItem: .mainApp,
+      accessibilityGranted: { [permissions] in permissions.refresh().accessibility },
+      openAccessibilitySettings: { [guide] in
+        _ = guide.perform(PermissionGuide.ActionID.openSettings)
+      },
+      voice: { [speaker, settings] in
+        speaker.voiceChoice(for: settings.preferences.languagePair.learning)
+      },
+      openVoiceSettings: { NSWorkspace.shared.open(Self.voiceSettingsURL) },
+      canCheckForUpdates: { [weak self] in self?.updater?.canCheckForUpdates ?? false },
+      presenceChanged: { [weak self] in self?.apply(AppPresence($0)) },
+      export: { [weak self] in self?.exportRecords() })
+    if updater != nil {
+      services.checkForUpdates = { [weak self] in self?.updater?.checkForUpdates() }
+    }
+    let navigation = MainNavigation()
+    let context = MainWindowContext(
+      navigation: navigation, data: data, settings: settings, hotkeys: hotkeys,
+      services: services,
+      lookUp: { [weak self] text, rect in self?.lookUpFromWindow(text, fieldRect: rect) })
+    let controller = MainWindowController(context: context)
+    controller.onClose = { [weak self] in
+      guard let self, !self.settings.preferences.keepsRunningAfterClose else { return }
+      NSApp.terminate(nil)
+    }
+    return controller
+  }
+
+  /// System Settings → Accessibility → Spoken Content, where voices are downloaded.
+  private static let voiceSettingsURL =
+    URL(
+      string: "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?SpeechSettings")
+    ?? URL(fileURLWithPath: "/System/Applications/System Settings.app")
+
+  private func lookUpFromWindow(_ text: String, fieldRect: CGRect) {
+    let anchor = mainWindow?.screenRect(ofContentRect: fieldRect).map(PanelAnchor.selection)
+    coordinator?.lookUpTyped(text, near: anchor ?? .mouse(NSEvent.mouseLocation))
+  }
+
+  /// 「导出…」: the Anki TSV of every term, saved where the user says.
+  private func exportRecords() {
+    guard let window = mainWindow?.window, let data = mainWindow?.context.data else { return }
+    let panel = NSSavePanel()
+    panel.nameFieldStringValue = "\(appName).txt"
+    panel.allowedContentTypes = [.tabSeparatedText]
+    panel.beginSheetModal(for: window) { response in
+      guard response == .OK, let url = panel.url else { return }
+      Task { @MainActor in
+        do {
+          try await data.exportAnki()?.write(to: url, options: .atomic)
+        } catch {
+          Log.store.error("export failed: \(String(describing: error), privacy: .public)")
+          let alert = NSAlert()
+          alert.messageText = SettingsText.exportFailed
+          alert.informativeText = error.localizedDescription
+          await alert.beginSheetModal(for: window)
+        }
+      }
+    }
+  }
+
+  // MARK: - Dock and menu bar
+
+  /// Shows the Dock icon and the menu bar icon as the settings say. Becoming a regular app
+  /// from an agent needs activating again before the Dock icon and the menu bar appear.
+  private func apply(_ presence: AppPresence) {
+    setStatusItemShown(presence.showsStatusItem)
+    if NSApp.mainMenu == nil { NSApp.mainMenu = MainMenu.make(appName: appName) }
+    guard NSApp.activationPolicy() != presence.activationPolicy else { return }
+    NSApp.setActivationPolicy(presence.activationPolicy)
+    if presence.activationPolicy == .regular,
+      NSApp.isActive || mainWindow?.window?.isVisible == true
+    {
+      NSApp.activateFromFrontApp()
+    }
+  }
+
+  private func setStatusItemShown(_ shown: Bool) {
+    if shown, statusItem == nil {
+      let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+      item.button?.image = NSImage(
+        systemSymbolName: "character.book.closed", accessibilityDescription: appName)
+      item.menu = makeMenu()
+      statusItem = item
+    } else if !shown, let item = statusItem {
+      NSStatusBar.system.removeStatusItem(item)
+      statusItem = nil
+    }
+  }
+
   // MARK: - Onboarding
 
   private var onboardingCompleted: Bool {
@@ -213,8 +320,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   private func showOnboarding() {
     if onboarding == nil {
       let model = OnboardingModel(
-        hotkeys: hotkeys, settings: SettingsWindowController.shared.model,
-        permissions: permissions.status)
+        hotkeys: hotkeys, settings: settings, permissions: permissions.status)
       model.openAccessibilitySettings = { [guide] in
         _ = guide.perform(PermissionGuide.ActionID.openSettings)
       }
@@ -225,6 +331,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
       onboarding = OnboardingWindowController(
         model: model, appName: appName,
         refreshPermissions: { [permissions] in permissions.refresh() })
+      // Done opens the main window (Design/main-app/README.md).
+      let close = model.finish
+      model.finish = { [weak self] in
+        close()
+        self?.openMainWindow()
+      }
     }
     onboarding?.show()
   }
@@ -255,7 +367,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   }
 
   @objc func showShortcutSettings(_ sender: Any?) {
-    SettingsWindowController.shared.show(.shortcuts)
+    openMainWindow(settings: .shortcuts)
+  }
+
+  /// The status menu's and the Window menu's 「打开 Dict」.
+  @objc func showMainWindow(_ sender: Any?) {
+    openMainWindow()
+  }
+
+  /// The status menu's and the app menu's 「设置…」, ⌘,.
+  @objc func showSettings(_ sender: Any?) {
+    openMainWindow(settings: .general)
   }
 
   @objc func checkForUpdates(_ sender: Any?) {
@@ -271,10 +393,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
 /// What opening Dict again shows.
 enum ReopenTarget: Equatable {
-  case onboarding, settings
+  case onboarding, mainWindow
 
   init(onboardingCompleted: Bool) {
-    self = onboardingCompleted ? .settings : .onboarding
+    self = onboardingCompleted ? .mainWindow : .onboarding
   }
 }
 

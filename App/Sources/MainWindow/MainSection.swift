@@ -91,4 +91,21 @@ final class MainNavigation {
     section = .today
     searchFocusRequest += 1
   }
+
+  // MARK: - Review
+
+  /// The term a review was asked to start with; the review page starts its session with it
+  /// and clears it with `didStartReview()`.
+  private(set) var reviewTermRequest: Int64?
+
+  /// Opens 复习 on a new session with `termID` first, due or not (生词本's 「现在复习」); nil
+  /// only opens the page.
+  func startReview(with termID: Int64? = nil) {
+    section = .review
+    reviewTermRequest = termID
+  }
+
+  func didStartReview() {
+    reviewTermRequest = nil
+  }
 }

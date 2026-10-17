@@ -241,7 +241,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     let context = MainWindowContext(
       navigation: navigation, data: data, settings: settings, hotkeys: hotkeys,
       services: services,
-      lookUp: { [weak self] text, rect in self?.lookUpFromWindow(text, fieldRect: rect) })
+      lookUp: { [weak self] text, rect in self?.lookUpFromWindow(text, fieldRect: rect) },
+      pronounce: { [speaker] text, language, rate in
+        speaker.accent = PreferencesStore(defaults: .standard).load().accent
+        speaker.say(text, language: language, rate: rate)
+      })
     let controller = MainWindowController(context: context)
     controller.onClose = { [weak self] in
       guard let self, !self.settings.preferences.keepsRunningAfterClose else { return }

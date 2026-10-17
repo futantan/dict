@@ -75,8 +75,9 @@ struct MainWindowGalleryTests {
       ("settings-privacy", sample, { $0.show(.privacy) }),
       ("history", sample, { $0.section = .history }),
     ]
+    let reviewStates = try await ReviewGalleryTests.states()
     for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-      for (name, data, navigate) in states {
+      for (name, data, navigate) in states + reviewStates {
         let controller = try Self.makeController(data: data)
         let window = try #require(controller.window)
         window.appearance = NSAppearance(named: appearance)

@@ -17,6 +17,16 @@ protocol WindowVocab: Sendable {
   func setTier(_ tier: Tier, termID: Int64, on day: LocalDay) async throws
   func deleteAll() async throws
   func exportAnkiTSV() async throws -> Data
+
+  // MARK: - Review
+
+  func dueReviews(on day: LocalDay, limit: Int) async throws -> [ReviewItem]
+  func reviewItem(termID: Int64) async throws -> ReviewItem?
+  func reviewHistory(termID: Int64, excluding encounterID: Int64?) async throws -> ReviewHistory
+  func nextDueDay(after day: LocalDay) async throws -> LocalDay?
+  func recordReview(
+    termID: Int64, encounterID: Int64?, rating: Rating, on day: LocalDay, at date: Date
+  ) async throws
 }
 
 extension VocabStore: WindowVocab {}
@@ -116,4 +126,9 @@ final class WindowData {
   func exportAnki() async throws -> Data? {
     try await vocab?.exportAnkiTSV()
   }
+
+  // MARK: - Review
+
+  /// The review page's session; one per window, so it outlives the page's view.
+  @ObservationIgnored private(set) lazy var review = ReviewModel(data: self)
 }

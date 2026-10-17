@@ -18,12 +18,6 @@ struct SavedPage: View {
   var body: some View { PlaceholderPage(section: .saved) }
 }
 
-struct ReviewPage: View {
-  let data: WindowData
-
-  var body: some View { PlaceholderPage(section: .review) }
-}
-
 private struct PlaceholderPage: View {
   let section: MainSection
 

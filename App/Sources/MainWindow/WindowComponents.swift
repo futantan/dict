@@ -159,7 +159,7 @@ struct SidebarItem: View {
         Text(section.title)
           .font((isSelected ? WindowType.sidebarItemSelected : WindowType.sidebarItem).font)
           .frame(maxWidth: .infinity, alignment: .leading)
-        if let count {
+        if let count, count > 0 {
           Text(count, format: .number)
             .font(WindowType.detail.font)
             .foregroundStyle(Color(Palette.textSecondary))

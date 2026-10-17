@@ -9,6 +9,26 @@ import Testing
 
 @MainActor
 struct MainWindowTests {
+  /// The window's text reads at 4.5:1 or more on the sidebar and the cards, in either
+  /// appearance, as the panel's does on its fill.
+  @Test(arguments: [NSAppearance.Name.aqua, .darkAqua])
+  func theWindowsTextIsLegible(_ name: NSAppearance.Name) throws {
+    let appearance = try #require(NSAppearance(named: name))
+    let pairs: [(String, NSColor, NSColor)] = [
+      ("textQuiet on sidebar", Palette.textQuiet, Palette.sidebarFill),
+      ("textSecondary on sidebar", Palette.textSecondary, Palette.sidebarFill),
+      ("accentOnTint on sidebar item", Palette.accentOnTint, Palette.accentTint),
+      ("textPrimary on card", Palette.textPrimary, Palette.cardFill),
+      ("textSecondary on card", Palette.textSecondary, Palette.cardFill),
+      ("textQuiet on card", Palette.textQuiet, Palette.cardFill),
+      ("dangerOnTint", Palette.dangerOnTint, Palette.dangerTint),
+    ]
+    for (label, text, background) in pairs {
+      let ratio = Contrast.ratio(text, on: background, in: appearance)
+      #expect(ratio >= 4.5, "\(label) in \(name.rawValue): \(ratio)")
+    }
+  }
+
   @Test func presenceFollowsTheDockAndMenuBarSwitches() {
     var preferences = Preferences()
     #expect(AppPresence(preferences) == AppPresence(policy: .regular, statusItem: true))
@@ -103,6 +123,22 @@ struct MainWindowTests {
       return
     }
     #expect(segments.contains(.changed(from: "have", to: "has")))
+  }
+
+  /// Ported from the old Settings window: closing the window saves the key being typed.
+  @Test func closingTheWindowSavesTheKeyBeingEdited() async throws {
+    let controller = try MainWindowGalleryTests.makeController(
+      data: MainWindowGallery.unavailableData())
+    var closed = false
+    controller.onClose = { closed = true }
+    controller.context.settings.keyDraft = "sk-edited"
+
+    controller.windowWillClose(Notification(name: NSWindow.willCloseNotification))
+
+    #expect(controller.context.settings.keyDraft == "sk-edited")
+    #expect(controller.context.settings.setupIssue == nil)
+    #expect(closed)
+    #expect(controller.window?.isVisible == false)
   }
 
   @Test func aLineFromAnotherDayShowsTheDate() {

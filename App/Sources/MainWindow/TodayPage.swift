@@ -50,15 +50,12 @@ struct TodayPage: View {
         .font(.system(size: Size.symbol + 2, weight: Size.symbolWeight))
         .foregroundStyle(Color(Palette.textTertiary))
         .accessibilityHidden(true)
-      TextField(
-        text: $query,
-        prompt: Text(WindowStrings.searchPlaceholder).foregroundStyle(Color(Palette.textTertiary))
-      ) { Text(WindowStrings.searchPlaceholder) }
-      .textFieldStyle(.plain)
-      .font(WindowType.search.font)
-      .foregroundStyle(Color(Palette.textPrimary))
-      .focused($isSearchFocused)
-      .onSubmit(submit)
+      // The system's colours: the placeholder in the placeholder grey, the text as labels.
+      TextField(WindowStrings.searchPlaceholder, text: $query)
+        .textFieldStyle(.plain)
+        .font(WindowType.search.font)
+        .focused($isSearchFocused)
+        .onSubmit(submit)
       KeyCap(keys: "⌘K")
         .foregroundStyle(Color(Palette.textSecondary))
     }
@@ -101,8 +98,9 @@ struct TodayPage: View {
         label: WindowStrings.dueLabel, value: data.today.due, unit: WindowStrings.dueUnit,
         isEmphasized: true
       ) {
-        PrimaryButton(title: WindowStrings.startReview) { navigation.section = .review }
-          .disabled(data.today.due == 0)
+        if data.today.due > 0 {
+          PrimaryButton(title: WindowStrings.startReview) { navigation.section = .review }
+        }
       }
     }
     .fixedSize(horizontal: false, vertical: true)
@@ -140,7 +138,7 @@ struct TodayPage: View {
   private var frequent: some View {
     VStack(alignment: .leading, spacing: WindowLayout.headingSpacing) {
       SectionHeading(WindowStrings.frequent)
-      WindowCard(padding: WindowLayout.listInset) {
+      WindowCard(padding: data.today.frequent.isEmpty ? 0 : WindowLayout.listInset) {
         if data.today.frequent.isEmpty {
           EmptyCardText(text: WindowStrings.nothingFrequent)
         }

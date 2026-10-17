@@ -750,6 +750,7 @@ final class SessionCoordinator {
         panel.update(cardPanel)
         if recorded == nil { await recordLookup(term, lemma: lemma, id: id) }
       }
+      guard id == self.id, !Task.isCancelled else { return }
       if let completed { await completeLookup(with: completed) }
       Log.ui.info(
         "session \(id, privacy: .public): card complete \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms after the shortcut"

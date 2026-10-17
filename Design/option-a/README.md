@@ -27,7 +27,7 @@
 | `successTint` / `successOnTint` | #E3F4E8 / #1F7A3A | #56D364 16% / #7EE08F | 「常用」、「没有发现错误」 |
 | `warningTint` / `warningOnTint` | #FFF0DE / #A34A00 | #F5A524 14% / #F5B54A | 校验问题、未完成、未替换 |
 | `neutralTint` / `neutralOnTint` | #EFEFF2 / #545458 | 白 8% / #B4B4BB | 次级按钮、说明、中性胶囊、US/UK 标签 |
-| `highlight` | #FFE58F | #FFE58F 35% | 原句里被查的词 |
+| `highlight` | #FFE58F | #846818 | 原句里被查的词；上面的正文 ≥ 4.5:1，深色与面板底 ≥ 3:1（不透明暗金，半透明的黄在深底上发灰发绿） |
 
 diff 的红绿沿用 `DiffColor`（已有对比度测试），当前修改的下划线改用 `accent`。
 

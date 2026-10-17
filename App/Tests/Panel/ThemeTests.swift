@@ -21,6 +21,7 @@ struct ThemeTests {
       ("successOnTint", Palette.successOnTint, Palette.successTint),
       ("warningOnTint", Palette.warningOnTint, Palette.warningTint),
       ("neutralOnTint", Palette.neutralOnTint, Palette.neutralTint),
+      ("textPrimary on highlight", Palette.textPrimary, Palette.highlight),
     ]
     for (label, text, background) in pairs {
       let ratio = Contrast.ratio(text, on: background, in: appearance)
@@ -40,6 +41,15 @@ struct ThemeTests {
     // The arc still stands out from the ring it turns on.
     let arc = Contrast.ratio(Palette.accent, on: Palette.spinnerTrack, in: appearance)
     #expect(arc >= 2, "arc on track in \(name.rawValue): \(arc)")
+  }
+
+  /// In dark the looked-up word's highlight stands 3:1 off the panel's fill, as a control's
+  /// state does, while its text keeps 4.5:1 (`theTextIsLegible`); a translucent yellow over
+  /// the dark fill turned a grey olive close to the fill.
+  @Test func theDarkHighlightStandsOut() throws {
+    let dark = try #require(NSAppearance(named: .darkAqua))
+    let ratio = Contrast.ratio(Palette.highlight, on: Palette.panelFill, in: dark)
+    #expect(ratio >= 3, "highlight on panelFill: \(ratio)")
   }
 
   /// The README's type table lists exactly the shared text styles, with their sizes and

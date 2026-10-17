@@ -37,7 +37,7 @@ enum Palette {
   static let neutralTint = dynamic(light: rgb(0xEFEFF2), dark: rgb(0xFFFFFF, 0.08))
   static let neutralOnTint = dynamic(light: rgb(0x545458), dark: rgb(0xB4B4BB))
   /// The looked-up word in its sentence.
-  static let highlight = dynamic(light: rgb(0xFFE58F), dark: rgb(0xFFE58F, 0.35))
+  static let highlight = dynamic(light: rgb(0xFFE58F), dark: rgb(0x846818))
 
   private static func dynamic(light: NSColor, dark: NSColor) -> NSColor {
     NSColor(name: nil) { appearance in

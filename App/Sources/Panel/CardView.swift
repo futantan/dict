@@ -9,6 +9,10 @@ import SwiftUI
 /// fields as they arrive. Pronouncing and translating are in the bar (`ActionBar`).
 struct CardView: View {
   let card: CardState
+  /// The star at the header's trailing edge; History has its 要学 button below the card.
+  var showsStar = true
+  /// After the word on its baseline: History's 「原文 ran」.
+  var note: String?
   var onAction: (PanelAction.ID) -> Void = { _ in }
 
   var body: some View {
@@ -79,14 +83,26 @@ struct CardView: View {
   private var header: some View {
     HStack(alignment: .top, spacing: Spacing.pill) {
       VStack(alignment: .leading, spacing: Spacing.senses) {
-        lemma
+        if let note {
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.row) {
+            lemma
+            Text(note)
+              .font(Typography.secondary.font)
+              .foregroundStyle(Color(Palette.textSecondary))
+              .lineLimit(1)
+          }
+        } else {
+          lemma
+        }
         details
       }
       Spacer(minLength: 0)
-      IconButton(
-        title: card.isLearning ? CardStrings.learning : CardStrings.learn,
-        symbol: card.isLearning ? "star.fill" : "star", shortcut: "⌘S", isOn: card.isLearning
-      ) { onAction(CardStrings.learnAction) }
+      if showsStar {
+        IconButton(
+          title: card.isLearning ? CardStrings.learning : CardStrings.learn,
+          symbol: card.isLearning ? "star.fill" : "star", shortcut: "⌘S", isOn: card.isLearning
+        ) { onAction(CardStrings.learnAction) }
+      }
     }
   }
 

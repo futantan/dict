@@ -109,8 +109,6 @@ enum WindowLayout {
   static let settingsItemHeight: CGFloat = 32
   static let settingsColumnMaxWidth: CGFloat = 720
   static let settingsSpacing: CGFloat = 32
-  /// How far a grouped form insets its sections from its edges.
-  static let formInset: CGFloat = 20
   /// The window's size when it first opens, and the smallest it gets.
   static let defaultSize = CGSize(width: 1280, height: 800)
   static let minimumSize = CGSize(width: 960, height: 620)

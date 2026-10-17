@@ -85,6 +85,15 @@ struct MainWindowGalleryTests {
         let png = try #require(Self.render(window))
         try png.write(to: directory.appendingPathComponent("\(language)-\(scheme)-\(name).png"))
       }
+      // The model section at the narrowest width, where its rows must shrink or stack.
+      let controller = try Self.makeController(data: sample)
+      let window = try #require(controller.window)
+      window.appearance = NSAppearance(named: appearance)
+      window.setContentSize(WindowLayout.minimumSize)
+      controller.context.navigation.show(.model)
+      let png = try #require(Self.render(window))
+      try png.write(
+        to: directory.appendingPathComponent("\(language)-\(scheme)-settings-model-narrow.png"))
     }
   }
 

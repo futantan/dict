@@ -26,6 +26,54 @@
     "%lld words and %lld sentences, never uploaded to any server." : {
       "comment" : "Data and privacy: what is kept on this Mac",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@terms@ and %#@sentences@, never uploaded to any server."
+          },
+          "substitutions" : {
+            "sentences" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sentence"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sentences"
+                    }
+                  }
+                }
+              }
+            },
+            "terms" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg word"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg words"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -298,6 +346,17 @@
         }
       }
     },
+    "Collapsed" : {
+      "comment" : "Accessibility value of the Advanced row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已折叠"
+          }
+        }
+      }
+    },
     "Couldn’t access the Keychain (error %@)." : {
       "comment" : "Reading or saving the API key failed. The argument is an error number",
       "localizations" : {
@@ -338,6 +397,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "连不上 Ollama。请确认它正在这台 Mac 上运行。"
+          }
+        }
+      }
+    },
+    "Custom" : {
+      "comment" : "Segment of the provider control for any OpenAI-compatible service",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义"
           }
         }
       }
@@ -463,6 +533,17 @@
         }
       }
     },
+    "Expanded" : {
+      "comment" : "Accessibility value of the Advanced row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已展开"
+          }
+        }
+      }
+    },
     "Export records" : {
       "comment" : "Settings row",
       "localizations" : {
@@ -542,6 +623,17 @@
         }
       }
     },
+    "Hide" : {
+      "comment" : "Button that hides the typed API key",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏"
+          }
+        }
+      }
+    },
     "Hide API key" : {
       "comment" : "Help tag",
       "localizations" : {
@@ -571,6 +663,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "JSON 模式"
+          }
+        }
+      }
+    },
+    "JSON mode, thinking, output limit" : {
+      "comment" : "What the collapsed Advanced row of a custom provider holds",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON 模式、思考、输出上限"
           }
         }
       }
@@ -861,6 +964,17 @@
         }
       }
     },
+    "Saved in the Keychain" : {
+      "comment" : "Note under the API key field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存在钥匙串中"
+          }
+        }
+      }
+    },
     "See which models this service offers." : {
       "comment" : "Shown next to the List Available Models button before it is used",
       "localizations" : {
@@ -905,6 +1019,17 @@
         }
       }
     },
+    "Show" : {
+      "comment" : "Button that shows the typed API key",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示"
+          }
+        }
+      }
+    },
     "Show API key" : {
       "comment" : "Help tag",
       "localizations" : {
@@ -945,6 +1070,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "简体中文"
+          }
+        }
+      }
+    },
+    "Some checks failed" : {
+      "comment" : "Pill: the test finished and a check failed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部分检查未通过"
           }
         }
       }
@@ -1363,6 +1499,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关掉后，关闭主窗口会退出 Dict，快捷键也随之失效。"
+          }
+        }
+      }
+    },
+    "Works · first words in %@ s" : {
+      "comment" : "Pill: every check passed. The argument is the seconds to the first answer text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以使用 · 首字 %@ 秒"
+          }
+        }
+      }
+    },
+    "Works, but slow" : {
+      "comment" : "Pill: every check passed but the model thinks, so lookups are slow",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以使用，但较慢"
           }
         }
       }

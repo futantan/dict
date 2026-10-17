@@ -11,7 +11,7 @@ import Testing
 private let renderDirectory = ProcessInfo.processInfo.environment["DICT_SETTINGS_RENDER_DIR"]
 
 /// Renders the settings page's cards in sample states offscreen, at a fixed width: the
-/// languages and shortcuts cards and every state of the model form. The whole page is
+/// languages and shortcuts cards and every state of the model section. The whole page is
 /// rendered by `MainWindowGalleryTests`.
 ///
 /// `TEST_RUNNER_DICT_SETTINGS_RENDER_DIR=<dir> xcodebuild test … -only-testing:
@@ -72,12 +72,12 @@ struct SettingsGalleryTests {
         "languages-japanese",
         card { LanguageRows(model: model(Preferences(myLanguage: "en", learningLanguage: "ja"))) }
       ),
-      ("model-none", AnyView(ModelForm(model: model(Preferences())))),
-      ("model-openai-nokey", AnyView(ModelForm(model: model(provider("openai"))))),
+      ("model-none", AnyView(ModelCard(model: model(Preferences())))),
+      ("model-openai-nokey", AnyView(ModelCard(model: model(provider("openai"))))),
       (
         "model-openai-ok",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("openai"), key: key,
               connection: .checked(.translated(after: .milliseconds(840))))))
@@ -85,7 +85,7 @@ struct SettingsGalleryTests {
       (
         "model-openai-testing",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("openai"), key: key,
               connection: .checked(ConnectionReport(translation: .running)))))
@@ -93,14 +93,14 @@ struct SettingsGalleryTests {
       (
         "model-openai-unauthorized",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("openai"), key: key, connection: .checked(.failed(.model(.unauthorized))))))
       ),
       (
         "model-ollama",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("ollama", model: "qwen3:4b"),
               connection: .checked(.failed(.model(.network(code: -1004)))),
@@ -109,19 +109,19 @@ struct SettingsGalleryTests {
       (
         "model-ollama-listed",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("ollama", model: "qwen3:4b"),
               list: .loaded(["gemma3:1b", "llama3.2:3b", "qwen3:4b"]))))
       ),
       (
         "model-ollama-none-installed",
-        AnyView(ModelForm(model: model(provider("ollama"), list: .loaded([]))))
+        AnyView(ModelCard(model: model(provider("ollama"), list: .loaded([]))))
       ),
       (
         "model-openai-notfound",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("openai", model: "gpt-9"), key: key,
               connection: .checked(.failed(.model(.modelNotFound))),
@@ -130,7 +130,7 @@ struct SettingsGalleryTests {
       (
         "model-openai-structured",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("openai"), key: key,
               connection: .checked(
@@ -141,7 +141,7 @@ struct SettingsGalleryTests {
       (
         "model-ollama-thinking",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("ollama", model: "qwen3:4b"),
               connection: .checked(.translated(after: .milliseconds(4200), sawThinking: true)))))
@@ -149,7 +149,7 @@ struct SettingsGalleryTests {
       (
         "model-custom-json-failed",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
               key: key,
@@ -159,16 +159,29 @@ struct SettingsGalleryTests {
                   structuredOutput: .failed(.structuredOutput(.malformed)))))))
       ),
       (
+        "model-custom-advanced",
+        AnyView(
+          ModelCard(
+            model: model(
+              provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
+              key: key),
+            showsAdvanced: true))
+      ),
+      (
+        "model-openai-advanced",
+        AnyView(ModelCard(model: model(provider("openai"), key: key), showsAdvanced: true))
+      ),
+      (
         "model-custom-insecure",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "http://api.deepseek.com/v1"))))
       ),
       (
         "model-custom-badrequest",
         AnyView(
-          ModelForm(
+          ModelCard(
             model: model(
               provider("custom", model: "deepseek-chat", baseURL: "https://api.deepseek.com/v1"),
               key: key,
@@ -189,6 +202,16 @@ struct SettingsGalleryTests {
         card { ShortcutRows(center: hotkeys(assigned: true)) }
       ),
     ]
+  }
+
+  /// The model section, as on the settings page.
+  private struct ModelCard: View {
+    let model: SettingsModel
+    var showsAdvanced = false
+
+    var body: some View {
+      ModelSettingsSection(model: model, showsAdvanced: showsAdvanced).padding(20)
+    }
   }
 
   /// Rows in a card, as on the settings page.

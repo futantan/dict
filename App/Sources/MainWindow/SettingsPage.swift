@@ -5,7 +5,8 @@ import SwiftUI
 
 /// 设置 (Design/main-app/settings.html): a list of sections beside one scrolling column of
 /// cards. The settings themselves are `SettingsModel`'s and the shortcut center's, as in
-/// the old Settings window; the model section is the onboarding's `ModelSections`.
+/// the old Settings window; the model section (`ModelSettingsSection`) shares the onboarding's
+/// model logic.
 struct SettingsPage: View {
   let model: SettingsModel
   let hotkeys: HotkeyCenter
@@ -91,7 +92,7 @@ struct SettingsPage: View {
     VStack(alignment: .leading, spacing: WindowLayout.pageSpacing) {
       group(.general) { general }
       group(.languages, footnote: SettingsText.languagesNote) { LanguageRows(model: model) }
-      modelSection
+      ModelSettingsSection(model: model).id(SettingsSection.model)
       group(.shortcuts, footnote: SettingsText.shortcutsNote) { ShortcutRows(center: hotkeys) }
       group(.writing) { writing }
       group(.voice) { voice }
@@ -170,20 +171,6 @@ struct SettingsPage: View {
     Binding(
       get: { model.preferences[keyPath: keyPath] },
       set: { value in model.update { set(&$0, value) } })
-  }
-
-  // MARK: Model
-
-  /// The onboarding's grouped form, so the model settings behave the same in both places.
-  private var modelSection: some View {
-    VStack(alignment: .leading, spacing: WindowLayout.headingSpacing) {
-      SectionHeading(SettingsSection.model.title)
-      ModelForm(model: model)
-        // The grouped form insets its sections; this lines them up with the other cards.
-        .padding(.horizontal, -WindowLayout.formInset)
-        .padding(.vertical, -WindowLayout.formInset / 2)
-    }
-    .id(SettingsSection.model)
   }
 
   // MARK: Writing

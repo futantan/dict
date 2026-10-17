@@ -12,7 +12,9 @@ public actor VocabStore {
   /// The `PRAGMA user_version` this build writes.
   public static let schemaVersion = migrations.count
 
-  private let db: VocabDatabase
+  /// Internal so the read-side queries of the app's windows (`VocabStore+Window.swift`) can
+  /// live in files of their own.
+  let db: VocabDatabase
   private let autoPromotion: AutoPromotion?
 
   /// Opens or creates the file at `url`, turns on foreign keys and WAL, and migrates it. A file
@@ -113,9 +115,7 @@ public actor VocabStore {
     }
     let sentences = try db.rows(
       """
-      SELECT id, kind, source, result, edits_json, applied, source_lang, result_lang,
-             source_app, day, created_at
-      FROM sentence_event WHERE day = ? ORDER BY created_at, id
+      SELECT \(sentenceColumns) FROM sentence_event WHERE day = ? ORDER BY created_at, id
       """, [.text(day.description)]
     ).compactMap(Self.sentenceEvent)
     return DailyLog(day: day, lookups: lookups, sentences: sentences)
@@ -366,7 +366,7 @@ public actor VocabStore {
     Int64(date.timeIntervalSince1970.rounded(.down))
   }
 
-  private static func date(_ value: VocabValue) -> Date? {
+  static func date(_ value: VocabValue) -> Date? {
     value.int64.map { Date(timeIntervalSince1970: TimeInterval($0)) }
   }
 
@@ -385,7 +385,7 @@ public actor VocabStore {
       .replacingOccurrences(of: "_", with: "\\_")
   }
 
-  private static func term(_ row: [VocabValue]) -> TermSummary? {
+  static func term(_ row: [VocabValue]) -> TermSummary? {
     guard row.count >= termColumnCount, let id = row[0].int64, let language = row[1].string,
       let lemma = row[2].string, let key = row[3].string,
       let tier = row[4].string.flatMap(Tier.init), let count = row[5].int,
@@ -399,7 +399,7 @@ public actor VocabStore {
       encounterCount: count, card: card, createdAt: created, lastSeenAt: lastSeen)
   }
 
-  private static func encounter(_ row: [VocabValue], at offset: Int) -> Encounter? {
+  static func encounter(_ row: [VocabValue], at offset: Int) -> Encounter? {
     let c = Array(row.dropFirst(offset))
     guard c.count >= 14, let id = c[0].int64, let termID = c[1].int64,
       let kind = c[2].string.flatMap(EncounterKind.init), let surface = c[3].string,
@@ -413,7 +413,7 @@ public actor VocabStore {
       sourceURL: c[11].string.flatMap(URL.init(string:)), day: day, seenAt: seenAt)
   }
 
-  private static func sentenceEvent(_ c: [VocabValue]) -> SentenceEvent? {
+  static func sentenceEvent(_ c: [VocabValue]) -> SentenceEvent? {
     guard c.count >= 11, let id = c[0].int64, let kind = c[1].string.flatMap(SentenceKind.init),
       let source = c[2].string, let result = c[3].string, let applied = c[5].int,
       let sourceLanguage = c[6].string, let resultLanguage = c[7].string,
@@ -464,16 +464,22 @@ public actor VocabStore {
   }
 }
 
-private let termColumns = """
+let termColumns = """
   t.id, t.language, t.lemma, t.lemma_key, t.tier,
   (SELECT count(*) FROM encounter c WHERE c.term_id = t.id), t.card_json, t.card_version,
   t.created_at, t.last_seen_at
   """
-private let termColumnCount = 10
+let termColumnCount = 10
 
-private let encounterColumns = """
+let encounterColumns = """
   e.id, e.term_id, e.kind, e.surface, e.sentence, e.term_start, e.term_length, e.sense,
   e.sentence_translation, e.source_kind, e.source_app, e.source_url, e.day, e.seen_at
+  """
+let encounterColumnCount = 14
+
+let sentenceColumns = """
+  id, kind, source, result, edits_json, applied, source_lang, result_lang, source_app, day,
+  created_at
   """
 
 extension Optional {

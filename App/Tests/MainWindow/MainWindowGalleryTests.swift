@@ -45,7 +45,8 @@ struct MainWindowGalleryTests {
       checkForUpdates: {}, canCheckForUpdates: { true })
     let context = MainWindowContext(
       navigation: MainNavigation(), data: data, settings: settings,
-      hotkeys: HotkeyCenter(defaults: defaults), services: services, lookUp: { _, _ in })
+      hotkeys: HotkeyCenter(defaults: defaults), services: services, lookUp: { _, _ in },
+      history: HistoryServices(lookUpTerm: { MainWindowGallery.lexicon($0, context: $1) }))
     return MainWindowController(context: context, frameName: nil)
   }
 
@@ -73,7 +74,22 @@ struct MainWindowGalleryTests {
       ("settings", sample, { $0.section = .settings }),
       ("settings-model", sample, { $0.show(.model) }),
       ("settings-privacy", sample, { $0.show(.privacy) }),
-      ("history", sample, { $0.section = .history }),
+      ("history", try await Self.historyData { _ in }, { $0.section = .history }),
+      (
+        "history-sentence", try await Self.historyData { $0.selectedID = Self.firstCorrection($0) },
+        { $0.section = .history }
+      ),
+      (
+        "history-search", try await Self.historyData { await $0.setSearch("run") },
+        { $0.section = .history }
+      ),
+      (
+        "history-filtered", try await Self.historyData { await $0.setKind(.translations) },
+        { $0.section = .history }
+      ),
+      (
+        "history-empty", try await Self.historyData(empty: true) { _ in }, { $0.section = .history }
+      ),
     ]
     let reviewStates = try await ReviewGalleryTests.states()
     for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
@@ -85,6 +101,13 @@ struct MainWindowGalleryTests {
         navigate(controller.context.navigation)
         let png = try #require(Self.render(window))
         try png.write(to: directory.appendingPathComponent("\(language)-\(scheme)-\(name).png"))
+        // The History page also at the smallest width, where its columns are tightest.
+        if name.hasPrefix("history") {
+          window.setContentSize(WindowLayout.minimumSize)
+          let narrow = try #require(Self.render(window))
+          try narrow.write(
+            to: directory.appendingPathComponent("\(language)-\(scheme)-\(name)-narrow.png"))
+        }
       }
       // The model section at the narrowest width, where its rows must shrink or stack.
       let controller = try Self.makeController(data: sample)
@@ -96,6 +119,24 @@ struct MainWindowGalleryTests {
       try png.write(
         to: directory.appendingPathComponent("\(language)-\(scheme)-settings-model-narrow.png"))
     }
+  }
+
+  /// The sample data with the History page's state prepared by `prepare`.
+  static func historyData(empty: Bool = false, _ prepare: (HistoryModel) async -> Void)
+    async throws -> WindowData
+  {
+    let data =
+      try await empty ? MainWindowGallery.emptyData() : MainWindowGallery.sampleData()
+    await data.history.reload()
+    await prepare(data.history)
+    return data
+  }
+
+  /// The first correction in the loaded history.
+  static func firstCorrection(_ history: HistoryModel) -> String? {
+    history.items.first {
+      if case .sentence(let event) = $0 { event.kind == .corrected } else { false }
+    }?.historyID
   }
 
   /// The window's frame view, title bar and traffic lights included.

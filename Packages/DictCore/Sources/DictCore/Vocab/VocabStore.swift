@@ -379,7 +379,7 @@ public actor VocabStore {
     return parts.string ?? url.absoluteString
   }
 
-  private static func escapeLike(_ text: String) -> String {
+  static func escapeLike(_ text: String) -> String {
     text.replacingOccurrences(of: "\\", with: "\\\\")
       .replacingOccurrences(of: "%", with: "\\%")
       .replacingOccurrences(of: "_", with: "\\_")

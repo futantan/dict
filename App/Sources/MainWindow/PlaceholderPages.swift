@@ -2,15 +2,9 @@
 
 import SwiftUI
 
-// The pages a later wave builds (Design/main-app/history.html, saved.html, review.html).
+// The pages a later wave builds (Design/main-app/saved.html, review.html).
 // Each replaces its struct here with a file of its own, keeping the name and the inputs it
 // needs from `MainWindowView.page(for:)`.
-
-struct HistoryPage: View {
-  let data: WindowData
-
-  var body: some View { PlaceholderPage(section: .history) }
-}
 
 struct SavedPage: View {
   let data: WindowData

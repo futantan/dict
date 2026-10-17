@@ -27,6 +27,15 @@ protocol WindowVocab: Sendable {
   func recordReview(
     termID: Int64, encounterID: Int64?, rating: Rating, on day: LocalDay, at date: Date
   ) async throws
+
+  // MARK: - History
+
+  func history(_ filter: HistoryFilter, after cursor: HistoryCursor?, limit: Int) async throws
+    -> HistorySlice
+  func historySourceApps() async throws -> [String]
+  func historyCounts(since day: LocalDay) async throws -> HistoryCounts
+  func deleteEncounter(_ id: Int64) async throws
+  func deleteSentenceEvent(_ id: Int64) async throws
 }
 
 extension VocabStore: WindowVocab {}
@@ -131,4 +140,9 @@ final class WindowData {
 
   /// The review page's session; one per window, so it outlives the page's view.
   @ObservationIgnored private(set) lazy var review = ReviewModel(data: self)
+
+  // MARK: - History
+
+  /// The History page's filters, entries and selection.
+  @ObservationIgnored private(set) lazy var history = HistoryModel(data: self)
 }

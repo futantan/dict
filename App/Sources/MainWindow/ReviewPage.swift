@@ -452,6 +452,7 @@ private struct RatingButton: View {
       .contentShape(Capsule())
     }
     .buttonStyle(PressStyle())
+    .focusRing(Capsule())
     .accessibilityLabel(title)
   }
 }
@@ -499,6 +500,7 @@ private struct EndButton: View {
         .contentShape(Capsule())
     }
     .buttonStyle(PressStyle())
+    .focusRing(Capsule())
   }
 }
 

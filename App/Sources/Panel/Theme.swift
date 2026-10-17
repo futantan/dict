@@ -160,4 +160,6 @@ enum Size {
   /// A key cap on a secondary button: the text colour at this opacity, so it shows on the
   /// neutral tint in either appearance.
   static let keycapOnTint: CGFloat = 0.1
+  /// The accent ring around a custom button that has the keyboard focus.
+  static let focusRing: CGFloat = 2
 }

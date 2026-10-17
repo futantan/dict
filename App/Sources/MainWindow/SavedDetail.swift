@@ -208,12 +208,14 @@ struct SavedDetail: View {
       }
     }
     .buttonStyle(.plain)
+    .focusRing(Capsule())
     Button {
       stopLearning(term.term.id)
     } label: {
       OutlineLabel { Text(SavedStrings.stopLearningButton) }
     }
     .buttonStyle(.plain)
+    .focusRing(Capsule())
   }
 
   /// The sentence with the word on the highlight, by its recorded range or else by the

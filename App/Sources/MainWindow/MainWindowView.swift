@@ -68,6 +68,9 @@ struct MainWindowView: View {
 private struct Sidebar: View {
   let context: MainWindowContext
 
+  /// The item with the keyboard focus, under Full Keyboard Access.
+  @FocusState private var focused: MainSection?
+
   var body: some View {
     let navigation = context.navigation
     VStack(alignment: .leading, spacing: WindowLayout.sidebarItemSpacing) {
@@ -87,16 +90,23 @@ private struct Sidebar: View {
     .background(Color(Palette.sidebarFill))
     .accessibilityElement(children: .contain)
     .accessibilityLabel(navigation.section.title)
+    // The focus moves with the selection while it is in the sidebar, so it does not stay on
+    // 今天 after another page is chosen with the mouse or a shortcut.
+    .onChange(of: navigation.section) { _, section in
+      if focused != nil { focused = section }
+    }
   }
 
   private func item(_ section: MainSection) -> some View {
     SidebarItem(
       section: section, isSelected: context.navigation.section == section,
       count: section == .saved ? context.data.learningCount : nil,
-      badge: section == .review ? context.data.dueCount : nil
+      badge: section == .review ? context.data.dueCount : nil,
+      isFocused: focused == section
     ) {
       context.navigation.section = section
     }
+    .focused($focused, equals: section)
   }
 }
 

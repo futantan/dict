@@ -227,6 +227,8 @@ private struct FilterBar: View {
           .fixedSize()
         }
         .buttonStyle(.plain)
+        .focusRing(
+          RoundedRectangle(cornerRadius: WindowLayout.segmentRadius, style: .continuous))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }
@@ -275,6 +277,7 @@ private struct SortMenu: View {
     .buttonStyle(.plain)
     .menuIndicator(.hidden)
     .fixedSize()
+    .focusRing(RoundedRectangle(cornerRadius: Radius.iconButton, style: .continuous))
   }
 }
 
@@ -303,6 +306,7 @@ private struct ExportMenu: View {
     .buttonStyle(.plain)
     .menuIndicator(.hidden)
     .fixedSize()
+    .focusRing(Capsule())
     .accessibilityLabel(SavedStrings.exportLabel)
   }
 }

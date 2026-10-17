@@ -231,6 +231,8 @@ private struct SourceSection: View {
         AnyView(
           Button(site) { openURL(url) }
             .buttonStyle(.plain)
+            .focusRing(
+              RoundedRectangle(cornerRadius: Radius.partOfSpeech, style: .continuous))
             .foregroundStyle(Color(Palette.accent))
             .help(url.absoluteString)))
     }
@@ -265,6 +267,7 @@ private struct DeleteButton: View {
       .contentShape(Capsule())
     }
     .buttonStyle(.plain)
+    .focusRing(Capsule())
     .layoutValue(key: FlowLayout.PushesToEnd.self, value: true)
   }
 }

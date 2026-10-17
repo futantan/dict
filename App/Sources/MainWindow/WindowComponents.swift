@@ -71,6 +71,7 @@ struct LinkButton: View {
         .foregroundStyle(Color(Palette.accent))
     }
     .buttonStyle(.plain)
+    .focusRing(RoundedRectangle(cornerRadius: Radius.partOfSpeech, style: .continuous))
   }
 }
 
@@ -156,6 +157,8 @@ struct SidebarItem: View {
   var count: Int?
   /// On an accent capsule: 复习's due count; hidden at 0.
   var badge: Int?
+  /// Whether it has the keyboard focus (Full Keyboard Access): an accent ring on its shape.
+  var isFocused = false
   let action: () -> Void
 
   var body: some View {
@@ -189,9 +192,17 @@ struct SidebarItem: View {
         isSelected ? Color(Palette.accentTint) : .clear,
         in: RoundedRectangle(cornerRadius: Radius.iconButton, style: .continuous)
       )
+      .overlay {
+        if isFocused {
+          RoundedRectangle(cornerRadius: Radius.iconButton, style: .continuous)
+            .strokeBorder(Color(Palette.accent), lineWidth: Size.focusRing)
+        }
+      }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    // The system's ring is a square around the row; the one above takes its place.
+    .focusEffectDisabled()
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
@@ -288,6 +299,7 @@ struct CardButton: View {
         .contentShape(Capsule())
     }
     .buttonStyle(.plain)
+    .focusRing(Capsule())
   }
 }
 

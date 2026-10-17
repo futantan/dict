@@ -100,6 +100,7 @@ struct IconButton: View {
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .focusRing(RoundedRectangle(cornerRadius: Radius.iconButton, style: .continuous))
     .onHover { isHovered = $0 }
     .help(label)
     .accessibilityLabel(label)
@@ -122,6 +123,7 @@ struct PrimaryButton: View {
         .background(Color(Palette.accentFill), in: Capsule())
     }
     .buttonStyle(PressableStyle())
+    .focusRing(Capsule())
     .accessibilityLabel(title)
   }
 }
@@ -156,6 +158,7 @@ struct SecondaryButton: View {
       }
     }
     .buttonStyle(PressableStyle())
+    .focusRing(Capsule())
     .accessibilityLabel(title)
   }
 }
@@ -204,6 +207,32 @@ private struct CapsuleLabel: View {
 private struct PressableStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label.opacity(configuration.isPressed ? 0.8 : 1)
+  }
+}
+
+/// With Full Keyboard Access, a custom button's focus as an accent ring on its own shape;
+/// the system's ring follows the button's frame, a square around a capsule or a row.
+private struct FocusRing<RingShape: InsettableShape>: ViewModifier {
+  let shape: RingShape
+  @FocusState private var isFocused: Bool
+
+  func body(content: Content) -> some View {
+    content
+      .focusEffectDisabled()
+      .focused($isFocused)
+      .overlay {
+        if isFocused {
+          shape.strokeBorder(Color(Palette.accent), lineWidth: Size.focusRing)
+            .allowsHitTesting(false)
+        }
+      }
+  }
+}
+
+extension View {
+  /// The accent ring on `shape` while this button has the keyboard focus.
+  func focusRing<RingShape: InsettableShape>(_ shape: RingShape) -> some View {
+    modifier(FocusRing(shape: shape))
   }
 }
 

@@ -398,6 +398,8 @@ private struct KindPicker: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusRing(
+          RoundedRectangle(cornerRadius: HistoryLayout.segmentRadius, style: .continuous))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }
@@ -444,6 +446,7 @@ private struct SourceAppMenu: View {
     .buttonStyle(.plain)
     .menuIndicator(.hidden)
     .fixedSize()
+    .focusRing(Capsule())
   }
 
   /// The app's name, or its bundle id when it is not installed.

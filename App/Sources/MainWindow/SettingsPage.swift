@@ -82,6 +82,7 @@ struct SettingsPage: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusRing(RoundedRectangle(cornerRadius: Radius.iconButton, style: .continuous))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }

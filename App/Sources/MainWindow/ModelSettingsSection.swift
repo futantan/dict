@@ -269,6 +269,7 @@ struct ModelSettingsSection: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .focusRing(Rectangle())
     .accessibilityValue(showsAdvanced ? ModelCardText.expanded : ModelCardText.collapsed)
   }
 
@@ -364,6 +365,8 @@ private struct ProviderPicker: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusRing(
+          RoundedRectangle(cornerRadius: ModelCardLayout.segmentRadius, style: .continuous))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
       }
     }

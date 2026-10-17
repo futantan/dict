@@ -25,7 +25,8 @@ struct VocabReviewQueryTests {
 
   @Test func reviewItemListsALearningTermDueOrNot() async throws {
     let store = try makeStore()
-    let term = try await store.recordLookup(lookup("hinder", sentence: "Rain hinders us.", minute: 1))
+    let term = try await store.recordLookup(
+      lookup("hinder", sentence: "Rain hinders us.", minute: 1))
     _ = try await store.recordLookup(lookup("hinder", sentence: nil, minute: 2))
     #expect(try await store.reviewItem(termID: term.id) == nil)
 

@@ -53,8 +53,7 @@ extension VocabStore {
 
   /// The term's latest other sentence, skipping `encounterID` and any encounter with the same
   /// sentence, and its latest review.
-  public func reviewHistory(termID: Int64, excluding encounterID: Int64?) throws -> ReviewHistory
-  {
+  public func reviewHistory(termID: Int64, excluding encounterID: Int64?) throws -> ReviewHistory {
     let excluded = encounterID.map(VocabValue.integer) ?? .null
     let other = try db.rows(
       """

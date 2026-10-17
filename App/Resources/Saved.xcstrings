@@ -1,0 +1,538 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld times" : {
+      "comment" : "Word List table pill: how many times the word was met",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "once"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld times"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "第 %lld 次"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld words" : {
+      "comment" : "After the Word List title: how many words are marked to learn",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld word"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld words"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 个词"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Added %@" : {
+      "comment" : "Word List detail: the day the word was marked to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@加入"
+          }
+        }
+      }
+    },
+    "Added This Week" : {
+      "comment" : "Word List filter",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本周新加"
+          }
+        }
+      }
+    },
+    "All" : {
+      "comment" : "Word List filter",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部"
+          }
+        }
+      }
+    },
+    "CSV, Anki" : {
+      "comment" : "Word List: the formats after the export menu's title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CSV、Anki"
+          }
+        }
+      }
+    },
+    "Date Added" : {
+      "comment" : "Word List order",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入时间"
+          }
+        }
+      }
+    },
+    "Due" : {
+      "comment" : "Word List table pill: the word is due for review",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待复习"
+          }
+        }
+      }
+    },
+    "Export" : {
+      "comment" : "Word List: title of the export menu",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出"
+          }
+        }
+      }
+    },
+    "Export as CSV or for Anki" : {
+      "comment" : "Accessibility label of the Word List's export menu",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出为 CSV 或 Anki"
+          }
+        }
+      }
+    },
+    "Export as CSV…" : {
+      "comment" : "Word List export menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出为 CSV…"
+          }
+        }
+      }
+    },
+    "Export for Anki…" : {
+      "comment" : "Word List export menu item",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出到 Anki…"
+          }
+        }
+      }
+    },
+    "Familiar" : {
+      "comment" : "Word List filter, and pill on a word remembered up to the longest interval",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已熟悉"
+          }
+        }
+      }
+    },
+    "Filter" : {
+      "comment" : "Accessibility label of the Word List's filters",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "筛选"
+          }
+        }
+      }
+    },
+    "Last Seen" : {
+      "comment" : "Word List column header and order: where and when the word was last met",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近遇到"
+          }
+        }
+      }
+    },
+    "Learning" : {
+      "comment" : "Accessibility name of the Word List's star column",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要学"
+          }
+        }
+      }
+    },
+    "Looked up on its own" : {
+      "comment" : "Word List detail: an encounter that has no sentence",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单独查的，没有原句"
+          }
+        }
+      }
+    },
+    "Meaning" : {
+      "comment" : "Word List column header",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "释义"
+          }
+        }
+      }
+    },
+    "No words match." : {
+      "comment" : "The Word List when the search or filter hides every word",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有符合条件的词。"
+          }
+        }
+      }
+    },
+    "No words to learn yet. Star a word on its card, or look it up on a few different days and it’s added for you." : {
+      "comment" : "The Word List when no word is marked to learn",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有要学的词。在词卡上点星标，或者同一个词在不同的几天里多查几次，就会自动加进来。"
+          }
+        }
+      }
+    },
+    "Open History ›" : {
+      "comment" : "Word List detail: link to the History page",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在查询记录中查看 ›"
+          }
+        }
+      }
+    },
+    "Other senses: %@" : {
+      "comment" : "Word List detail: the word's other meanings",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他义项：%@"
+          }
+        }
+      }
+    },
+    "Pronounce" : {
+      "comment" : "Word List detail button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发音"
+          }
+        }
+      }
+    },
+    "Review" : {
+      "comment" : "Word List column header: the next review",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复习"
+          }
+        }
+      }
+    },
+    "Review Now" : {
+      "comment" : "Word List detail button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在复习"
+          }
+        }
+      }
+    },
+    "Review on %@" : {
+      "comment" : "Word List detail: the day of the word's next review",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@复习"
+          }
+        }
+      }
+    },
+    "Search the word list" : {
+      "comment" : "Accessibility label of the Word List's search field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索生词本"
+          }
+        }
+      }
+    },
+    "Search words or meanings" : {
+      "comment" : "Placeholder of the Word List's search field",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索词或释义"
+          }
+        }
+      }
+    },
+    "Seen" : {
+      "comment" : "Word List column header: how many times the word was met",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遇到"
+          }
+        }
+      }
+    },
+    "Showing %lld of %lld" : {
+      "comment" : "Under the Word List's table when a search or filter hides some words",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示 %1$lld / %2$lld 个词"
+          }
+        }
+      }
+    },
+    "Sort" : {
+      "comment" : "Word List: before the current order",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排序"
+          }
+        }
+      }
+    },
+    "Stop Learning" : {
+      "comment" : "Word List detail button",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消要学"
+          }
+        }
+      }
+    },
+    "Stop learning “%@”" : {
+      "comment" : "Accessibility label of the filled star on a Word List row",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消要学：%@"
+          }
+        }
+      }
+    },
+    "Times Seen" : {
+      "comment" : "Word List order",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遇到次数"
+          }
+        }
+      }
+    },
+    "To Review" : {
+      "comment" : "Word List filter, and pill on a due word",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待复习"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "When a word was met",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
+          }
+        }
+      }
+    },
+    "Today %@" : {
+      "comment" : "When a word was met: today at a time",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天 %@"
+          }
+        }
+      }
+    },
+    "Where you met it" : {
+      "comment" : "Word List detail: heading of the sentences the word was met in",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你在这些地方遇到过它"
+          }
+        }
+      }
+    },
+    "Word" : {
+      "comment" : "Word List column header",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "词"
+          }
+        }
+      }
+    },
+    "Word details" : {
+      "comment" : "Accessibility label of the Word List's detail pane",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "词条详情"
+          }
+        }
+      }
+    },
+    "Words" : {
+      "comment" : "Accessibility label of the Word List's table",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生词列表"
+          }
+        }
+      }
+    },
+    "Words marked to learn" : {
+      "comment" : "Line above the Word List title",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标了要学的词"
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "comment" : "When a word was met",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨天"
+          }
+        }
+      }
+    },
+    "Yesterday %@" : {
+      "comment" : "When a word was met: yesterday at a time",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨天 %@"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

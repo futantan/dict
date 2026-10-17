@@ -91,4 +91,22 @@ final class MainNavigation {
     section = .today
     searchFocusRequest += 1
   }
+
+  // MARK: - Review from another page
+
+  /// The term the review page starts with, asked for by `startReview(with:)`. The review
+  /// page shows it first, then the rest due, and calls `didStartReview()`.
+  private(set) var reviewFirstTermID: Int64?
+
+  /// 「现在复习」 on 生词本: the review page, starting with `termID` whether or not it is due.
+  func startReview(with termID: Int64) {
+    reviewFirstTermID = termID
+    section = .review
+  }
+
+  /// The review page took `reviewFirstTermID`; it is cleared so the same term can be asked
+  /// for again.
+  func didStartReview() {
+    reviewFirstTermID = nil
+  }
 }

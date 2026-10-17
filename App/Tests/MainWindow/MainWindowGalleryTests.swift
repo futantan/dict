@@ -74,6 +74,8 @@ struct MainWindowGalleryTests {
       ("settings-model", sample, { $0.show(.model) }),
       ("settings-privacy", sample, { $0.show(.privacy) }),
       ("history", sample, { $0.section = .history }),
+      ("saved", sample, { $0.section = .saved }),
+      ("saved-empty", try await MainWindowGallery.emptyData(), { $0.section = .saved }),
     ]
     for (scheme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
       for (name, data, navigate) in states {

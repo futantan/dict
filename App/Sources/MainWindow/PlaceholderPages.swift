@@ -12,12 +12,6 @@ struct HistoryPage: View {
   var body: some View { PlaceholderPage(section: .history) }
 }
 
-struct SavedPage: View {
-  let data: WindowData
-
-  var body: some View { PlaceholderPage(section: .saved) }
-}
-
 struct ReviewPage: View {
   let data: WindowData
 

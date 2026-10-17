@@ -102,7 +102,148 @@
           sentence: "She ran a small bakery in the old town.", surface: "ran",
           app: "com.apple.Safari", day: today, minutes: 14 * 60 + 20))
       try await store.setTier(.learning, termID: run.id, on: today)
+      try await addSavedSamples(to: store)
       return store
+    }
+
+    // MARK: - Saved
+
+    /// 生词本's samples: cards with phonetics and other senses, and sentences met on earlier
+    /// days, so the Today page's figures stay as they are; one word remembered up to the top
+    /// of the ladder, 已熟悉.
+    private static func addSavedSamples(to store: VocabStore) async throws {
+      for sample in savedSamples {
+        for (index, met) in sample.met.enumerated() {
+          let day = today.adding(days: -met.daysAgo)
+          let term = try await store.recordLookup(
+            LookupRecord(
+              language: "en", lemma: sample.lemma, surface: met.surface ?? sample.lemma,
+              sentence: met.sentence,
+              termStart: utf16Offset(of: met.surface ?? sample.lemma, in: met.sentence),
+              termLength: (met.surface ?? sample.lemma).utf16.count, sense: sample.definition,
+              sentenceTranslation: met.translation, source: .accessibility, sourceApp: met.app,
+              card: index == sample.met.count - 1 ? savedCard(sample) : nil, day: day,
+              seenAt: date(day, minutes: met.minutes)))
+          if sample.lemma == "resilient", index == 0 {
+            for _ in reviewIntervals.indices {
+              try await store.recordReview(
+                termID: term.id, encounterID: nil, rating: .good, on: today, at: now)
+            }
+          }
+        }
+      }
+    }
+
+    private struct SavedSample {
+      struct Met {
+        var sentence: String
+        var translation: String
+        var app: String
+        var daysAgo: Int
+        var minutes: Int
+        var surface: String?
+      }
+
+      var lemma: String
+      var phonetic: String
+      var pos: String
+      var definition: String
+      var otherSenses: [WordCard.Sense] = []
+      var met: [Met]
+    }
+
+    private static let savedSamples: [SavedSample] = [
+      SavedSample(
+        lemma: "ubiquitous", phonetic: "/juːˈbɪkwɪtəs/", pos: "adjective",
+        definition: "无处不在的；普遍存在的",
+        otherSenses: [WordCard.Sense(partOfSpeech: "adjective", definition: "（技术、产品）随处可见的，已普及的")],
+        met: [
+          .init(
+            sentence: "Coffee chains are so ubiquitous here that nobody gives directions by them.",
+            translation: "这里连锁咖啡店到处都是，没人拿它们来指路。", app: "com.apple.mail", daysAgo: 8,
+            minutes: 8 * 60 + 30),
+          .init(
+            sentence:
+              "Type hints are now ubiquitous across the codebase, so the linter catches most of these.",
+            translation: "类型标注如今遍布整个代码库，所以大多数这类问题 linter 都能发现。",
+            app: "com.apple.Notes", daysAgo: 2, minutes: 16 * 60 + 48),
+          .init(
+            sentence:
+              "Smartphones have become ubiquitous in classrooms, and teachers are still figuring out the rules.",
+            translation: "智能手机在课堂上已经无处不在，老师们还在摸索规则。", app: "com.apple.Safari",
+            daysAgo: 1, minutes: 14 * 60 + 2),
+        ]),
+      SavedSample(
+        lemma: "meticulous", phonetic: "/məˈtɪkjələs/", pos: "adjective", definition: "一丝不苟的",
+        met: [
+          .init(
+            sentence: "She keeps meticulous notes on every experiment.",
+            translation: "她每次实验都做一丝不苟的记录。", app: "com.apple.Notes", daysAgo: 1,
+            minutes: 10 * 60 + 15)
+        ]),
+      SavedSample(
+        lemma: "alleviate", phonetic: "/əˈliːvieɪt/", pos: "verb", definition: "减轻；缓解",
+        met: [
+          .init(
+            sentence: "The new schedule should alleviate some of the pressure on the team.",
+            translation: "新的排期应该能减轻团队的一些压力。", app: "com.apple.mail", daysAgo: 2,
+            minutes: 9 * 60 + 40)
+        ]),
+      SavedSample(
+        lemma: "candid", phonetic: "/ˈkændɪd/", pos: "adjective", definition: "坦率的；直言的",
+        met: [
+          .init(
+            sentence: "Thanks for the candid feedback on the draft.",
+            translation: "谢谢你对草稿的坦率反馈。", app: "com.google.Chrome", daysAgo: 1,
+            minutes: 17 * 60 + 36)
+        ]),
+      SavedSample(
+        lemma: "feasible", phonetic: "/ˈfiːzəbl/", pos: "adjective", definition: "可行的",
+        met: [
+          .init(
+            sentence: "Is it feasible to ship both features this month?",
+            translation: "这个月两个功能都上线可行吗？", app: "com.apple.mail", daysAgo: 4,
+            minutes: 11 * 60 + 5)
+        ]),
+      SavedSample(
+        lemma: "resilient", phonetic: "/rɪˈzɪliənt/", pos: "adjective",
+        definition: "有韧性的；适应力强的",
+        met: [
+          .init(
+            sentence: "Small teams tend to be more resilient to sudden changes.",
+            translation: "小团队往往更能扛住突如其来的变化。", app: "com.apple.Safari", daysAgo: 5,
+            minutes: 11 * 60)
+        ]),
+      SavedSample(
+        lemma: "mitigate", phonetic: "/ˈmɪtɪɡeɪt/", pos: "verb", definition: "减轻；缓和",
+        met: [
+          .init(
+            sentence: "Good tests mitigate the risk of a bad release.",
+            translation: "好的测试能降低发布出问题的风险。", app: "com.apple.TextEdit", daysAgo: 3,
+            minutes: 15 * 60 + 20)
+        ]),
+      SavedSample(
+        lemma: "run", phonetic: "/rʌn/", pos: "verb", definition: "经营；管理",
+        met: [
+          .init(
+            sentence: "They run the shop as a family business.", translation: "他们以家族生意的方式经营这家店。",
+            app: "com.apple.Safari", daysAgo: 6, minutes: 20 * 60 + 10)
+        ]),
+    ]
+
+    private static func savedCard(_ sample: SavedSample) -> StoredCard? {
+      let card = WordCard(
+        status: .ok, lemma: sample.lemma, phonetic: sample.phonetic, partOfSpeech: sample.pos,
+        definition: sample.definition, contextTranslation: "", otherSenses: sample.otherSenses,
+        examples: [], collocations: [], level: "")
+      guard let data = try? JSONEncoder().encode(card) else { return nil }
+      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
+    }
+
+    private static func utf16Offset(of surface: String, in sentence: String) -> Int? {
+      sentence.range(of: surface).map {
+        sentence.utf16.distance(from: sentence.startIndex, to: $0.lowerBound)
+      }
     }
 
     // MARK: Samples

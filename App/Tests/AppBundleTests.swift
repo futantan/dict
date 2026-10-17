@@ -12,7 +12,7 @@ struct AppBundleTests {
   /// Dict starts as an agent and `AppPresence` makes it a regular app with a Dock icon at
   /// launch when the setting is on, so the test host, which is the app, never shows a Dock
   /// icon or takes focus, and stays an agent while the tests run.
-  @Test func infoPlistStartsAsAnAgentAndTheDockIconIsASetting() throws {
+  @Test @MainActor func infoPlistStartsAsAnAgentAndTheDockIconIsASetting() throws {
     let info = try #require(Bundle.main.infoDictionary)
 
     #expect(AppIdentity(infoDictionary: info) != nil)

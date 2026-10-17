@@ -122,10 +122,10 @@ final class SessionCoordinator {
   /// The card shown, and the note under it, while the session shows one.
   private var card: CardState?
   private var cardNote: PanelNote?
-  /// The looked-up term as the vocabulary log has it, once this lookup is recorded. Kept
-  /// across "Try Again" and switching to the translation and back, which show the same
-  /// lookup again rather than a new one.
-  private var recorded: TermSummary?
+  /// The lookup and its term as the vocabulary log has them, once recorded. Kept across
+  /// "Try Again" and switching to the translation and back, which show the same lookup again
+  /// rather than a new one, and whose card completes that lookup.
+  private var recorded: RecordedLookup?
   /// The latest ⌘S, for `settle()`.
   private var tierChange: Task<Void, Never>?
   private var pace = PronunciationPace()
@@ -723,12 +723,13 @@ final class SessionCoordinator {
       accent: environment.accent())
     let lemma = entries.first?.lemma ?? term
     if let recorded {
-      showRecorded(recorded)
+      showRecorded(recorded.term)
     } else if !entries.isEmpty {
       await recordLookup(term, lemma: lemma, id: id)
     }
     guard let stream, id == self.id, !Task.isCancelled else { return }
 
+    var completed: WordCard?
     do {
       for try await event in stream {
         guard id == self.id else { return }
@@ -737,6 +738,7 @@ final class SessionCoordinator {
           card?.show(definition: definition, contextTranslation: translation)
         case .card(let complete):
           card?.show(complete)
+          completed = complete
         case .notATerm:
           Log.ui.info("session \(id, privacy: .public): the model says no term; translating")
           showsCard = false
@@ -748,6 +750,7 @@ final class SessionCoordinator {
         panel.update(cardPanel)
         if recorded == nil { await recordLookup(term, lemma: lemma, id: id) }
       }
+      if let completed { await completeLookup(with: completed) }
       Log.ui.info(
         "session \(id, privacy: .public): card complete \(milliseconds(clock.now - start), format: .fixed(precision: 1), privacy: .public)ms after the shortcut"
       )
@@ -783,13 +786,34 @@ final class SessionCoordinator {
       termLength: range?.length, source: origin.source, sourceApp: origin.app,
       day: environment.today(), seenAt: .now)
     do {
-      let summary = try await vocab.recordLookup(record)
+      let lookup = try await vocab.record(record)
       guard id == self.id else { return }
-      recorded = summary
-      showRecorded(summary)
+      recorded = lookup
+      showRecorded(lookup.term)
     } catch {
       Log.store.error(
         "recording the lookup failed: \(String(describing: error), privacy: .public)")
+    }
+  }
+
+  /// Keeps the model's card with the recorded lookup, so the main window shows it too; a
+  /// failure is only logged. The lookup is recorded before the card completes, and the card
+  /// of a session dismissed before then is never kept.
+  private func completeLookup(with complete: WordCard) async {
+    guard let vocab = environment.vocab, let recorded,
+      let json = try? JSONEncoder().encode(complete)
+    else { return }
+    do {
+      try await vocab.completeLookup(
+        encounterID: recorded.encounterID,
+        card: StoredCard(
+          json: String(decoding: json, as: UTF8.self), version: WordCard.storedVersion),
+        sense: complete.definition.isEmpty ? nil : complete.definition,
+        sentenceTranslation: complete.contextTranslation.isEmpty ? nil : complete.contextTranslation
+      )
+    } catch {
+      Log.store.error(
+        "keeping the card failed: \(String(describing: error), privacy: .public)")
     }
   }
 
@@ -803,15 +827,15 @@ final class SessionCoordinator {
   /// ⌘S: marks the term 要学, or back to 查过 (architecture 8.3).
   private func toggleLearning() {
     guard let vocab = environment.vocab, let recorded, card != nil else { return }
-    let tier: Tier = recorded.tier == .learning ? .seen : .learning
+    let tier: Tier = recorded.term.tier == .learning ? .seen : .learning
     let id = id
     let day = environment.today()
     tierChange = Task {
       do {
-        try await vocab.setTier(tier, termID: recorded.id, on: day)
+        try await vocab.setTier(tier, termID: recorded.term.id, on: day)
         guard id == self.id else { return }
-        self.recorded?.tier = tier
-        if let summary = self.recorded { self.showRecorded(summary) }
+        self.recorded?.term.tier = tier
+        if let summary = self.recorded?.term { self.showRecorded(summary) }
       } catch {
         Log.store.error(
           "changing the tier failed: \(String(describing: error), privacy: .public)")

@@ -5,7 +5,10 @@ import Foundation
 
 /// The parts of the vocabulary log a session writes (architecture 8.1); `VocabStore`.
 protocol SessionVocab: Sendable {
-  func recordLookup(_ lookup: LookupRecord) async throws -> TermSummary
+  func record(_ lookup: LookupRecord) async throws -> RecordedLookup
+  func completeLookup(
+    encounterID: Int64, card: StoredCard, sense: String?, sentenceTranslation: String?
+  ) async throws
   func recordSentence(_ event: SentenceRecord) async throws
   func setTier(_ tier: Tier, termID: Int64, on day: LocalDay) async throws
 }

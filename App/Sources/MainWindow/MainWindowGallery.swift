@@ -153,7 +153,8 @@
           .init(phrase: "run late", meaning: "晚点"),
         ], level: "")
       guard let data = try? JSONEncoder().encode(card) else { return nil }
-      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
+      return StoredCard(
+        json: String(decoding: data, as: UTF8.self), version: WordCard.storedVersion)
     }
 
     // MARK: - Saved
@@ -267,7 +268,8 @@
         definition: sample.definition, contextTranslation: "", otherSenses: sample.otherSenses,
         examples: [], collocations: [], level: "")
       guard let data = try? JSONEncoder().encode(card) else { return nil }
-      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
+      return StoredCard(
+        json: String(decoding: data, as: UTF8.self), version: WordCard.storedVersion)
     }
 
     // MARK: Review samples
@@ -311,7 +313,8 @@
         definition: "坦率的", contextTranslation: "", otherSenses: [], examples: [],
         collocations: [], level: "")
       guard let data = try? JSONEncoder().encode(card) else { return nil }
-      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
+      return StoredCard(
+        json: String(decoding: data, as: UTF8.self), version: WordCard.storedVersion)
     }
 
     /// The dictionary layer the History page's card shows for `run`, so the renders do not
@@ -377,7 +380,8 @@
         status: .ok, lemma: lemma, phonetic: "", partOfSpeech: pos, definition: definition,
         contextTranslation: "", otherSenses: [], examples: [], collocations: [], level: "")
       guard let data = try? JSONEncoder().encode(card) else { return nil }
-      return StoredCard(json: String(decoding: data, as: UTF8.self), version: 1)
+      return StoredCard(
+        json: String(decoding: data, as: UTF8.self), version: WordCard.storedVersion)
     }
 
     private static func sentence(

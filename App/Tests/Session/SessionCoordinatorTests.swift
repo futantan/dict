@@ -1204,6 +1204,12 @@ struct SessionLookupTests {
     #expect(encounter.termLength == 3)
     #expect(encounter.source == .accessibility)
     #expect(encounter.sourceApp == "com.apple.TextEdit")
+    // Once the card completes, the lookup keeps it for the window's pages.
+    #expect(encounter.sense == "经营；管理")
+    #expect(encounter.sentenceTranslation == "她经营一家小面包店。")
+    let stored = try #require(log.lookups.first?.term.card)
+    #expect(stored.version == WordCard.storedVersion)
+    #expect(try decodeCard(stored.json) == ranCard)
   }
 
   @Test func theSecondLookupShowsTheCount() async {
@@ -1258,6 +1264,9 @@ struct SessionLookupTests {
     let log = try #require(try await harness.vocab?.day(today))
     // Keyed by the text as selected, never by the model's lemma (architecture 8.1).
     #expect(log.lookups.map(\.term.lemmaKey) == ["ran"])
+    #expect(log.lookups.first?.encounter.sense == "经营；管理")
+    #expect(log.lookups.first?.encounter.sentenceTranslation == "她经营一家小面包店。")
+    #expect(try log.lookups.first?.term.card.map { try decodeCard($0.json) } == ranCard)
   }
 
   @Test func notATermIsTranslatedInstead() async throws {
@@ -1274,7 +1283,7 @@ struct SessionLookupTests {
     #expect(try await harness.vocab?.day(today).lookups.isEmpty == true)
   }
 
-  @Test func aFailedModelKeepsTheDictionaryLayer() async {
+  @Test func aFailedModelKeepsTheDictionaryLayer() async throws {
     let harness = Harness([(.success(ran()), nil)])
     harness.entries = [runEntry]
     harness.card = [.text(#"{"status":"ok","#)]
@@ -1283,6 +1292,10 @@ struct SessionLookupTests {
     #expect(harness.panel.lastCard?.model == .unavailable)
     #expect(harness.panel.lastCard?.senses.count == 2)
     #expect(harness.panel.lastState?.note == CardStrings.failureNote(CardStreamError.interrupted))
+    // The lookup is kept with the dictionary layer only.
+    let failed = try #require(try await harness.vocab?.day(today).lookups.first)
+    #expect(failed.encounter.sense == nil)
+    #expect(failed.term.card == nil)
 
     // Try Again asks again for the same lookup without counting it twice.
     harness.card = ranStream
@@ -1290,6 +1303,11 @@ struct SessionLookupTests {
     await harness.coordinator.settle()
     #expect(harness.panel.lastCard?.model == .complete)
     #expect(harness.panel.lastCard?.encounters == 1)
+    // The card that came on the retry fills in the same lookup.
+    let lookups = try #require(try await harness.vocab?.day(today).lookups)
+    #expect(lookups.count == 1)
+    #expect(lookups.first?.encounter.sense == "经营；管理")
+    #expect(lookups.first?.term.card != nil)
   }
 
   @Test func learnMarksTheWordAndAgainUnmarksIt() async throws {

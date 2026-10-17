@@ -105,7 +105,7 @@ struct ModelSettingsSection: View {
   }
 
   private func baseURLField(_ preset: ProviderPreset) -> some View {
-    TextField(text: model.binding(\.baseURL), prompt: Text(ModelText.baseURLPrompt(preset))) {
+    TextField(text: model.binding(\.baseURL), prompt: prompt(ModelText.baseURLPrompt(preset))) {
       Text(ModelText.baseURL)
     }
     .cardField()
@@ -147,11 +147,11 @@ struct ModelSettingsSection: View {
   private func keyField(_ preset: ProviderPreset) -> some View {
     Group {
       if isKeyVisible {
-        TextField(text: model.keyBinding, prompt: Text(ModelText.keyPrompt(preset))) {
+        TextField(text: model.keyBinding, prompt: prompt(ModelText.keyPrompt(preset))) {
           Text(ModelText.apiKey)
         }
       } else {
-        SecureField(text: model.keyBinding, prompt: Text(ModelText.keyPrompt(preset))) {
+        SecureField(text: model.keyBinding, prompt: prompt(ModelText.keyPrompt(preset))) {
           Text(ModelText.apiKey)
         }
       }
@@ -205,7 +205,7 @@ struct ModelSettingsSection: View {
 
   private func modelField(_ preset: ProviderPreset) -> some View {
     HStack(spacing: Spacing.tight) {
-      TextField(text: model.binding(\.model), prompt: Text(ModelText.modelPrompt(preset))) {
+      TextField(text: model.binding(\.model), prompt: prompt(ModelText.modelPrompt(preset))) {
         Text(ModelText.model)
       }
       .textFieldStyle(.plain)
@@ -322,6 +322,11 @@ struct ModelSettingsSection: View {
 
   private func subtitle(_ details: [String]) -> String? {
     details.isEmpty ? nil : details.joined(separator: "\n")
+  }
+
+  /// A field's prompt, lighter than typed text.
+  private func prompt(_ text: String) -> Text {
+    Text(text).foregroundStyle(Color(Palette.textTertiary))
   }
 }
 
@@ -443,7 +448,7 @@ extension View {
     let shape = RoundedRectangle(cornerRadius: ModelCardLayout.fieldRadius, style: .continuous)
     return textFieldStyle(.plain)
       .font(ModelCardType.field.font)
-      .foregroundStyle(Color(Palette.textPrimary))
+      // No foreground style: it would paint the prompt like typed text.
       .padding(.horizontal, ModelCardLayout.fieldPadding)
       .frame(height: ModelCardLayout.fieldHeight)
       .background(Color(ModelCardPalette.fieldFill), in: shape)

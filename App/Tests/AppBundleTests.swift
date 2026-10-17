@@ -48,6 +48,13 @@ struct LaunchModeTests {
       LaunchMode.detect(environment: [:], arguments: ["app", "--e2e", "s.json"]) == .endToEnd)
   }
 
+  @MainActor @Test func windowDemoOpensTheNamedState() {
+    #expect(
+      LaunchMode.detect(environment: [:], arguments: ["app", "-DictWindowDemo", "review"])
+        == .windowDemo("review"))
+    #expect(MainWindowDemo.State.allCases.map(\.rawValue).contains("settings-model"))
+  }
+
   @Test(arguments: [
     (["app"], true),
     (["app", "--no-onboarding"], false),

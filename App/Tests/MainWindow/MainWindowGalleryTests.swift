@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import AppKit
-import Carbon.HIToolbox
 import DictCore
 import Foundation
 import Testing
@@ -19,35 +18,7 @@ private let renderDirectory = ProcessInfo.processInfo.environment["DICT_MAINWIND
 struct MainWindowGalleryTests {
   /// A window over `data` with settings that never touch the user's defaults or keychain.
   static func makeController(data: WindowData) throws -> MainWindowController {
-    let suite = "MainWindowGalleryTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
-    var preferences = Preferences()
-    preferences.model.providerID = "openai"
-    PreferencesStore(defaults: defaults).save(preferences)
-    // Saved, not assigned: assigning would register the keys system-wide.
-    HotkeyStore(defaults: defaults).save([
-      .read: KeyCombo(keyCode: UInt16(kVK_ANSI_A), modifiers: .option),
-      .write: KeyCombo(keyCode: UInt16(kVK_ANSI_F), modifiers: .option),
-    ])
-    let settings = SettingsModel(
-      defaults: defaults, secrets: InMemorySecretStore(["openai": "sk-proj-sample-not-a-real-key"]))
-    settings.showConnection(.checked(.translated(after: .milliseconds(820))))
-    let services = SettingsServices(
-      appName: "Dict", version: "1.4.0", accessibilityGranted: { true },
-      voice: {
-        VoiceChoice(
-          voice: VoiceInfo(
-            identifier: "com.apple.voice.compact.en-US.Ava", name: "Ava", language: "en-US",
-            quality: .compact),
-          hint: .higherQuality)
-      },
-      checkForUpdates: {}, canCheckForUpdates: { true })
-    let context = MainWindowContext(
-      navigation: MainNavigation(), data: data, settings: settings,
-      hotkeys: HotkeyCenter(defaults: defaults), services: services, lookUp: { _, _ in },
-      history: HistoryServices(lookUpTerm: { MainWindowGallery.lexicon($0, context: $1) }))
-    return MainWindowController(context: context, frameName: nil)
+    MainWindowGallery.makeController(data: data)
   }
 
   @Test func everyPageLaysOutAtTheMinimumSize() async throws {
@@ -60,6 +31,29 @@ struct MainWindowGalleryTests {
       #expect(window.contentView?.fittingSize.width ?? 0 <= WindowLayout.minimumSize.width)
     }
     #expect(!window.isVisible)
+  }
+
+  @Test func everyDemoStateOpensOnItsPage() async throws {
+    for state in MainWindowDemo.State.allCases {
+      let controller = try await MainWindowDemo.makeController(state, width: 960)
+      let window = try #require(controller.window)
+      #expect(window.contentLayoutRect.width == 960)
+      #expect(!window.isVisible)
+      switch state {
+      case .historyCorrection:
+        if case .sentence(let event) = controller.context.data.history.selected {
+          #expect(event.kind == .corrected)
+        } else {
+          Issue.record("no correction selected")
+        }
+      case .reviewRevealed:
+        #expect(controller.context.navigation.section == .review)
+      case .settingsModel:
+        #expect(controller.context.navigation.section == .settings)
+      default:
+        #expect(controller.context.navigation.section.rawValue == state.rawValue)
+      }
+    }
   }
 
   @Test(.enabled(if: renderDirectory != nil))

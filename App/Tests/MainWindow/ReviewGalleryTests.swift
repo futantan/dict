@@ -37,13 +37,7 @@ struct ReviewGalleryTests {
   }
 
   private static func reviewing(answers: [Rating]) async throws -> WindowData {
-    let data = try await MainWindowGallery.sampleData()
-    await data.review.appear()
-    for rating in answers {
-      data.review.reveal()
-      await data.review.answer(rating)
-    }
-    return data
+    try await MainWindowGallery.reviewingData(answers: answers)
   }
 
   @Test(.enabled(if: renderDirectory != nil))

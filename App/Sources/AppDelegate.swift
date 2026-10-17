@@ -29,6 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   private let settings = SettingsModel()
   /// Built on first use, after the session is wired.
   private var mainWindow: MainWindowController?
+  #if DEBUG
+    /// The `-DictWindowDemo` window.
+    private var demoWindow: MainWindowController?
+  #endif
 
   static func main() {
     let app = NSApplication.shared
@@ -51,6 +55,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
       // and they stay agents without a Dock icon.
       setStatusItemShown(true)
       return
+    case .windowDemo(let state):
+      #if DEBUG
+        startWindowDemo(state)
+      #endif
     case .normal(let onboarding):
       apply(AppPresence(settings.preferences))
       start(showingOnboarding: onboarding)
@@ -62,6 +70,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool)
     -> Bool
   {
+    #if DEBUG
+      if let demoWindow {
+        demoWindow.show()
+        return false
+      }
+    #endif
     // The test host and the e2e runner have no session and show no windows.
     guard coordinator != nil else { return false }
     switch ReopenTarget(onboardingCompleted: onboardingCompleted) {
@@ -268,6 +282,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     return controller
   }
 
+  #if DEBUG
+    /// The main window alone over the gallery's sample data, with the Dock icon and the
+    /// main menu of a default install and none of the user's data (`MainWindowDemo`).
+    private func startWindowDemo(_ name: String) {
+      guard let state = MainWindowDemo.State(rawValue: name) else {
+        Log.ui.error("unknown window demo \(name, privacy: .public)")
+        NSApp.terminate(nil)
+        return
+      }
+      NSApp.mainMenu = MainMenu.make(appName: appName)
+      NSApp.setActivationPolicy(AppPresence(Preferences()).activationPolicy)
+      let arguments = UserDefaults.standard
+      Task {
+        do {
+          let controller = try await MainWindowDemo.makeController(
+            state, width: arguments.double(forKey: "DictWindowDemoWidth"))
+          controller.onClose = { [weak controller] in
+            guard let controller,
+              !controller.context.settings.preferences.keepsRunningAfterClose
+            else { return }
+            NSApp.terminate(nil)
+          }
+          demoWindow = controller
+          controller.show()
+          let closeAfter = arguments.double(forKey: "DictWindowDemoCloseAfter")
+          if closeAfter > 0 {
+            try await Task.sleep(for: .seconds(closeAfter))
+            controller.window?.performClose(nil)
+          }
+        } catch {
+          Log.ui.error("window demo failed: \(String(describing: error), privacy: .public)")
+          NSApp.terminate(nil)
+        }
+      }
+    }
+  #endif
+
   /// System Settings → Accessibility → Spoken Content, where voices are downloaded.
   private static let voiceSettingsURL =
     URL(
@@ -425,6 +476,8 @@ enum LaunchMode: Equatable {
   case unitTests
   /// The `--e2e` debug entry point.
   case endToEnd
+  /// `-DictWindowDemo <state>`, debug builds only: the main window over sample data.
+  case windowDemo(String)
   /// A normal launch; `--no-onboarding` keeps the first-run window closed, for scripts that
   /// launch the app in the background.
   case normal(showsOnboarding: Bool)
@@ -437,6 +490,11 @@ enum LaunchMode: Equatable {
   static func detect(environment: [String: String], arguments: [String]) -> LaunchMode {
     if environment["XCTestConfigurationFilePath"] != nil { return .unitTests }
     if arguments.contains("--e2e") { return .endToEnd }
+    #if DEBUG
+      if let index = arguments.firstIndex(of: "-DictWindowDemo"), index + 1 < arguments.count {
+        return .windowDemo(arguments[index + 1])
+      }
+    #endif
     return .normal(showsOnboarding: !arguments.contains("--no-onboarding"))
   }
 }

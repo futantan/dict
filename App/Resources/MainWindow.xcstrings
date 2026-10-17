@@ -191,6 +191,24 @@
     "Seen %lld times" : {
       "comment" : "Pill: how many times a word has been met",
       "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Seen once"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Seen %lld times"
+                }
+              }
+            }
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -331,6 +349,17 @@
         }
       }
     },
+    "time · replaced %lld" : {
+      "comment" : "Unit after the number 1 of corrections and translations out today",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次 · 替换 %lld 次"
+          }
+        }
+      }
+    },
     "times · replaced %lld" : {
       "comment" : "Unit after the number of corrections and translations out today",
       "localizations" : {
@@ -338,6 +367,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "次 · 替换 %lld 次"
+          }
+        }
+      }
+    },
+    "word" : {
+      "comment" : "Unit after the big number 1 of words to review",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个词"
+          }
+        }
+      }
+    },
+    "word · %lld sentences" : {
+      "comment" : "Unit after the big number 1 of words looked up today; the argument is sentences",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "word · %lld sentence"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "word · %lld sentences"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个词 · %lld 句"
           }
         }
       }
@@ -356,6 +425,24 @@
     "words · %lld sentences" : {
       "comment" : "Unit after the big number of words looked up today; the argument is sentences",
       "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "words · %lld sentence"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "words · %lld sentences"
+                }
+              }
+            }
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",

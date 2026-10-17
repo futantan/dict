@@ -64,23 +64,41 @@ enum WindowStrings {
     localized: "Words you meet more than once show up here.", table: "MainWindow",
     comment: "The Today page's list of frequent words when it is empty")
 
+  // A unit follows its big number without repeating it, so a plural variation can't pick
+  // its form: the singular is its own string, "1 word" beside "12 words".
+
   /// 「个词 · 5 句」 after the big number of words.
-  static func lookedUpUnit(sentences: Int) -> String {
-    String(
-      localized: "words · \(sentences) sentences", table: "MainWindow",
-      comment: "Unit after the big number of words looked up today; the argument is sentences")
+  static func lookedUpUnit(terms: Int, sentences: Int) -> String {
+    terms == 1
+      ? String(
+        localized: "word · \(sentences) sentences", table: "MainWindow",
+        comment: "Unit after the big number 1 of words looked up today; the argument is sentences")
+      : String(
+        localized: "words · \(sentences) sentences", table: "MainWindow",
+        comment: "Unit after the big number of words looked up today; the argument is sentences")
   }
 
   /// 「次 · 替换 6 次」.
-  static func wroteUnit(replaced: Int) -> String {
-    String(
-      localized: "times · replaced \(replaced)", table: "MainWindow",
-      comment: "Unit after the number of corrections and translations out today")
+  static func wroteUnit(count: Int, replaced: Int) -> String {
+    count == 1
+      ? String(
+        localized: "time · replaced \(replaced)", table: "MainWindow",
+        comment: "Unit after the number 1 of corrections and translations out today")
+      : String(
+        localized: "times · replaced \(replaced)", table: "MainWindow",
+        comment: "Unit after the number of corrections and translations out today")
   }
 
-  static let dueUnit = String(
-    localized: "words", table: "MainWindow", comment: "Unit after the big number of words to review"
-  )
+  /// 「个词」 after the big number of words to review.
+  static func dueUnit(_ count: Int) -> String {
+    count == 1
+      ? String(
+        localized: "word", table: "MainWindow",
+        comment: "Unit after the big number 1 of words to review")
+      : String(
+        localized: "words", table: "MainWindow",
+        comment: "Unit after the big number of words to review")
+  }
 
   /// 「第 5 次」.
   static func encounters(_ count: Int) -> String {

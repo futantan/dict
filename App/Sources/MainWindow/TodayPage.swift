@@ -90,12 +90,13 @@ struct TodayPage: View {
     return HStack(spacing: WindowLayout.tileSpacing) {
       StatTile(
         label: WindowStrings.lookedUpToday, value: counts.terms,
-        unit: WindowStrings.lookedUpUnit(sentences: counts.translations))
+        unit: WindowStrings.lookedUpUnit(terms: counts.terms, sentences: counts.translations))
       StatTile(
         label: WindowStrings.wroteToday, value: counts.writes,
-        unit: WindowStrings.wroteUnit(replaced: counts.replaced))
+        unit: WindowStrings.wroteUnit(count: counts.writes, replaced: counts.replaced))
       StatTile(
-        label: WindowStrings.dueLabel, value: data.today.due, unit: WindowStrings.dueUnit,
+        label: WindowStrings.dueLabel, value: data.today.due,
+        unit: WindowStrings.dueUnit(data.today.due),
         isEmphasized: true
       ) {
         if data.today.due > 0 {

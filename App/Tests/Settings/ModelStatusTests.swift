@@ -17,9 +17,7 @@ struct ModelStatusTests {
   }
 
   private func model(_ preferences: ModelPreferences, key: String? = nil) throws -> SettingsModel {
-    let suite = "ModelStatusTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
+    let defaults = UserDefaults.scratch("ModelStatusTests")
     PreferencesStore(defaults: defaults).save(Preferences(model: preferences))
     var secrets: [String: String] = [:]
     if let key, let id = preferences.providerID { secrets[id] = key }

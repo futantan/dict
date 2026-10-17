@@ -22,9 +22,7 @@ private let isEnabled =
 @Suite(.enabled(if: isEnabled), .serialized)
 struct OnboardingLiveTests {
   private func onboarding() throws -> OnboardingModel {
-    let suite = "OnboardingLiveTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
+    let defaults = UserDefaults.scratch("OnboardingLiveTests")
     HotkeyStore(defaults: defaults).save([
       .read: KeyCombo(keyCode: 2, modifiers: [.control, .option])
     ])
@@ -66,9 +64,7 @@ struct OnboardingLiveTests {
       "The screen is locked")
 
     let secrets = InMemorySecretStore()
-    let suite = "OnboardingLiveTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
+    let defaults = UserDefaults.scratch("OnboardingLiveTests")
     let settings = SettingsModel(defaults: defaults, secrets: secrets)
     settings.selectProvider("openai")
     settings.keyDraft = try #require(liveKey)

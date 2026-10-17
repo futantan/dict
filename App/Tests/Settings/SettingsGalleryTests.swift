@@ -50,9 +50,7 @@ struct SettingsGalleryTests {
       _ preferences: Preferences, key: String? = nil, connection: ConnectionStatus = .idle,
       list: ModelListStatus = .idle
     ) -> SettingsModel {
-      let suite = "SettingsGalleryTests.\(UUID().uuidString)"
-      let defaults = UserDefaults(suiteName: suite) ?? .standard
-      defaults.removePersistentDomain(forName: suite)
+      let defaults = UserDefaults.scratch("SettingsGalleryTests")
       PreferencesStore(defaults: defaults).save(preferences)
       var secrets: [String: String] = [:]
       if let key, let id = preferences.model.providerID { secrets[id] = key }
@@ -222,9 +220,7 @@ struct SettingsGalleryTests {
   /// A center that loads sample combinations from a throwaway defaults suite and never
   /// registers them.
   private static func hotkeys(assigned: Bool) -> HotkeyCenter {
-    let suite = "SettingsGalleryTests.hotkeys.\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suite) ?? .standard
-    defaults.removePersistentDomain(forName: suite)
+    let defaults = UserDefaults.scratch("SettingsGalleryTests.hotkeys")
     if assigned {
       HotkeyStore(defaults: defaults).save([
         .read: KeyCombo(keyCode: 2, modifiers: [.control, .option]),

@@ -43,10 +43,8 @@ struct SettingsModelTests {
   private let secrets: any SecretStore = InMemorySecretStore()
   private let builds = Builds()
 
-  init() throws {
-    let suite = "SettingsModelTests.\(UUID().uuidString)"
-    defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
+  init() {
+    defaults = .scratch("SettingsModelTests")
   }
 
   private func makeModel(

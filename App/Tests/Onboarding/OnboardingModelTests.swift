@@ -14,10 +14,7 @@ struct OnboardingModelTests {
   private let combo = KeyCombo(keyCode: 2, modifiers: [.control, .option])
 
   private func defaults() -> UserDefaults {
-    let name = "OnboardingModelTests.\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: name) ?? .standard
-    defaults.removePersistentDomain(forName: name)
-    return defaults
+    .scratch("OnboardingModelTests")
   }
 
   private func model(

@@ -312,8 +312,7 @@ struct WarmupTests {
   }
 
   @Test func defaultsFollowTheDocumentedSuggestion() {
-    let defaults = UserDefaults(suiteName: "au.ibra.dict.tests.\(UUID().uuidString)")
-    let support = defaults.map(AccessibilitySupport.init(defaults:))
+    let support = AccessibilitySupport(defaults: .scratch("CopyFallbackTests"))
     #expect(support == AccessibilitySupport(chromium: true, electron: false))
   }
 }

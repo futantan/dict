@@ -9,16 +9,11 @@ import Testing
 /// The persisted form must stay readable both ways with v0.1.0, which stored a bare
 /// `KeyCombo` per role.
 final class HotkeyStoreTests {
-  private let suiteName = "HotkeyStoreTests.\(UUID().uuidString)"
   private let defaults: UserDefaults
   private let combo = KeyCombo(keyCode: UInt16(kVK_ANSI_D), modifiers: [.control, .option])
 
-  init() throws {
-    defaults = try #require(UserDefaults(suiteName: suiteName))
-  }
-
-  deinit {
-    UserDefaults.standard.removePersistentDomain(forName: suiteName)
+  init() {
+    defaults = .scratch("HotkeyStoreTests")
   }
 
   @Test func whatV010WroteLoadsAsACombination() {

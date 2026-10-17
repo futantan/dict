@@ -17,9 +17,7 @@ private let liveKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"]
 @Suite(.enabled(if: liveKey?.isEmpty == false), .serialized)
 struct SettingsLiveTests {
   private func model(key: String) throws -> SettingsModel {
-    let suite = "SettingsLiveTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
+    let defaults = UserDefaults.scratch("SettingsLiveTests")
     let model = SettingsModel(defaults: defaults, secrets: InMemorySecretStore())
     model.selectProvider("openai")
     model.keyDraft = key

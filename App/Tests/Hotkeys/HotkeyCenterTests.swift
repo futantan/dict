@@ -11,7 +11,6 @@ import Testing
 @MainActor
 @Suite(.serialized)
 final class HotkeyCenterTests {
-  private let suiteName = "HotkeyCenterTests.\(UUID().uuidString)"
   private let defaults: UserDefaults
   private var centers: [HotkeyCenter] = []
 
@@ -21,12 +20,8 @@ final class HotkeyCenterTests {
   private let f18 = KeyCombo(keyCode: UInt16(kVK_F18), modifiers: hyper)
   private let f19 = KeyCombo(keyCode: UInt16(kVK_F19), modifiers: hyper)
 
-  init() throws {
-    defaults = try #require(UserDefaults(suiteName: suiteName))
-  }
-
-  deinit {
-    UserDefaults.standard.removePersistentDomain(forName: suiteName)
+  init() {
+    defaults = .scratch("HotkeyCenterTests")
   }
 
   private func makeCenter() -> HotkeyCenter {

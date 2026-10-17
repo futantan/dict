@@ -12,9 +12,7 @@ import Testing
 struct OnboardingWindowTests {
   /// The sample panel goes right below the sample box, whose top is in the window's upper half.
   @Test func sampleAnchorIsTheSampleOnScreen() async throws {
-    let suite = "OnboardingWindowTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defaults.removePersistentDomain(forName: suite)
+    let defaults = UserDefaults.scratch("OnboardingWindowTests")
     let model = OnboardingModel(
       hotkeys: HotkeyCenter(defaults: defaults),
       settings: SettingsModel(defaults: defaults, secrets: InMemorySecretStore()),

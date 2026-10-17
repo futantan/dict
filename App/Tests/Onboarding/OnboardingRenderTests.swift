@@ -54,9 +54,7 @@ struct OnboardingRenderTests {
       _ step: OnboardingStep, accessibility: Bool = false, read: Bool = false,
       provider: String? = nil, key: String? = nil, connection: ConnectionStatus = .idle
     ) -> OnboardingModel {
-      let suite = "OnboardingRenderTests.\(UUID().uuidString)"
-      let defaults = UserDefaults(suiteName: suite) ?? .standard
-      defaults.removePersistentDomain(forName: suite)
+      let defaults = UserDefaults.scratch("OnboardingRenderTests")
       if read {
         HotkeyStore(defaults: defaults).save([
           .read: KeyCombo(keyCode: 2, modifiers: [.control, .option])

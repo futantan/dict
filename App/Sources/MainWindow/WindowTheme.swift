@@ -122,6 +122,9 @@ enum WindowLayout {
   static let settingsItemHeight: CGFloat = 32
   static let settingsColumnMaxWidth: CGFloat = 720
   static let settingsSpacing: CGFloat = 32
+  /// A shortcut field's narrowest width in the settings rows: narrow enough at the smallest
+  /// window for 「纠错、润色或翻译你正在写的文字。」 to stay on one line beside it.
+  static let settingsRecorderWidth: CGFloat = 100
   /// The window's size when it first opens, and the smallest it gets.
   static let defaultSize = CGSize(width: 1280, height: 800)
   static let minimumSize = CGSize(width: 960, height: 620)

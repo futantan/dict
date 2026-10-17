@@ -9,6 +9,8 @@ import SwiftUI
 struct ShortcutRecorder: View {
   let role: HotkeyRole
   let center: HotkeyCenter
+  /// The field's narrowest width; the settings rows give it less, for their text.
+  var minWidth: CGFloat = 140
 
   @State private var isRecording = false
   @State private var heldModifiers: KeyCombo.Modifiers = []
@@ -21,7 +23,7 @@ struct ShortcutRecorder: View {
           Text(label)
             .monospacedDigit()
             .foregroundStyle(isRecording || center.shortcuts[role] == nil ? .secondary : .primary)
-            .frame(minWidth: 140)
+            .frame(minWidth: minWidth)
         }
         .background(
           KeyCaptureView(

@@ -3,6 +3,7 @@
 import AppKit
 import DictCore
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import DictApp
@@ -38,6 +39,25 @@ struct MainWindowTests {
     #expect(WindowLayout.showsSideColumn(width: content(window: WindowLayout.defaultSize.width)))
     #expect(!WindowLayout.showsSideColumn(width: content(window: 1100)))
     #expect(!WindowLayout.showsSideColumn(width: content(window: WindowLayout.minimumSize.width)))
+  }
+
+  /// At the smallest window the 写 shortcut's explanation stays on one line beside its field,
+  /// rather than leaving 「的文字。」 alone on a second one.
+  @Test func theShortcutExplanationFitsOnOneLineAtTheSmallestWidth() throws {
+    // Less a scroll bar, shown all the time when a mouse is connected.
+    let column =
+      WindowLayout.minimumSize.width - WindowLayout.sidebarWidth - 0.5 - WindowLayout.pageSide
+      * 2 - WindowLayout.settingsListWidth - WindowLayout.settingsSpacing
+      - NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
+    let center = HotkeyCenter(defaults: MainWindowGallery.scratchDefaults())
+    func height(_ subtitle: String) -> CGFloat {
+      let row = SettingsRow(title: "写", subtitle: subtitle) {
+        ShortcutRecorder(
+          role: .write, center: center, minWidth: WindowLayout.settingsRecorderWidth)
+      }
+      return NSHostingView(rootView: row.frame(width: column)).fittingSize.height
+    }
+    #expect(height("纠错、润色或翻译你正在写的文字。") == height("纠错"))
   }
 
   @Test func presenceFollowsTheDockAndMenuBarSwitches() {

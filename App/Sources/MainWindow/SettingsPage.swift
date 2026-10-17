@@ -315,7 +315,8 @@ struct ShortcutRows: View {
     ForEach(Array(HotkeyRole.allCases.enumerated()), id: \.element) { index, role in
       if index > 0 { CardDivider() }
       SettingsRow(title: role.title, subtitle: role.summary) {
-        ShortcutRecorder(role: role, center: center)
+        ShortcutRecorder(
+          role: role, center: center, minWidth: WindowLayout.settingsRecorderWidth)
       }
     }
   }

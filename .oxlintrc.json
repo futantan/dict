@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "import",
+    "jsx-a11y",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ],
+    "import/first": "error",
+    "import/no-duplicates": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      { "prefer": "type-imports" }
+    ],
+    "unicorn/prefer-node-protocol": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["packages/ui/src/components/**"],
+      "rules": {
+        "no-shadow": "off",
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "apps/macos/",
+    "docs/",
+    "research/",
+    "spikes/",
+    "**/routeTree.gen.ts"
+  ]
+}

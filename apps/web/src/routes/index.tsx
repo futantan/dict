@@ -1,19 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Button } from "@workspace/ui/components/button"
 
-export const Route = createFileRoute("/")({ component: App })
+import { LandingPage } from "@/components/landing-page"
+import { site } from "@/lib/site"
 
-function App() {
-  return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+const title = `${site.name} — ${site.tagline}`
+
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title },
+      { name: "description", content: site.description },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: site.name },
+      { property: "og:title", content: title },
+      { property: "og:description", content: site.description },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: site.description },
+    ],
+  }),
+  component: LandingPage,
+})

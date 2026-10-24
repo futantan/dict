@@ -1,0 +1,77 @@
+@import "@workspace/ui/globals.css";
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    @apply font-sans antialiased;
+    font-feature-settings: "kern", "liga";
+  }
+  ::selection {
+    background: var(--highlight);
+    color: var(--highlight-foreground);
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-heading);
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+/* A highlighter stroke behind text, drawn left to right once on load. */
+@utility marker {
+  background-image: linear-gradient(
+    transparent 58%,
+    var(--highlight) 58% 94%,
+    transparent 94%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding-inline: 0.06em;
+  margin-inline: -0.06em;
+}
+
+@utility marker-draw {
+  animation: marker-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.5s both;
+}
+
+@keyframes marker-draw {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+/* Soft desktop wallpaper behind the product mocks. */
+@utility wallpaper {
+  background:
+    radial-gradient(
+      120% 90% at 0% 0%,
+      color-mix(in oklab, var(--brand) 24%, transparent),
+      color-mix(in oklab, var(--brand) 9%, transparent) 38%,
+      transparent 72%
+    ),
+    radial-gradient(
+      90% 80% at 100% 100%,
+      color-mix(in oklab, var(--highlight) 50%, transparent),
+      color-mix(in oklab, var(--highlight) 18%, transparent) 40%,
+      transparent 72%
+    ),
+    color-mix(in oklab, var(--muted) 80%, var(--background));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .marker-draw {
+    animation: none;
+  }
+}

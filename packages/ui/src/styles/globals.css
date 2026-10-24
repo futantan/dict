@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
@@ -9,7 +10,13 @@
 @source "../**/*.{ts,tsx}";
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+  --color-brand: var(--brand);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-diff-insert: var(--diff-insert);
+  --color-diff-insert-bg: var(--diff-insert-bg);
+  --color-diff-delete: var(--diff-delete);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,76 +55,93 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI",
+    system-ui, sans-serif;
 }
 
+/* Colors follow the macOS app's panel tokens (apps/macos/Design/option-a). */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.148 0.004 228.8);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.148 0.004 228.8);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.148 0.004 228.8);
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.963 0.002 197.1);
-  --muted-foreground: oklch(0.56 0.021 213.5);
-  --accent: oklch(0.963 0.002 197.1);
-  --accent-foreground: oklch(0.218 0.008 223.9);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.925 0.005 214.3);
-  --input: oklch(0.925 0.005 214.3);
-  --ring: oklch(0.723 0.014 214.4);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.987 0.002 197.1);
-  --sidebar-foreground: oklch(0.148 0.004 228.8);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.963 0.002 197.1);
-  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-  --sidebar-border: oklch(0.925 0.005 214.3);
-  --sidebar-ring: oklch(0.723 0.014 214.4);
+  color-scheme: light;
+  --background: #fbfbfd;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #5b3fd6;
+  --primary-foreground: #ffffff;
+  --secondary: #efeff2;
+  --secondary-foreground: #3a3a3c;
+  --muted: #f2f2f5;
+  --muted-foreground: #6e6e73;
+  --accent: #ece8ff;
+  --accent-foreground: #5b3fd6;
+  --destructive: #b3261e;
+  --border: #dedee3;
+  --input: #dedee3;
+  --ring: #5b3fd6;
+  --brand: #5b3fd6;
+  --highlight: #ffe58f;
+  --highlight-foreground: #1d1d1f;
+  --diff-insert: #17692f;
+  --diff-insert-bg: rgb(52 199 89 / 16%);
+  --diff-delete: #b3261e;
+  --chart-1: #c9bfff;
+  --chart-2: #a897ff;
+  --chart-3: #7d64e8;
+  --chart-4: #5b3fd6;
+  --chart-5: #4630b0;
+  --radius: 0.75rem;
+  --sidebar: #f2f2f5;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-primary: #5b3fd6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ece8ff;
+  --sidebar-accent-foreground: #5b3fd6;
+  --sidebar-border: #dedee3;
+  --sidebar-ring: #5b3fd6;
 }
 
 .dark {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.987 0.002 197.1);
-  --card: oklch(0.218 0.008 223.9);
-  --card-foreground: oklch(0.987 0.002 197.1);
-  --popover: oklch(0.218 0.008 223.9);
-  --popover-foreground: oklch(0.987 0.002 197.1);
-  --primary: oklch(0.424 0.199 265.638);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.275 0.011 216.9);
-  --muted-foreground: oklch(0.723 0.014 214.4);
-  --accent: oklch(0.275 0.011 216.9);
-  --accent-foreground: oklch(0.987 0.002 197.1);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.56 0.021 213.5);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.218 0.008 223.9);
-  --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.275 0.011 216.9);
-  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.56 0.021 213.5);
+  color-scheme: dark;
+  --background: #131315;
+  --foreground: #f2f2f4;
+  --card: #1e1e22;
+  --card-foreground: #f2f2f4;
+  --popover: #1e1e22;
+  --popover-foreground: #f2f2f4;
+  --primary: #6d55e8;
+  --primary-foreground: #ffffff;
+  --secondary: #2a2a2f;
+  --secondary-foreground: #e4e4e8;
+  --muted: #1c1c20;
+  --muted-foreground: #a1a1a8;
+  --accent: rgb(168 151 255 / 18%);
+  --accent-foreground: #c9bfff;
+  --destructive: #ff8a80;
+  --border: #34343a;
+  --input: #3a3a40;
+  --ring: #a897ff;
+  --brand: #a897ff;
+  --highlight: #846818;
+  --highlight-foreground: #f2f2f4;
+  --diff-insert: #7ee08f;
+  --diff-insert-bg: rgb(86 211 100 / 16%);
+  --diff-delete: #ff8a80;
+  --chart-1: #c9bfff;
+  --chart-2: #a897ff;
+  --chart-3: #7d64e8;
+  --chart-4: #6d55e8;
+  --chart-5: #4630b0;
+  --sidebar: #1e1e22;
+  --sidebar-foreground: #f2f2f4;
+  --sidebar-primary: #a897ff;
+  --sidebar-primary-foreground: #131315;
+  --sidebar-accent: rgb(168 151 255 / 18%);
+  --sidebar-accent-foreground: #c9bfff;
+  --sidebar-border: #34343a;
+  --sidebar-ring: #a897ff;
 }
 
 @layer base {

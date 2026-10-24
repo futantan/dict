@@ -10,6 +10,7 @@
     "jsonMode": "schema",
     "tokenLimitField": "max_completion_tokens",
     "modelList": "openAI",
+    "wire": "chatCompletions",
     "thinkingRules": [
       {
         "modelPrefix": "",
@@ -29,6 +30,36 @@
     ]
   },
   {
+    "id": "chatgpt",
+    "displayName": "ChatGPT",
+    "baseURL": "https://api.openai.com/v1",
+    "auth": { "none": {} },
+    "requiresKey": false,
+    "keyHelpURL": null,
+    "defaultModel": "",
+    "jsonMode": "schema",
+    "tokenLimitField": "max_output_tokens",
+    "modelList": "chatGPT",
+    "wire": "chatGPT",
+    "thinkingRules": [
+      {
+        "modelPrefix": "",
+        "off": { "reasoning": { "effort": "none" } },
+        "lowest": { "reasoning": { "effort": "minimal" } }
+      },
+      {
+        "modelPrefix": "gpt-6",
+        "off": { "reasoning": { "effort": "none" } },
+        "lowest": { "reasoning": { "effort": "none" } }
+      },
+      {
+        "modelPrefix": "gpt-5-nano",
+        "off": null,
+        "lowest": { "reasoning": { "effort": "minimal" } }
+      }
+    ]
+  },
+  {
     "id": "ollama",
     "displayName": "Ollama",
     "baseURL": "http://localhost:11434/v1",
@@ -39,6 +70,7 @@
     "jsonMode": "schema",
     "tokenLimitField": "max_tokens",
     "modelList": "ollama",
+    "wire": "chatCompletions",
     "thinkingRules": [
       {
         "modelPrefix": "",
@@ -58,6 +90,7 @@
     "jsonMode": "schema",
     "tokenLimitField": "max_tokens",
     "modelList": "openAI",
+    "wire": "chatCompletions",
     "thinkingRules": [
       {
         "modelPrefix": "",

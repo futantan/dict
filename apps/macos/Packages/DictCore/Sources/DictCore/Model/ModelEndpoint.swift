@@ -57,12 +57,16 @@ public struct ProviderPreset: Codable, Sendable, Equatable {
   public var thinkingRules: [ThinkingRule]
   /// How to list the models the service offers.
   public var modelList: ModelListStyle
+  /// Which API the requests go to.
+  public var wire: ModelWire
 
   public init(
     id: String, displayName: String, baseURL: URL, auth: AuthStyle, requiresKey: Bool,
     keyHelpURL: URL?, defaultModel: String, jsonMode: JSONMode, tokenLimitField: String,
-    thinkingRules: [ThinkingRule], modelList: ModelListStyle = .openAI
+    thinkingRules: [ThinkingRule], modelList: ModelListStyle = .openAI,
+    wire: ModelWire = .chatCompletions
   ) {
+    self.wire = wire
     self.id = id
     self.displayName = displayName
     self.baseURL = baseURL
@@ -78,8 +82,13 @@ public struct ProviderPreset: Codable, Sendable, Equatable {
 }
 
 /// Where a provider lists its models: `GET <base URL>/models` (OpenAI compatible), or
-/// Ollama's own `GET /api/tags`.
-public enum ModelListStyle: String, Codable, Sendable { case openAI, ollama }
+/// Ollama's own `GET /api/tags`, or the ChatGPT plan's `GET <api>/models`, whose shape is
+/// `{"models": [{"slug", "display_name", "visibility"}]}`.
+public enum ModelListStyle: String, Codable, Sendable { case openAI, ollama, chatGPT }
+
+/// The API a provider's requests go to: any OpenAI-compatible Chat Completions endpoint, or
+/// the Responses API on the user's ChatGPT plan, signed in with ChatGPT instead of a key.
+public enum ModelWire: String, Codable, Sendable { case chatCompletions, chatGPT }
 
 /// The request-body fragments that switch thinking off or to its lowest level.
 public struct ThinkingRule: Codable, Sendable, Equatable {

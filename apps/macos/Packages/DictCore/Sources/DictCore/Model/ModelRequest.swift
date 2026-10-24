@@ -65,6 +65,14 @@ public enum ModelError: Error, Sendable, Equatable {
   case timedOut(TimeoutStage)
   case emptyResponse
   case malformedResponse
+  /// ChatGPT: no account is signed in, or the sign-in ended (a refresh was refused).
+  case signInRequired
+  /// ChatGPT: signed in, but the user did not let this app use their plan.
+  case planUsageNotGranted
+  /// ChatGPT: the account, workspace or region may not use its plan here (HTTP 403).
+  case planNotEligible
+  /// ChatGPT: the plan's usage, or this app's limit in the ChatGPT settings, is used up.
+  case planLimitReached
 }
 
 /// Which watchdog fired.

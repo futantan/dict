@@ -122,13 +122,18 @@ struct RequestBodyTests {
 }
 
 struct ProviderPresetTests {
-  @Test func tableHasTheThreeV1Rows() throws {
+  @Test func tableHasTheFourRows() throws {
     let presets = try ProviderPreset.all()
-    #expect(presets.map(\.id) == ["openai", "ollama", ProviderPreset.customID])
+    #expect(presets.map(\.id) == ["openai", "chatgpt", "ollama", ProviderPreset.customID])
     let openAI = try #require(presets.first)
     #expect(openAI.baseURL.absoluteString == "https://api.openai.com/v1")
-    #expect(openAI.requiresKey && openAI.auth == .bearer)
-    #expect(presets[1].auth == AuthStyle.none && !presets[1].requiresKey)
+    #expect(openAI.requiresKey && openAI.auth == .bearer && openAI.wire == .chatCompletions)
+    let ollama = try #require(presets.first { $0.id == "ollama" })
+    #expect(ollama.auth == AuthStyle.none && !ollama.requiresKey)
+    // Signed in with ChatGPT instead of a key; the model comes from the account's list.
+    let chatGPT = try #require(presets.first { $0.id == "chatgpt" })
+    #expect(chatGPT.wire == .chatGPT && chatGPT.auth == AuthStyle.none && !chatGPT.requiresKey)
+    #expect(chatGPT.defaultModel.isEmpty)
   }
 
   @Test func longestPrefixWins() {

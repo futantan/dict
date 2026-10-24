@@ -51,32 +51,39 @@ public enum ModelSetupIssue: Error, Sendable, Equatable {
   case insecureBaseURL
   case missingModel
   case missingKey
+  /// ChatGPT: no account is signed in.
+  case notSignedIn
 }
 
-/// What a `ChatCompletionsModel` needs besides the key.
+/// What a `TextModel` needs besides the key or the ChatGPT sign-in.
 public struct ModelConfiguration: Sendable, Equatable {
   public var endpoint: ModelEndpoint
   /// The thinking rules of the endpoint's preset.
   public var rules: [ThinkingRule]
+  /// The preset's API: a `ChatCompletionsModel`, or a `ResponsesModel` on the ChatGPT plan.
+  public var wire: ModelWire
 
-  public init(endpoint: ModelEndpoint, rules: [ThinkingRule]) {
+  public init(endpoint: ModelEndpoint, rules: [ThinkingRule], wire: ModelWire = .chatCompletions) {
     self.endpoint = endpoint
     self.rules = rules
+    self.wire = wire
   }
 }
 
 extension ModelPreferences {
   /// The endpoint for these preferences, or the first problem with them.
   ///
-  /// - Parameter hasKey: whether the Keychain holds a non-empty key for the provider. A
-  ///   custom provider without a key is called with no authentication.
+  /// - Parameter hasKey: whether the Keychain holds a non-empty key for the provider, or
+  ///   for ChatGPT whether an account is signed in. A custom provider without a key is
+  ///   called with no authentication.
   public func configuration(
     presets: [ProviderPreset], hasKey: Bool
   ) throws(ModelSetupIssue) -> ModelConfiguration {
     let (endpoint, preset) = try resolved(presets: presets, hasKey: hasKey)
+    if preset.wire == .chatGPT && !hasKey { throw .notSignedIn }
     guard !endpoint.model.isEmpty else { throw .missingModel }
     if preset.requiresKey && !hasKey { throw .missingKey }
-    return ModelConfiguration(endpoint: endpoint, rules: preset.thinkingRules)
+    return ModelConfiguration(endpoint: endpoint, rules: preset.thinkingRules, wire: preset.wire)
   }
 
   /// The endpoint to list the provider's models from. Unlike `configuration`, it needs no
@@ -85,6 +92,7 @@ extension ModelPreferences {
     presets: [ProviderPreset], hasKey: Bool
   ) throws(ModelSetupIssue) -> ModelEndpoint {
     let (endpoint, preset) = try resolved(presets: presets, hasKey: hasKey)
+    if preset.wire == .chatGPT && !hasKey { throw .notSignedIn }
     if preset.requiresKey && !hasKey { throw .missingKey }
     return endpoint
   }
@@ -98,7 +106,9 @@ extension ModelPreferences {
       throw .unknownProvider
     }
     let isCustom = providerID == ProviderPreset.customID
-    let typedURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    // The ChatGPT plan has one address; a base URL typed for another provider is ignored.
+    let typedURL =
+      preset.wire == .chatGPT ? "" : baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
     let url = typedURL.isEmpty && !isCustom ? preset.baseURL : try validatedBaseURL(typedURL)
     let typedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
 

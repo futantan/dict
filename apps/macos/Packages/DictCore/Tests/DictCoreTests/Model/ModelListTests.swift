@@ -33,7 +33,8 @@ struct ModelListTests {
   @Test func presetsSayHowToList() throws {
     let styles = Dictionary(
       uniqueKeysWithValues: try ProviderPreset.all().map { ($0.id, $0.modelList) })
-    #expect(styles == ["openai": .openAI, "ollama": .ollama, "custom": .openAI])
+    #expect(
+      styles == ["openai": .openAI, "chatgpt": .chatGPT, "ollama": .ollama, "custom": .openAI])
   }
 
   // MARK: - Decoding
@@ -62,6 +63,24 @@ struct ModelListTests {
     #expect(
       try decodeModelList(Data(json.utf8), style: .ollama)
         == ["gemma3:1b", "llama3.2:3b", "qwen3:4b"])
+  }
+
+  /// Only listed entries, in the server's order, duplicates once.
+  @Test func decodesTheChatGPTPlansListedSlugs() throws {
+    let json = """
+      {"models":[
+        {"slug":"gpt-6.1-sol","display_name":"GPT-6.1 Sol","visibility":"list"},
+        {"slug":"internal-x","display_name":"X","visibility":"hide"},
+        {"slug":"gpt-6-astra","display_name":"GPT-6 Astra","visibility":"list"},
+        {"slug":"gpt-6.1-sol","display_name":"GPT-6.1 Sol","visibility":"list"},
+        {"display_name":"No slug","visibility":"list"}
+      ]}
+      """
+    #expect(
+      try decodeModelList(Data(json.utf8), style: .chatGPT) == ["gpt-6.1-sol", "gpt-6-astra"])
+    #expect(throws: ModelError.malformedResponse) {
+      try decodeModelList(Data(#"{"data":[{"id":"x"}]}"#.utf8), style: .chatGPT)
+    }
   }
 
   @Test func emptyListsAreEmpty() throws {

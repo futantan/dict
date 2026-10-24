@@ -12,7 +12,7 @@ public enum ModelListError: Error, Sendable, Equatable {
 /// server root, outside its OpenAI-compatible `/v1`.
 public func modelListURL(baseURL: URL, style: ModelListStyle) -> URL {
   switch style {
-  case .openAI:
+  case .openAI, .chatGPT:
     return baseURL.appending(path: "models")
   case .ollama:
     var root = baseURL
@@ -22,8 +22,9 @@ public func modelListURL(baseURL: URL, style: ModelListStyle) -> URL {
 }
 
 /// The model names in a list response, sorted and without duplicates: `data[].id` for an
-/// OpenAI-compatible service, `models[].name` (or `.model`) for Ollama. Throws
-/// `ModelError.malformedResponse` for any other shape.
+/// OpenAI-compatible service, `models[].name` (or `.model`) for Ollama. The ChatGPT plan's
+/// `models[].slug` of the entries whose `visibility` is "list" keep the server's order.
+/// Throws `ModelError.malformedResponse` for any other shape.
 public func decodeModelList(_ data: Data, style: ModelListStyle) throws(ModelError) -> [String] {
   guard let json = try? JSONDecoder().decode(JSONValue.self, from: data) else {
     throw .malformedResponse
@@ -37,9 +38,15 @@ public func decodeModelList(_ data: Data, style: ModelListStyle) throws(ModelErr
   case .ollama:
     items = json["models"]?.arrayValue
     names = { $0["name"]?.stringValue ?? $0["model"]?.stringValue }
+  case .chatGPT:
+    items = json["models"]?.arrayValue
+    names = { $0["visibility"]?.stringValue == "list" ? $0["slug"]?.stringValue : nil }
   }
   guard let items else { throw .malformedResponse }
-  return Set(items.compactMap(names).filter { !$0.isEmpty }).sorted()
+  let found = items.compactMap(names).filter { !$0.isEmpty }
+  guard style == .chatGPT else { return Set(found).sorted() }
+  var seen = Set<String>()
+  return found.filter { seen.insert($0).inserted }
 }
 
 /// Lists the models the service at `endpoint` offers; the endpoint's model is ignored.

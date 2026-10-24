@@ -95,6 +95,8 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
   struct Host: Sendable {
     var reply: @Sendable (_ body: JSONValue) -> StubReply
     var bodies: [JSONValue] = []
+    /// The bodies as sent, for form-encoded requests.
+    var forms: [String] = []
     var headers: [[String: String]] = []
     var urls: [URL] = []
     var methods: [String] = []
@@ -122,10 +124,11 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
 
   override func startLoading() {
     let host = request.url?.host() ?? ""
-    let body =
-      (try? JSONDecoder().decode(JSONValue.self, from: Self.bodyData(of: request))) ?? .null
+    let data = Self.bodyData(of: request)
+    let body = (try? JSONDecoder().decode(JSONValue.self, from: data)) ?? .null
     let reply = Self.hosts.withLock { hosts -> StubReply? in
       hosts[host]?.bodies.append(body)
+      hosts[host]?.forms.append(String(decoding: data, as: UTF8.self))
       hosts[host]?.headers.append(request.allHTTPHeaderFields ?? [:])
       if let url = request.url { hosts[host]?.urls.append(url) }
       hosts[host]?.methods.append(request.httpMethod ?? "GET")

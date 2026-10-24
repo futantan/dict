@@ -1,48 +1,29 @@
-import {
-  CpuIcon,
-  EyeIcon,
-  HardDriveIcon,
-  KeyRoundIcon,
-  ScanTextIcon,
-  Volume2Icon,
-  type LucideIcon,
-} from "lucide-react"
-
-import { SectionHeading } from "@/components/section-heading"
 import { site } from "@/lib/site"
 
-type Item = { icon: LucideIcon; title: string; body: string }
-
-const items: Item[] = [
+const facts: { lead: string; body: string }[] = [
   {
-    icon: HardDriveIcon,
-    title: "Stays on your Mac",
-    body: "Your words, sentences and review history live in a local database. No account, no sync server, no telemetry.",
+    lead: "Stored on your Mac.",
+    body: "Your word book, history and review progress live in a local database.",
   },
   {
-    icon: KeyRoundIcon,
-    title: "Bring your own model",
-    body: "Use your own OpenAI or compatible API key, or run a local model with Ollama. Requests go straight from your Mac to the provider you picked.",
+    lead: "No account.",
+    body: "There is nothing to sign up for, and the app sends no analytics.",
   },
   {
-    icon: CpuIcon,
-    title: "Works with zero setup",
-    body: "No key yet? Apple Translation, the system spell checker and built-in voices cover the basics from the first launch.",
+    lead: "Your own key.",
+    body: "Any OpenAI-compatible API works. Requests go from your Mac straight to that provider.",
   },
   {
-    icon: Volume2Icon,
-    title: "Hear it right",
-    body: "Pronunciation in the accent you choose, with phonetics on every card.",
+    lead: "Or a local model.",
+    body: "Point it at Ollama and lookups never leave the Mac.",
   },
   {
-    icon: ScanTextIcon,
-    title: "Text in images, too",
-    body: "Text you can see but not select, like a screenshot or an image, can be read with OCR and looked up the same way.",
+    lead: "Works without a key.",
+    body: "The offline dictionary and Apple Translation cover lookups from the first launch.",
   },
   {
-    icon: EyeIcon,
-    title: "Open to inspect",
-    body: `Every line is open source under ${site.license}. Read it, build it, change it.`,
+    lead: "Open source.",
+    body: `The code is on GitHub under ${site.license}, so you can check all of this.`,
   },
 ]
 
@@ -51,29 +32,33 @@ export function Privacy() {
     <section
       id="privacy"
       aria-labelledby="privacy-title"
-      className="px-4 py-20 md:py-28"
+      className="px-4 pb-32 md:pb-44"
     >
-      <SectionHeading
-        id="privacy-title"
-        eyebrow="Yours, on your terms"
-        title="Private by default. Yours to configure."
-        lede="Chinese speakers learning English get sensible defaults. Every language pair, model and voice can be changed."
-      />
-      <ul className="mx-auto mt-14 grid max-w-6xl gap-px overflow-hidden rounded-3xl border bg-border sm:grid-cols-2 md:mt-20 lg:grid-cols-3">
-        {items.map(({ icon: Icon, title, body }) => (
-          <li key={title} className="flex flex-col gap-3 bg-card p-7">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-              <Icon className="size-5" strokeWidth={1.6} aria-hidden="true" />
-            </span>
-            <h3 className="mt-2 text-[17px] font-semibold tracking-tight">
-              {title}
-            </h3>
-            <p className="text-[15px] leading-relaxed text-muted-foreground">
-              {body}
-            </p>
-          </li>
-        ))}
-      </ul>
+      <div className="mx-auto max-w-[1000px]">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <h2
+            id="privacy-title"
+            className="font-display text-[clamp(2rem,4vw,3rem)] leading-[1.08]"
+          >
+            Where your text goes
+          </h2>
+          <p className="max-w-[26rem] text-[16px] leading-[26px] text-muted-foreground">
+            Nothing passes through a server of ours, because there isn&apos;t
+            one.
+          </p>
+        </div>
+        <ul className="mt-10 grid gap-px border-y bg-border sm:grid-cols-2 lg:grid-cols-3">
+          {facts.map((fact) => (
+            <li
+              key={fact.lead}
+              className="bg-background px-1 py-6 text-[14px] leading-[22px] text-muted-foreground sm:px-6"
+            >
+              <span className="font-medium text-foreground">{fact.lead}</span>{" "}
+              {fact.body}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   )
 }

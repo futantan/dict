@@ -21,12 +21,12 @@ export const Route = createRootRoute({
       { name: "color-scheme", content: "light dark" },
       {
         name: "theme-color",
-        content: "#fbfbfd",
+        content: "#060a1c",
         media: "(prefers-color-scheme: light)",
       },
       {
         name: "theme-color",
-        content: "#131315",
+        content: "#060a1c",
         media: "(prefers-color-scheme: dark)",
       },
       { title: site.name },
@@ -42,7 +42,7 @@ export const Route = createRootRoute({
       <p className="text-muted-foreground">
         The requested page could not be found.
       </p>
-      <a className="text-brand underline underline-offset-4" href="/">
+      <a className="underline underline-offset-4" href="/">
         Back to {site.name}
       </a>
     </main>

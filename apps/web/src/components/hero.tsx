@@ -1,62 +1,22 @@
-import { CtaButtons, CtaFootnote } from "@/components/cta-buttons"
-import { Keycap, LookupCard, MenuBar, WindowFrame } from "@/components/mock-mac"
+import { Demo } from "@/components/demo"
+import { DownloadButton } from "@/components/download"
 import { site } from "@/lib/site"
 
-function MailMock() {
+// The read key sits inside the headline as a glossy key, the way it sits
+// under your finger.
+function Headline() {
+  const [before, after] = site.headline.split(site.readKey)
   return (
-    <WindowFrame title="Re: Launch date" className="w-full md:w-[66%]">
-      <div className="flex flex-col gap-3 px-5 pt-5 pb-14 text-[14px] leading-relaxed sm:px-7 sm:text-[15px] md:min-h-[340px] md:pb-5">
-        <div className="flex flex-col gap-1 border-b pb-3 text-[13px] text-muted-foreground">
-          <span>
-            <span className="text-foreground/70">From:</span> Priya Raman
-          </span>
-          <span>
-            <span className="text-foreground/70">Subject:</span> Re: Launch date
-          </span>
-        </div>
-        <p>Hi Wei,</p>
-        <p>
-          Thanks for pulling this together. We picked a{" "}
-          <span className="relative">
-            <span className="rounded-[3px] bg-highlight px-0.5 text-highlight-foreground">
-              tentative
-            </span>
-            <span className="absolute -top-9 left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-lg border bg-card px-1.5 py-1 shadow-md sm:flex">
-              <Keycap className="h-6 min-w-6 text-[12px]">
-                {site.readKey}
-              </Keycap>
-            </span>
-          </span>{" "}
-          date for the launch, but legal still needs to sign off on the wording.
-        </p>
-        <p className="text-muted-foreground">
-          I&apos;ll circle back once I hear from them. Until then, let&apos;s
-          keep it between us.
-        </p>
-        <p className="hidden text-muted-foreground md:block">
-          Best,
-          <br />
-          Priya
-        </p>
-      </div>
-    </WindowFrame>
-  )
-}
-
-function HeroStage() {
-  return (
-    <div
-      aria-hidden="true"
-      className="wallpaper relative mx-auto w-full max-w-6xl overflow-hidden rounded-[28px] border shadow-[0_40px_120px_-40px_rgb(91_63_214/0.45)]"
+    <h1
+      id="hero-title"
+      className="font-display max-w-[15ch] bg-gradient-to-b from-white to-[#c9cfe6] bg-clip-text text-[clamp(2.75rem,6.4vw,4.625rem)] leading-[1.14] tracking-[-0.015em] text-balance text-transparent"
     >
-      <MenuBar />
-      <div className="relative px-4 pt-8 pb-6 sm:px-8 md:px-12 md:pt-12 md:pb-20">
-        <MailMock />
-        <div className="relative z-10 -mt-10 ml-auto w-[92%] max-w-[360px] sm:mr-auto md:absolute md:top-24 md:right-10 md:mt-0 lg:right-16">
-          <LookupCard />
-        </div>
-      </div>
-    </div>
+      {before}
+      <span className="mx-[0.12em] inline-flex h-[0.95em] translate-y-[0.1em] items-center rounded-[0.19em] bg-gradient-to-b from-[#4f7bff] to-[#1035d8] px-[0.18em] align-baseline text-[0.62em] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.35),inset_0_-2px_0_rgb(0_0_0/0.2),0_6px_16px_-4px_rgb(23_71_255/0.6),0_0_0_1px_rgb(5_6_27/0.5)]">
+        {site.readKey}
+      </span>
+      {after}
+    </h1>
   )
 }
 
@@ -65,42 +25,30 @@ export function Hero() {
     <section
       id="top"
       aria-labelledby="hero-title"
-      className="relative px-4 pt-14 pb-20 sm:pt-20 md:pb-28"
+      className="relative bg-[linear-gradient(180deg,#060a1c_0%,#071034_55%,#0a1a78_100%)] px-4 pt-36 text-white md:pt-44"
     >
-      <div className="mx-auto flex max-w-3xl flex-col items-center text-center motion-safe:animate-in motion-safe:duration-700 motion-safe:fade-in motion-safe:slide-in-from-bottom-3">
-        <a
-          href="#privacy"
-          className="mb-7 inline-flex items-center gap-2 rounded-full border bg-card/70 py-1 pr-3 pl-1 text-[13px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
-        >
-          <span className="rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold text-accent-foreground">
-            Open source
-          </span>
-          <span className="whitespace-nowrap">
-            Native for {site.minMacOS}+
-            <span className="hidden sm:inline">, private by default</span>
-          </span>
-        </a>
-        <h1
-          id="hero-title"
-          className="font-display text-[clamp(2.75rem,8vw,5.75rem)] leading-[0.98] font-medium text-balance"
-        >
-          {site.headline.lead}{" "}
-          <em className="marker marker-draw text-highlight-foreground not-italic dark:text-foreground">
-            {site.headline.mark}
-          </em>
-        </h1>
-        <p className="mt-7 max-w-xl text-[18px] leading-relaxed text-pretty text-muted-foreground">
-          {site.name} lives in your menu bar. Select text in any app, press{" "}
-          <Keycap className="mx-0.5 h-6 align-[1px]">{site.readKey}</Keycap> to
-          understand it or{" "}
-          <Keycap className="mx-0.5 h-6 align-[1px]">{site.writeKey}</Keycap> to
-          fix it, and every word you meet becomes yours to keep.
+      <div className="mx-auto flex max-w-6xl flex-col items-center text-center">
+        <p className="glass mb-7 rounded-full px-3 py-1 text-[13px] text-white/80">
+          Menu-bar app for {site.minMacOS} and later
         </p>
-        <CtaButtons className="mt-9 w-full justify-center sm:w-auto" />
-        <CtaFootnote className="mt-4" />
+        <Headline />
+        <p className="mt-6 max-w-[36rem] text-[16px] leading-[26px] text-balance text-white/80">
+          {site.name} shows what a word means in the sentence you found it in.
+          Press {site.writeKey} on your own writing and it shows the fixes
+          before it changes anything.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <DownloadButton />
+          <a
+            href={site.githubUrl}
+            className="glass inline-flex h-10 items-center rounded-full px-5 text-[15px] text-white transition-colors hover:bg-white/15"
+          >
+            Source on GitHub
+          </a>
+        </div>
       </div>
-      <div className="mt-16 motion-safe:animate-in motion-safe:delay-200 motion-safe:duration-1000 motion-safe:fill-mode-both motion-safe:fade-in motion-safe:slide-in-from-bottom-6 md:mt-20">
-        <HeroStage />
+      <div className="mt-20 md:mt-24">
+        <Demo />
       </div>
     </section>
   )

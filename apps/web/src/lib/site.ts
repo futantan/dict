@@ -1,12 +1,9 @@
 // Everything that names or links the product lives here, so a rename is one edit.
-const headline = { lead: "Your second language,", mark: "one keystroke away." }
-
 export const site = {
   name: "Dict",
-  headline,
-  tagline: `${headline.lead} ${headline.mark}`,
+  headline: "Press ⌥A on any word you don't know",
   description:
-    "A native macOS menu-bar app for people who live in a second language. Select text anywhere to look it up or fix it, and turn every word you meet into your own review material.",
+    "A macOS menu-bar app for people who work in a second language. Select text in any app and press a key to see what it means in that sentence, or to check what you wrote before you send it.",
   downloadUrl: "#",
   githubUrl: "#",
   license: "GPL-3.0",

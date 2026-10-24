@@ -1,36 +1,56 @@
-import { buttonVariants } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
+import { useEffect, useState } from "react"
 
-import { AppMark } from "@/components/mock-mac"
+import { AppMark } from "@/components/cards"
 import { site } from "@/lib/site"
 
 const links = [
   { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How it works" },
+  { href: "#word-book", label: "Word book" },
   { href: "#privacy", label: "Privacy" },
   { href: "#faq", label: "FAQ" },
 ]
 
+// Wide and clear over the dark hero; a compact white pill once the page moves.
 export function SiteHeader() {
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 24)
+    update()
+    window.addEventListener("scroll", update, { passive: true })
+    return () => window.removeEventListener("scroll", update)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-50 px-4 pt-3 sm:pt-4">
+    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-3">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 rounded-full border bg-background/75 py-2 pr-2 pl-4 shadow-[0_8px_30px_-12px_rgb(0_0_0/0.18)] backdrop-blur-xl"
+        className={cn(
+          "mx-auto flex h-12 items-center gap-6 rounded-full pr-1.5 pl-3 transition-[max-width,background-color,box-shadow,color] duration-300",
+          scrolled
+            ? "shadow-float max-w-[640px] bg-card/95 text-foreground backdrop-blur-xl"
+            : "max-w-6xl text-white"
+        )}
       >
         <a
           href="#top"
-          className="flex items-center gap-2.5 text-[17px] font-semibold tracking-tight"
+          className="font-display flex items-center gap-2 text-[17px]"
         >
-          <AppMark />
-          <span>{site.name}</span>
+          <AppMark className="size-6" />
+          {site.name}
         </a>
-        <ul className="hidden items-center gap-1 md:flex">
+        <ul className="mx-auto hidden items-center gap-6 text-[14px] md:flex">
           {links.map((link) => (
             <li key={link.href}>
               <a
                 href={link.href}
-                className="rounded-full px-3 py-1.5 text-[14px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className={cn(
+                  "transition-colors",
+                  scrolled
+                    ? "text-muted-foreground hover:text-foreground"
+                    : "text-white/75 hover:text-white"
+                )}
               >
                 {link.label}
               </a>
@@ -39,7 +59,7 @@ export function SiteHeader() {
         </ul>
         <a
           href={site.downloadUrl}
-          className={cn(buttonVariants({ size: "default" }), "h-10 px-4")}
+          className="shadow-button ml-auto flex h-9 items-center rounded-full bg-primary px-4 text-[14px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 md:ml-0"
         >
           Download
         </a>

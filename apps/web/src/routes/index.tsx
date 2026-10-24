@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { LandingPage } from "@/components/landing-page"
 import { site } from "@/lib/site"
 
-const title = `${site.name} — ${site.tagline}`
+const title = `${site.name} — ${site.headline}`
 
 export const Route = createFileRoute("/")({
   head: () => ({

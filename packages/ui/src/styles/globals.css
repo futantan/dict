@@ -1,35 +1,25 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/newsreader/opsz.css";
-@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource-variable/albert-sans/wght.css";
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource/indie-flower/latin-400.css";
 
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
-@source "../../../components/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
 
 @theme inline {
-  --font-heading: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
-  --color-brand: var(--brand);
+  --font-heading: "Albert Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    "Inter Variable", ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+  --font-hand: "Indie Flower", cursive;
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-tile: var(--tile);
+  --color-night: var(--night);
   --color-diff-insert: var(--diff-insert);
   --color-diff-insert-bg: var(--diff-insert-bg);
   --color-diff-delete: var(--diff-delete);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -48,100 +38,90 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI",
-    system-ui, sans-serif;
+  /* 4px for tags, 6px for controls, 14px for cards and windows, and full. */
+  --radius-xs: 4px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 14px;
+  --radius-2xl: 14px;
+  --radius-3xl: 14px;
+  --radius-4xl: 14px;
 }
 
-/* Colors follow the macOS app's panel tokens (apps/macos/Design/option-a). */
 :root {
   color-scheme: light;
-  --background: #fbfbfd;
-  --foreground: #1d1d1f;
+  --background: #ffffff;
+  --foreground: #141414;
   --card: #ffffff;
-  --card-foreground: #1d1d1f;
+  --card-foreground: #141414;
   --popover: #ffffff;
-  --popover-foreground: #1d1d1f;
-  --primary: #5b3fd6;
+  --popover-foreground: #141414;
+  --primary: #1747ff;
   --primary-foreground: #ffffff;
-  --secondary: #efeff2;
-  --secondary-foreground: #3a3a3c;
-  --muted: #f2f2f5;
-  --muted-foreground: #6e6e73;
-  --accent: #ece8ff;
-  --accent-foreground: #5b3fd6;
-  --destructive: #b3261e;
-  --border: #dedee3;
-  --input: #dedee3;
-  --ring: #5b3fd6;
-  --brand: #5b3fd6;
-  --highlight: #ffe58f;
-  --highlight-foreground: #1d1d1f;
-  --diff-insert: #17692f;
-  --diff-insert-bg: rgb(52 199 89 / 16%);
-  --diff-delete: #b3261e;
-  --chart-1: #c9bfff;
-  --chart-2: #a897ff;
-  --chart-3: #7d64e8;
-  --chart-4: #5b3fd6;
-  --chart-5: #4630b0;
-  --radius: 0.75rem;
-  --sidebar: #f2f2f5;
-  --sidebar-foreground: #1d1d1f;
-  --sidebar-primary: #5b3fd6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ece8ff;
-  --sidebar-accent-foreground: #5b3fd6;
-  --sidebar-border: #dedee3;
-  --sidebar-ring: #5b3fd6;
+  --secondary: #f1f1f2;
+  --secondary-foreground: #141414;
+  --muted: #f6f6f7;
+  --muted-foreground: #656565;
+  --accent: #eef2ff;
+  --accent-foreground: #1747ff;
+  --destructive: #c4321f;
+  --border: #e9e9eb;
+  --input: #dcdce0;
+  --ring: #1747ff;
+  --tile: #f6f6f6;
+  --night: #060a1c;
+  --highlight: #ffd84a;
+  --highlight-foreground: #141414;
+  --diff-insert: #17703a;
+  --diff-insert-bg: #ddf3e3;
+  --diff-delete: #c4321f;
+  /* The blue band fades into the page colour, so each mode sets its own. */
+  --band: linear-gradient(
+    180deg,
+    #0a1a78 0%,
+    #0c2fcf 22%,
+    #1670e6 48%,
+    #58aaee 70%,
+    #c9e4f7 88%,
+    #ffffff 100%
+  );
 }
 
 .dark {
   color-scheme: dark;
-  --background: #131315;
-  --foreground: #f2f2f4;
-  --card: #1e1e22;
-  --card-foreground: #f2f2f4;
-  --popover: #1e1e22;
-  --popover-foreground: #f2f2f4;
-  --primary: #6d55e8;
+  --background: #0b0d14;
+  --foreground: #ececf1;
+  --card: #151926;
+  --card-foreground: #ececf1;
+  --popover: #151926;
+  --popover-foreground: #ececf1;
+  --primary: #3f6bff;
   --primary-foreground: #ffffff;
-  --secondary: #2a2a2f;
-  --secondary-foreground: #e4e4e8;
-  --muted: #1c1c20;
-  --muted-foreground: #a1a1a8;
-  --accent: rgb(168 151 255 / 18%);
-  --accent-foreground: #c9bfff;
-  --destructive: #ff8a80;
-  --border: #34343a;
-  --input: #3a3a40;
-  --ring: #a897ff;
-  --brand: #a897ff;
-  --highlight: #846818;
-  --highlight-foreground: #f2f2f4;
-  --diff-insert: #7ee08f;
-  --diff-insert-bg: rgb(86 211 100 / 16%);
-  --diff-delete: #ff8a80;
-  --chart-1: #c9bfff;
-  --chart-2: #a897ff;
-  --chart-3: #7d64e8;
-  --chart-4: #6d55e8;
-  --chart-5: #4630b0;
-  --sidebar: #1e1e22;
-  --sidebar-foreground: #f2f2f4;
-  --sidebar-primary: #a897ff;
-  --sidebar-primary-foreground: #131315;
-  --sidebar-accent: rgb(168 151 255 / 18%);
-  --sidebar-accent-foreground: #c9bfff;
-  --sidebar-border: #34343a;
-  --sidebar-ring: #a897ff;
+  --secondary: #1d2231;
+  --secondary-foreground: #ececf1;
+  --muted: #121621;
+  --muted-foreground: #9ba1b0;
+  --accent: rgb(63 107 255 / 0.16);
+  --accent-foreground: #9db3ff;
+  --destructive: #ff8a78;
+  --border: #232838;
+  --input: #2c3243;
+  --ring: #3f6bff;
+  --tile: #121621;
+  --highlight: #f5cd3d;
+  --highlight-foreground: #141414;
+  --diff-insert: #86dba0;
+  --diff-insert-bg: rgb(134 219 160 / 0.14);
+  --diff-delete: #ff8a78;
+  --band: linear-gradient(
+    180deg,
+    #0a1a78 0%,
+    #0c2fcf 26%,
+    #133fa8 55%,
+    #0f1f55 78%,
+    #0b0d14 100%
+  );
 }
 
 @layer base {
@@ -152,7 +132,8 @@
     @apply bg-background text-foreground;
   }
   button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  [role="button"]:not(:disabled),
+  summary {
     cursor: pointer;
   }
 }

@@ -156,7 +156,8 @@ struct ChatGPTSettingsTests {
     for _ in 0..<400 where model.chatGPT.isSignedIn {
       try await Task.sleep(for: .milliseconds(5))
     }
-    #expect(model.chatGPT == .signedOut(previousEmail: "a@example.com"))
+    #expect(model.chatGPT == .signedOut(previousEmail: nil))
+    #expect(try account.registrations.saved()?.clientID == "oaiapp_1")
     // Nothing answers on port 9: the revocation is unconfirmed, and the note says so.
     #expect(model.chatGPTNote == ChatGPTText.signOutUnconfirmed)
     #expect(account.savedCredential == nil)

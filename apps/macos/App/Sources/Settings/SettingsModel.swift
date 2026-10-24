@@ -515,12 +515,18 @@ final class SettingsModel {
     refreshChatGPT()
   }
 
-  /// Revokes the sign-in and forgets it. When OpenAI does not confirm, says where to
-  /// disconnect the app by hand.
+  /// Revokes the sign-in and forgets it, and the account's email, so the row offers a new
+  /// sign-in rather than saying one ended. The registration stays. When OpenAI does not
+  /// confirm, says where to disconnect the app by hand.
   func signOutOfChatGPT() {
     cancelChatGPTSignIn()
     let session = chatGPTAccount.session
+    let registrations = chatGPTAccount.registrations
     chatGPTNote = nil
+    if var registration = try? registrations.saved() {
+      registration.email = nil
+      try? registrations.save(registration)
+    }
     Task {
       let confirmed = await session.signOut()
       chatGPTNote = confirmed ? nil : ChatGPTText.signOutUnconfirmed

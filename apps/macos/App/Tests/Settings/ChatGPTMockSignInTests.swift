@@ -99,7 +99,7 @@ struct ChatGPTMockSignInTests {
     for _ in 0..<1000 where model.chatGPT.isSignedIn {
       try await Task.sleep(for: .milliseconds(10))
     }
-    #expect(model.chatGPT == .signedOut(previousEmail: "mock@example.com"))
+    #expect(model.chatGPT == .signedOut(previousEmail: nil))
     #expect(model.chatGPTNote == nil)
   }
 }

@@ -50,6 +50,7 @@ DictApp：
 - 换码、刷新都是表单 POST 到 `/api/accounts/oauth/token`，带签发的 client id 和 `resource`，没有 secret；换码时的 `redirect_uri` 与授权时完全一致。
 - 刷新不带 `scope`，保留原授权；访问令牌、过期时间、scope 和轮换后的刷新令牌一起替换并写回 Keychain。
 - 退出登录先清本地，再向 `/api/accounts/oauth/revoke` 吊销刷新令牌；吊销没得到 2xx 时界面提示去 ChatGPT 设置里手动断开。
+- 退出登录保留注册（host id 和 client id），但清掉保存的邮箱，所以界面回到普通的登录邀请，而不是「登录已失效」。
 - 能否用套餐只看令牌响应里授予的 scope 是否含 `chatgpt.tokens.use.direct`，ID token 本身不代表可以推理。
 - ID token 用 base64url 加 `JSONDecoder` 解出声明，校验 `iss`、`aud`（签发的 client id）、`exp`（留 60 秒余量）和 `nonce`；不验签，没有引入任何 JWT 或加密依赖（PKCE 的 SHA-256 用系统的 CryptoKit）。
 
@@ -111,7 +112,7 @@ DictApp（`make test-app`）：
 - `ChatGPTSettingsTests`、`ChatGPTModelSetupTests`：设置页状态机、自动选模型、首次说明只弹一次、未授权额度、登录失败、退出登录、`DICT_MOCK_MODEL` 下 ChatGPT 仍走自己的线路。
 - `ChatGPTMockSignInTests`：应用进程内的完整路径，相当于没有点击的 `make run-mock`。
   它启动 `fake-model.py`，用真实的 `SettingsModel`、`ChatGPTSignIn`、`NWListener`、令牌交换、模型列表和 `ResponsesModel` 走「登录 → 列表 → 测试按钮的翻译和严格 schema 两个请求 → 退出登录（吊销得到确认）」，只有浏览器由测试扮演；通过。
-- `SettingsGalleryTests` 加了 ChatGPT 的六种状态（未登录、登录中、登录失败、已登录可用、额度用尽、未授权额度），浅色和深色都渲染检查过。
+- `SettingsGalleryTests` 加了 ChatGPT 的六种状态（未登录、登录中、登录失败、已登录可用、额度用尽、未授权额度），都通过 `panesFitTheirContent`；渲染图浅色和深色各抽查过。
 
 真实界面的 mock 端到端没有跑：检查时屏幕是锁定的。
 屏幕解锁后的手动步骤：`make run-mock`，打开主窗口「设置 → 模型」，选 ChatGPT，点「Continue with ChatGPT」；默认浏览器会打开 `127.0.0.1:8767/auth/…` 并立刻跳回 Dict，显示「Signed in as mock@example.com」、模型 `mock`；点「测试」两项都应通过；`build/mock-model.log` 应依次出现 `302 authorize`、`200 token authorization_code`、`200 chatgpt models`、`200 responses translation`、`200 responses proofread`，退出登录后是 `200 revoke`。
@@ -153,5 +154,6 @@ mock 的令牌只存在进程内存里，mock 重启后旧令牌失效，应用�
 ## 9. 后续
 
 - 模型菜单显示 `display_name` 而不是 `slug`。
+- 深色模式下「Continue with ChatGPT」仍是黑底按钮；OpenAI 也有白色变体，深色界面用哪种需设计决定。
 - 首次引导是否把 ChatGPT 设为推荐项、分段控件的位置，需设计决定。
 - Dict 的订阅上线后是否仍算「开源、本机运行」，是否要先提交 OpenAI 的意向表（设计文档第 7 节）。

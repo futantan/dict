@@ -36,7 +36,26 @@ struct ModelSections: View {
         }
       }
 
-      if let preset = model.selectedPreset {
+      if let preset = model.selectedPreset, preset.wire == .chatGPT {
+        Section {
+          ChatGPTAccountRow(model: model)
+          if case .signedIn(_, canUsePlan: true) = model.chatGPT {
+            LabeledContent(ModelText.model) { ChatGPTModelPicker(model: model) }
+          }
+        }
+        if case .signedIn(_, canUsePlan: true) = model.chatGPT {
+          Section {
+            testRow
+            if case .checked(let report) = model.connection {
+              ForEach(
+                ModelStatus.checks(report, isCustom: false, hasListedModels: model.hasListedModels),
+                id: \.title, content: checkRow)
+            }
+          } footer: {
+            footnote(ChatGPTText.privacyNote)
+          }
+        }
+      } else if let preset = model.selectedPreset {
         Section {
           modelField(preset)
           TextField(
@@ -70,6 +89,8 @@ struct ModelSections: View {
     }
     .onChange(of: isKeyFocused) { _, focused in if !focused { model.commitKey() } }
     .onDisappear { model.commitKey() }
+    .onAppear { model.refreshChatGPT() }
+    .chatGPTPlanWelcome(model)
   }
 
   /// The model name as typed, with a menu of the listed models once there are some.

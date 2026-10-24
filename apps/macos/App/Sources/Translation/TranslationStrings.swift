@@ -10,6 +10,8 @@ enum TranslationStrings {
   static let retryAction = "translation.retry"
   /// Opens Settings on the Model pane.
   static let openSettingsAction = "translation.openSettings"
+  /// Opens the usage page of the ChatGPT settings.
+  static let manageUsageAction = "translation.manageUsage"
 
   /// Under Apple Translation's result after the model failed. A missing or rejected key gets
   /// a button to Settings, or the user might never notice the model is not working.
@@ -22,7 +24,9 @@ enum TranslationStrings {
           comment:
             "Under a translation by Apple Translation after the model failed; %@ is the reason"),
         modelFailureReason(error)),
-      action: isKeyProblem(error) ? openSettings(isDefault: false) : nil)
+      action: isKeyProblem(error)
+        ? openSettings(isDefault: false)
+        : isUsageLimit(error) ? manageUsage(isDefault: false) : nil)
   }
 
   /// Under a partial model translation: why it stopped. Only a failed stream can be tried
@@ -48,7 +52,8 @@ enum TranslationStrings {
   }
 
   static func modelFailure(_ error: any Error) -> PanelNotice {
-    PanelNotice(
+    if isUsageLimit(error) { return usageLimitReached }
+    return PanelNotice(
       title: String(
         localized: "The model couldn’t translate this", table: "Translation",
         comment: "Title of the error when the model translation failed"),
@@ -60,12 +65,39 @@ enum TranslationStrings {
       actions: [isKeyProblem(error) ? openSettings(isDefault: true) : retry(isDefault: true)])
   }
 
-  /// The key is missing or the provider rejected it: only Settings can fix that.
+  /// The key is missing or the provider rejected it, or the ChatGPT sign-in is missing or
+  /// doesn't allow plan usage: only Settings can fix that.
   static func isKeyProblem(_ error: any Error) -> Bool {
     switch error {
-    case ModelError.missingKey, ModelError.unauthorized: true
+    case ModelError.missingKey, ModelError.unauthorized, ModelError.signInRequired,
+      ModelError.planUsageNotGranted:
+      true
     default: false
     }
+  }
+
+  /// The ChatGPT plan's usage, or this app's limit of it, is used up.
+  static func isUsageLimit(_ error: any Error) -> Bool {
+    if case ModelError.planLimitReached = error { true } else { false }
+  }
+
+  /// OpenAI's wording and action for a used-up plan, from its UI guidelines.
+  static let usageLimitReached = PanelNotice(
+    title: String(
+      localized: "Usage limit reached", table: "Translation",
+      comment: "Title when the ChatGPT plan's usage is used up (OpenAI's wording)"),
+    message: String(
+      localized: "Review your plan or this app’s limit in ChatGPT settings.", table: "Translation",
+      comment: "Body when the ChatGPT plan's usage is used up (OpenAI's wording)"),
+    actions: [manageUsage(isDefault: true)])
+
+  static func manageUsage(isDefault: Bool) -> PanelAction {
+    PanelAction(
+      id: manageUsageAction,
+      title: String(
+        localized: "Manage usage", table: "Translation",
+        comment: "Button that opens the usage page of the ChatGPT settings (OpenAI's wording)"),
+      isDefault: isDefault)
   }
 
   /// The notice for an error of Apple's framework when it translated without a model, or nil
@@ -153,6 +185,22 @@ enum TranslationStrings {
       String(localized: "network error", table: "Translation", comment: "Model failure reason")
     case ModelError.timedOut:
       String(localized: "timed out", table: "Translation", comment: "Model failure reason")
+    case ModelError.signInRequired:
+      String(
+        localized: "not signed in to ChatGPT", table: "Translation",
+        comment: "Model failure reason")
+    case ModelError.planUsageNotGranted:
+      String(
+        localized: "ChatGPT plan usage not allowed", table: "Translation",
+        comment: "Model failure reason")
+    case ModelError.planNotEligible:
+      String(
+        localized: "the ChatGPT plan isn’t available here", table: "Translation",
+        comment: "Model failure reason")
+    case ModelError.planLimitReached:
+      String(
+        localized: "ChatGPT usage limit reached", table: "Translation",
+        comment: "Model failure reason")
     case ModelError.emptyResponse, ModelError.malformedResponse, CardError.malformed:
       String(
         localized: "unexpected response", table: "Translation", comment: "Model failure reason")

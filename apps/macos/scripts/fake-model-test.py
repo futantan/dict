@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Self-test of scripts/fake-model.py's answering mode: starts it on a free port, sends the
-# request shapes ChatCompletionsModel sends, and checks the stream it gets back.
+# request shapes ChatCompletionsModel sends, and checks the stream it gets back; then
+# signs in with ChatGPT and streams from the plan's Responses API as the app does.
 # Standard library only. Run by `make test-mock`.
 
+import base64
+import hashlib
 import importlib.util
 import json
 import pathlib
@@ -12,6 +15,7 @@ import sys
 import threading
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 
 sys.dont_write_bytecode = True  # importing fake-model.py must not leave scripts/__pycache__
@@ -196,6 +200,159 @@ class AnsweringModeTests(unittest.TestCase):
             self.get("/v1/chat/completions")
         self.assertEqual(caught.exception.code, 404)
         self.assertIn("message", json.loads(caught.exception.read())["error"])
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+class ChatGPTPlanTests(unittest.TestCase):
+    """Sign in with ChatGPT and the plan's Responses API as ChatGPTSignIn and ResponsesModel
+    use them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server = fake_model.make_server(0)
+        cls.port = cls.server.server_address[1]
+        cls.base = f"http://127.0.0.1:{cls.port}"
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def request(self, method, path, data=None, headers=None):
+        request = urllib.request.Request(self.base + path, data=data, headers=headers or {},
+                                         method=method)
+        opener = urllib.request.build_opener(NoRedirect)
+        try:
+            with opener.open(request, timeout=10) as response:
+                return response.status, dict(response.headers), response.read().decode()
+        except urllib.error.HTTPError as error:
+            return error.code, dict(error.headers), error.read().decode()
+
+    def authorize(self, client="dynamic_agent_client", verifier="v" * 43, **overrides):
+        challenge = fake_model.b64url(hashlib.sha256(verifier.encode()).digest())
+        params = {
+            "response_type": "code", "client_id": client, "agent_name_hint": "Dict",
+            "ext_agent_host_id": "urn:uuid:test", "scope": fake_model.SCOPES,
+            "redirect_uri": "http://127.0.0.1:1455/auth/callback",
+            "resource": self.base + "/chatgpt/v1", "state": "st", "nonce": "no",
+            "code_challenge": challenge, "code_challenge_method": "S256",
+        }
+        params.update(overrides)
+        return self.request(
+            "GET", "/auth/api/accounts/authorize?" + urllib.parse.urlencode(params))
+
+    def token(self, fields):
+        return self.request(
+            "POST", "/auth/api/accounts/oauth/token",
+            urllib.parse.urlencode(fields).encode(),
+            {"Content-Type": "application/x-www-form-urlencoded"})
+
+    def sign_in(self, verifier="v" * 43):
+        status, headers, _ = self.authorize(verifier=verifier)
+        self.assertEqual(status, 302)
+        location = urllib.parse.urlsplit(headers["Location"])
+        self.assertEqual(f"{location.scheme}://{location.netloc}{location.path}",
+                         "http://127.0.0.1:1455/auth/callback")
+        query = urllib.parse.parse_qs(location.query)
+        self.assertEqual(query["state"], ["st"])
+        self.assertEqual(query["client_id"], [fake_model.MOCK_CLIENT])
+        status, _, raw = self.token({
+            "grant_type": "authorization_code", "client_id": fake_model.MOCK_CLIENT,
+            "code": query["code"][0], "code_verifier": verifier,
+            "redirect_uri": "http://127.0.0.1:1455/auth/callback",
+            "resource": self.base + "/chatgpt/v1"})
+        self.assertEqual(status, 200, raw)
+        return json.loads(raw)
+
+    def responses(self, token, payload):
+        return self.request(
+            "POST", "/chatgpt/v1/responses", json.dumps(payload).encode(),
+            {"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
+
+    def test_sign_in_issues_tokens_and_a_checked_id_token(self):
+        tokens = self.sign_in()
+        self.assertIn(fake_model.PLAN_SCOPE, tokens["scope"].split())
+        payload = tokens["id_token"].split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+        self.assertEqual(claims["iss"], self.base + "/auth")
+        self.assertEqual(claims["aud"], fake_model.MOCK_CLIENT)
+        self.assertEqual(claims["nonce"], "no")
+
+    def test_a_later_sign_in_gets_no_new_client_id(self):
+        status, headers, _ = self.authorize(client=fake_model.MOCK_CLIENT, agent_name_hint="")
+        self.assertEqual(status, 302)
+        self.assertNotIn("client_id", urllib.parse.parse_qs(urllib.parse.urlsplit(
+            headers["Location"]).query))
+
+    def test_authorize_refuses_localhost_and_missing_hints(self):
+        self.assertEqual(
+            self.authorize(redirect_uri="http://localhost:1455/auth/callback")[0], 400)
+        self.assertEqual(self.authorize(agent_name_hint="")[0], 400)
+        self.assertEqual(self.authorize(ext_agent_host_id="")[0], 400)
+
+    def test_a_wrong_verifier_is_invalid_grant(self):
+        status, headers, _ = self.authorize(verifier="a" * 43)
+        code = urllib.parse.parse_qs(urllib.parse.urlsplit(headers["Location"]).query)["code"][0]
+        status, _, raw = self.token({
+            "grant_type": "authorization_code", "client_id": fake_model.MOCK_CLIENT,
+            "code": code, "code_verifier": "b" * 43,
+            "redirect_uri": "http://127.0.0.1:1455/auth/callback", "resource": "r"})
+        self.assertEqual((status, json.loads(raw)["error"]), (400, "invalid_grant"))
+
+    def test_refresh_rotates_and_a_spent_token_is_refused(self):
+        tokens = self.sign_in()
+        refresh = {"grant_type": "refresh_token", "client_id": fake_model.MOCK_CLIENT,
+                   "refresh_token": tokens["refresh_token"], "resource": "r"}
+        status, _, raw = self.token(refresh)
+        self.assertEqual(status, 200)
+        self.assertNotEqual(json.loads(raw)["refresh_token"], tokens["refresh_token"])
+        self.assertEqual(self.token(refresh)[0], 400)
+
+    def test_models_in_the_plan_shape_need_a_token(self):
+        tokens = self.sign_in()
+        status, _, raw = self.request(
+            "GET", "/chatgpt/v1/models",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"})
+        self.assertEqual(status, 200)
+        self.assertEqual([m["visibility"] for m in json.loads(raw)["models"]], ["list", "hide"])
+        self.assertEqual(self.request("GET", "/chatgpt/v1/models")[0], 401)
+
+    def test_responses_streams_the_translation(self):
+        tokens = self.sign_in()
+        user = "<source_text_0a1b2c3d>\nfive dozen liquor jugs\n</source_text_0a1b2c3d>\n\nDo."
+        status, headers, raw = self.responses(tokens["access_token"], {
+            "model": "mock", "instructions": "sys", "input": [{"role": "user", "content": user}],
+            "store": False, "stream": True, "reasoning": {"effort": "none"}})
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Content-Type"], "text/event-stream")
+        events = [json.loads(block.split("data: ", 1)[1]) for block in raw.split("\n\n") if block]
+        self.assertEqual(events[-1]["type"], "response.completed")
+        text = "".join(e["delta"] for e in events if e["type"] == "response.output_text.delta")
+        self.assertIn("五打酒壶", text)
+
+    def test_responses_rejects_what_the_plan_rejects(self):
+        token = self.sign_in()["access_token"]
+        good = {"model": "mock", "input": [{"role": "user", "content": "u"}], "store": False,
+                "stream": True}
+        for change, param in [({"store": True}, "store"), ({"stream": False}, "stream"),
+                              ({"max_output_tokens": 9}, "max_output_tokens"),
+                              ({"temperature": 0}, "temperature"),
+                              ({"input": [{"role": "system", "content": "s"}]}, "input.role")]:
+            status, _, raw = self.responses(token, {**good, **change})
+            self.assertEqual(status, 400, param)
+            error = json.loads(raw)["error"]
+            self.assertEqual(error["code"], "subscription_sharing_unsupported_capability")
+            self.assertEqual(error["param"], param)
+        status, _, raw = self.responses(token, {**good, "model": "mock-limit"})
+        self.assertEqual(status, 429)
+        self.assertEqual(json.loads(raw)["error"]["code"],
+                         "subscription_sharing_usage_limit_exceeded")
+        self.assertEqual(self.responses("forged", good)[0], 401)
 
 
 if __name__ == "__main__":

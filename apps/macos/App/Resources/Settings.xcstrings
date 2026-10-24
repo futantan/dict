@@ -137,6 +137,17 @@
         }
       }
     },
+    "Account" : {
+      "comment" : "Settings field label: the ChatGPT account",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账号"
+          }
+        }
+      }
+    },
     "Advanced" : {
       "comment" : "Settings section title",
       "localizations" : {
@@ -232,6 +243,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加拿大英语"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "comment" : "Stops waiting for the ChatGPT sign-in",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
           }
         }
       }
@@ -357,6 +379,39 @@
         }
       }
     },
+    "Complete eligible AI requests in this app with usage included in your ChatGPT plan or credits balance." : {
+      "comment" : "Body of the ChatGPT sign-in offer (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用你 ChatGPT 套餐内的用量或点数余额，完成本应用中符合条件的 AI 请求。"
+          }
+        }
+      }
+    },
+    "Continue with ChatGPT" : {
+      "comment" : "Button that starts Sign in with ChatGPT (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue with ChatGPT"
+          }
+        }
+      }
+    },
+    "Continue with ChatGPT to sign in." : {
+      "comment" : "The ChatGPT provider has no signed-in account",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请点「Continue with ChatGPT」登录。"
+          }
+        }
+      }
+    },
     "Couldn’t access the Keychain (error %@)." : {
       "comment" : "Reading or saving the API key failed. The argument is an error number",
       "localizations" : {
@@ -390,6 +445,17 @@
         }
       }
     },
+    "Couldn’t reach ChatGPT. Check your internet connection." : {
+      "comment" : "Signing in with ChatGPT failed to connect",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接 ChatGPT，请检查网络连接。"
+          }
+        }
+      }
+    },
     "Couldn’t reach Ollama. Check that it is running on this Mac." : {
       "comment" : "Listing Ollama models failed to connect",
       "localizations" : {
@@ -397,6 +463,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "连不上 Ollama。请确认它正在这台 Mac 上运行。"
+          }
+        }
+      }
+    },
+    "Couldn’t sign in with ChatGPT (%@). Try again." : {
+      "comment" : "Signing in with ChatGPT failed. The argument is a short technical reason",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法用 ChatGPT 登录（%@），请重试。"
           }
         }
       }
@@ -474,6 +551,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dict 用你选择的模型翻译，使用你自己的 API 密钥，或这台 Mac 上的 Ollama。纠错和润色同样需要模型。"
+          }
+        }
+      }
+    },
+    "Eligible usage in this app uses your ChatGPT plan. Manage usage in your ChatGPT settings." : {
+      "comment" : "Body of the one-time notice after signing in with ChatGPT (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本应用中符合条件的用量会使用你的 ChatGPT 套餐。可在 ChatGPT 设置中管理用量。"
           }
         }
       }
@@ -566,6 +654,17 @@
         }
       }
     },
+    "Finish signing in in your browser." : {
+      "comment" : "Shown while waiting for the browser to sign in with ChatGPT",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在浏览器中完成登录。"
+          }
+        }
+      }
+    },
     "Found %lld models. Choose one from the menu next to the model name." : {
       "comment" : "Listing models succeeded. The argument is how many",
       "localizations" : {
@@ -619,6 +718,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从 %@ 获取 API 密钥"
+          }
+        }
+      }
+    },
+    "Got it" : {
+      "comment" : "Dismisses the one-time ChatGPT notice (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "知道了"
           }
         }
       }
@@ -762,6 +872,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最低"
+          }
+        }
+      }
+    },
+    "Manage usage" : {
+      "comment" : "Link to the usage page of the ChatGPT settings (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理用量"
           }
         }
       }
@@ -1063,6 +1184,61 @@
         }
       }
     },
+    "Sign Out" : {
+      "comment" : "Button that signs out of ChatGPT",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出登录"
+          }
+        }
+      }
+    },
+    "Sign-in was cancelled." : {
+      "comment" : "The user cancelled on ChatGPT's consent page",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录已取消。"
+          }
+        }
+      }
+    },
+    "Signed in as %@" : {
+      "comment" : "ChatGPT account row. The argument is the account's email",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已登录：%@"
+          }
+        }
+      }
+    },
+    "Signed in with ChatGPT" : {
+      "comment" : "ChatGPT account row without an email",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已用 ChatGPT 登录"
+          }
+        }
+      }
+    },
+    "Signed out on this Mac, but OpenAI didn’t confirm it. To disconnect Dict from your account, open your ChatGPT settings." : {
+      "comment" : "Signing out of ChatGPT: the revocation was not confirmed",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在这台 Mac 上退出登录，但 OpenAI 没有确认。如要断开 Dict 与你账号的连接，请打开 ChatGPT 设置。"
+          }
+        }
+      }
+    },
     "Simplified Chinese" : {
       "comment" : "Language name",
       "localizations" : {
@@ -1162,6 +1338,17 @@
         }
       }
     },
+    "Text you look up or translate is sent to OpenAI and counts toward your ChatGPT plan. Dict asks OpenAI not to store it. Your sign-in is kept in the Keychain." : {
+      "comment" : "Privacy note under the ChatGPT provider",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你查询或翻译的文字会发送给 OpenAI，计入你的 ChatGPT 套餐用量。Dict 要求 OpenAI 不保存这些文字。登录信息保存在钥匙串中。"
+          }
+        }
+      }
+    },
     "Text you look up or translate is sent to the service at this base URL. Your API key is kept in the Keychain." : {
       "comment" : "Privacy note under the settings of a custom provider",
       "localizations" : {
@@ -1180,6 +1367,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "回答没有完成就中断了。"
+          }
+        }
+      }
+    },
+    "The browser didn’t finish signing in. Try again." : {
+      "comment" : "Signing in with ChatGPT timed out",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浏览器中的登录没有完成，请重试。"
           }
         }
       }
@@ -1470,6 +1668,17 @@
         }
       }
     },
+    "Usage limit reached. Review your plan or this app’s limit in ChatGPT settings." : {
+      "comment" : "Connection test: the ChatGPT plan's usage is used up (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已达到用量上限。请在 ChatGPT 设置中查看你的套餐或本应用的限额。"
+          }
+        }
+      }
+    },
     "Use https://. Plain http:// is only allowed for services on this Mac." : {
       "comment" : "The base URL uses http to another computer",
       "localizations" : {
@@ -1481,6 +1690,17 @@
         }
       }
     },
+    "Use your ChatGPT plan" : {
+      "comment" : "Heading of the ChatGPT sign-in offer (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用你的 ChatGPT 套餐"
+          }
+        }
+      }
+    },
     "Used when Dict reads English words and sentences aloud." : {
       "comment" : "Footer under the accent picker",
       "localizations" : {
@@ -1488,6 +1708,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dict 朗读英文单词和句子时使用。"
+          }
+        }
+      }
+    },
+    "Using ChatGPT plan" : {
+      "comment" : "Indicator that requests use the ChatGPT plan (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在使用 ChatGPT 套餐"
           }
         }
       }
@@ -1536,6 +1767,50 @@
         }
       }
     },
+    "You can close this tab and return to Dict." : {
+      "comment" : "Browser page after signing in with ChatGPT",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以关闭这个标签页，回到 Dict 了。"
+          }
+        }
+      }
+    },
+    "You didn’t allow Dict to use your ChatGPT plan. Continue with ChatGPT again and allow plan usage, or use an API key with OpenAI." : {
+      "comment" : "Signed in with ChatGPT without granting plan usage",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你没有允许 Dict 使用你的 ChatGPT 套餐。请再点「Continue with ChatGPT」并允许使用套餐，或改用 OpenAI 的 API Key。"
+          }
+        }
+      }
+    },
+    "Your ChatGPT account can’t use its plan in this app. Your plan, workspace or region may not allow it." : {
+      "comment" : "Connection test: the ChatGPT plan is not available (403)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 ChatGPT 账号无法在本应用中使用套餐，可能是套餐、工作区或所在地区不允许。"
+          }
+        }
+      }
+    },
+    "Your ChatGPT sign-in ended. Continue with ChatGPT to sign in again." : {
+      "comment" : "The ChatGPT sign-in was refused or signed out",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT 登录已失效。点「Continue with ChatGPT」重新登录。"
+          }
+        }
+      }
+    },
     "Your history stays on this Mac" : {
       "comment" : "Data and privacy: title of the note about where records are kept",
       "localizations" : {
@@ -1543,6 +1818,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查询记录保存在这台 Mac 上"
+          }
+        }
+      }
+    },
+    "You’re using your ChatGPT plan" : {
+      "comment" : "Title of the one-time notice after signing in with ChatGPT (OpenAI's wording)",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在使用 ChatGPT 套餐"
           }
         }
       }

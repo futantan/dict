@@ -59,6 +59,12 @@ struct SettingsGalleryTests {
       model.showModelList(list)
       return model
     }
+    func chatGPT(_ model: SettingsModel, _ status: ChatGPTStatus, note: String? = nil)
+      -> SettingsModel
+    {
+      model.showChatGPT(status, note: note)
+      return model
+    }
     func provider(_ id: String, model: String = "", baseURL: String = "") -> Preferences {
       Preferences(model: ModelPreferences(providerID: id, model: model, baseURL: baseURL))
     }
@@ -190,6 +196,48 @@ struct SettingsGalleryTests {
                       message:
                         "Model Not Exist. Please check the model name and try again; see the documentation for the list of available models."
                     )))))))
+      ),
+      ("model-chatgpt-signedout", AnyView(ModelCard(model: model(provider("chatgpt"))))),
+      (
+        "model-chatgpt-signingin",
+        AnyView(ModelCard(model: chatGPT(model(provider("chatgpt")), .signingIn)))
+      ),
+      (
+        "model-chatgpt-failed",
+        AnyView(
+          ModelCard(
+            model: chatGPT(
+              model(provider("chatgpt")), .signedOut(previousEmail: "a@example.com"),
+              note: ChatGPTText.signInFailure(ChatGPTSignInError.timedOut))))
+      ),
+      (
+        "model-chatgpt-ok",
+        AnyView(
+          ModelCard(
+            model: chatGPT(
+              model(
+                provider("chatgpt", model: "gpt-6.1-sol"),
+                connection: .checked(.translated(after: .milliseconds(910))),
+                list: .loaded(["gpt-6.1-sol", "gpt-6-astra"])),
+              .signedIn(email: "a@example.com", canUsePlan: true))))
+      ),
+      (
+        "model-chatgpt-limit",
+        AnyView(
+          ModelCard(
+            model: chatGPT(
+              model(
+                provider("chatgpt", model: "gpt-6.1-sol"),
+                connection: .checked(.failed(.model(.planLimitReached))),
+                list: .loaded(["gpt-6.1-sol"])),
+              .signedIn(email: "a@example.com", canUsePlan: true))))
+      ),
+      (
+        "model-chatgpt-notgranted",
+        AnyView(
+          ModelCard(
+            model: chatGPT(
+              model(provider("chatgpt")), .signedIn(email: "a@example.com", canUsePlan: false))))
       ),
       (
         "shortcuts-empty",

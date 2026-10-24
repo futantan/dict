@@ -29,19 +29,41 @@
 #   /api/tags   in the Ollama shape.
 # Any other GET is a 404 with an OpenAI-shaped error body, {"error": {"message": …}}.
 #
+# Sign in with ChatGPT and the plan's Responses API, for the ChatGPT provider under
+# DICT_MOCK_MODEL (ChatGPTEndpoints.mock): no real account, no real tokens.
+#   GET  /auth/api/accounts/authorize     checks the parameters a first or later sign-in
+#        sends, then 302s to the 127.0.0.1 redirect URI with a code, the state and, on a
+#        first sign-in, the issued client id `oaiapp_mock`.
+#   POST /auth/api/accounts/oauth/token   the code (PKCE checked with SHA-256, same
+#        redirect URI) or a refresh token for new tokens, and an unsigned ID token whose
+#        iss is this server's /auth; a spent or unknown token is `invalid_grant`.
+#   POST /auth/api/accounts/oauth/revoke  forgets the refresh token; always 200.
+#   GET  /chatgpt/v1/models               the plan's shape: `mock` listed, one hidden entry.
+#   POST /chatgpt/v1/responses            the same replies as above as Responses SSE
+#        events. It rejects what the plan rejects: no `store: false` or `stream: true`, a
+#        system-role input item, or `max_output_tokens`, `temperature` and the other
+#        unsupported fields, as `subscription_sharing_unsupported_capability` with `param`.
+#        The model `mock-limit` answers 429 `subscription_sharing_usage_limit_exceeded`.
+#   Both /chatgpt routes want an access token this server issued, else 401.
+#
 # Logs one line per request to stderr: the path, the reply kind and whether the table had
-# it; never the text.
+# it; never the text, a query string or a token.
 #
 # Usage: scripts/fake-model.py <port>
 # Port 0 lets the system pick a free one; the port in use is printed as the first line of
 # standard output once the server accepts connections.
 
+import base64
+import hashlib
 import http.server
 import json
 import pathlib
 import re
+import secrets
 import sys
+import threading
 import time
+import urllib.parse
 
 MARK = "[mock] "
 REPLIES = pathlib.Path(__file__).resolve().parent.parent / "Fixtures/MockModel/replies.json"
@@ -63,6 +85,160 @@ MODEL_LISTS = {
         }],
     },
 }
+
+
+MOCK_CLIENT = "oaiapp_mock"
+PLAN_SCOPE = "chatgpt.tokens.use.direct"
+SCOPES = "openid profile email offline_access resource.invoke " + PLAN_SCOPE
+CHATGPT_MODELS = {"models": [
+    {"slug": "mock", "display_name": "Mock", "visibility": "list"},
+    {"slug": "mock-hidden", "display_name": "Hidden", "visibility": "hide"},
+]}
+# Fields the plan's Responses API rejects (docs/reviews/chatgpt-login.md 2.6).
+UNSUPPORTED = ("background", "conversation", "max_output_tokens", "max_tool_calls", "metadata",
+               "moderation", "multi_agent", "prompt", "prompt_cache_retention",
+               "safety_identifier", "temperature", "top_logprobs", "top_p", "truncation", "user",
+               "previous_response_id")
+
+
+class AuthState:
+    """The codes and tokens this server issued, shared by the handler threads."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.codes = {}
+        self.refresh_tokens = set()
+        self.access_tokens = set()
+
+    def issue(self):
+        access = "mock-access-" + secrets.token_hex(8)
+        refresh = "mock-refresh-" + secrets.token_hex(8)
+        with self.lock:
+            self.access_tokens.add(access)
+            self.refresh_tokens.add(refresh)
+        return access, refresh
+
+    def spend_refresh(self, token):
+        with self.lock:
+            if token not in self.refresh_tokens:
+                return False
+            self.refresh_tokens.discard(token)
+            return True
+
+    def knows_access(self, token):
+        with self.lock:
+            return token in self.access_tokens
+
+
+AUTH = AuthState()
+
+
+def b64url(data):
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def id_token(issuer, nonce):
+    """An unsigned compact JWT: Dict checks the claims of a token it got straight from the
+    token endpoint, not a signature."""
+    header = b64url(json.dumps({"alg": "none", "typ": "JWT"}).encode())
+    now = int(time.time())
+    claims = {"iss": issuer, "aud": MOCK_CLIENT, "sub": "mock-user", "email": "mock@example.com",
+              "exp": now + 3600, "iat": now, "nonce": nonce}
+    return f"{header}.{b64url(json.dumps(claims).encode())}.mock"
+
+
+def token_answer(issuer, nonce=None):
+    access, refresh = AUTH.issue()
+    answer = {"access_token": access, "refresh_token": refresh, "token_type": "Bearer",
+              "expires_in": 3600, "scope": SCOPES}
+    if nonce is not None:
+        answer["id_token"] = id_token(issuer, nonce)
+    return answer
+
+
+def first(fields, name):
+    return (fields.get(name) or [""])[0]
+
+
+def authorize_redirect(query):
+    """The Location for a well-formed authorization request and None, or None and why not."""
+    client = first(query, "client_id")
+    registering = client == "dynamic_agent_client"
+    if not registering and client != MOCK_CLIENT:
+        return None, "unknown client_id"
+    if registering and not first(query, "agent_name_hint"):
+        return None, "a first sign-in needs agent_name_hint"
+    redirect = first(query, "redirect_uri")
+    if not re.fullmatch(r"http://127\.0\.0\.1:\d+/auth/callback", redirect):
+        return None, "redirect_uri must be http://127.0.0.1:<port>/auth/callback"
+    for name in ("ext_agent_host_id", "state", "nonce", "code_challenge", "resource"):
+        if not first(query, name):
+            return None, f"missing {name}"
+    if first(query, "response_type") != "code" or first(query, "code_challenge_method") != "S256":
+        return None, "response_type=code and code_challenge_method=S256 are required"
+    if PLAN_SCOPE not in first(query, "scope").split():
+        return None, "scope lacks " + PLAN_SCOPE
+    code = "mock-code-" + secrets.token_hex(8)
+    with AUTH.lock:
+        AUTH.codes[code] = {"challenge": first(query, "code_challenge"), "redirect": redirect,
+                            "nonce": first(query, "nonce")}
+    params = {"code": code, "state": first(query, "state"), "scope": SCOPES}
+    if registering:
+        params["client_id"] = MOCK_CLIENT
+    return redirect + "?" + urllib.parse.urlencode(params), None
+
+
+def token_grant(form, issuer):
+    """The status and JSON answer of the token endpoint for a parsed form."""
+    if first(form, "client_id") != MOCK_CLIENT or not first(form, "resource"):
+        return 400, {"error": "invalid_client"}
+    grant_type = first(form, "grant_type")
+    if grant_type == "authorization_code":
+        with AUTH.lock:
+            grant = AUTH.codes.pop(first(form, "code"), None)
+        challenge = b64url(hashlib.sha256(first(form, "code_verifier").encode()).digest())
+        if (not grant or grant["redirect"] != first(form, "redirect_uri")
+                or grant["challenge"] != challenge):
+            return 400, {"error": "invalid_grant"}
+        return 200, token_answer(issuer, grant["nonce"])
+    if grant_type == "refresh_token":
+        if not AUTH.spend_refresh(first(form, "refresh_token")):
+            return 400, {"error": "invalid_grant"}
+        return 200, token_answer(issuer)
+    return 400, {"error": "unsupported_grant_type"}
+
+
+def unsupported(request):
+    """The parameter of a Responses request the plan would reject, or None."""
+    if request.get("store") is not False:
+        return "store"
+    if request.get("stream") is not True:
+        return "stream"
+    for name in UNSUPPORTED:
+        if name in request:
+            return name
+    for item in request.get("input") or []:
+        if isinstance(item, dict) and item.get("role") == "system":
+            return "input.role"
+    return None
+
+
+def as_chat(request):
+    """A Responses request in the Chat Completions shape `reply` reads."""
+    messages = []
+    if request.get("instructions"):
+        messages.append({"role": "system", "content": request["instructions"]})
+    messages += [item for item in request.get("input") or [] if isinstance(item, dict)]
+    chat = {"messages": messages}
+    fmt = (request.get("text") or {}).get("format") or {}
+    if fmt.get("type") == "json_schema":
+        chat["response_format"] = {"type": "json_schema", "json_schema": {"name": fmt.get("name")}}
+    return chat
+
+
+def responses_event(kind, **fields):
+    fields["type"] = kind
+    return f"event: {kind}\ndata: {json.dumps(fields, ensure_ascii=False)}\n\n".encode()
 
 
 def chunk(text=None, finish=None):
@@ -147,11 +323,47 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
     def log(self, line):
-        print(time.strftime("%H:%M:%S"), self.command, self.path, line, file=sys.stderr,
-              flush=True)
+        print(time.strftime("%H:%M:%S"), self.command, self.path.split("?")[0], line,
+              file=sys.stderr, flush=True)
+
+    def send_json(self, status, body):
+        payload = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def issuer(self):
+        return f"http://{self.headers.get('Host') or '127.0.0.1'}/auth"
+
+    def has_access_token(self):
+        header = self.headers.get("Authorization") or ""
+        return AUTH.knows_access(header.removeprefix("Bearer "))
 
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/")
+        if path == "/auth/api/accounts/authorize":
+            query = urllib.parse.parse_qs(self.path.partition("?")[2])
+            location, error = authorize_redirect(query)
+            if location:
+                self.log("302 authorize")
+                self.send_response(302)
+                self.send_header("Location", location)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            else:
+                self.log(f"400 authorize: {error}")
+                self.send_json(400, {"error": "invalid_request", "error_description": error})
+            return
+        if path == "/chatgpt/v1/models":
+            if self.has_access_token():
+                self.log("200 chatgpt models")
+                self.send_json(200, CHATGPT_MODELS)
+            else:
+                self.log("401 chatgpt models")
+                self.send_json(401, {"detail": "Unauthorized"})
+            return
         found = path in MODEL_LISTS
         status = 200 if found else 404
         # Errors in the OpenAI shape, which the model list reads its message from.
@@ -168,6 +380,23 @@ class Handler(http.server.BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length)
         mode = self.path.strip("/").split("/")[0]
+        path = self.path.split("?")[0].rstrip("/")
+        if path == "/auth/api/accounts/oauth/token":
+            form = urllib.parse.parse_qs(raw.decode("utf-8", "replace"))
+            status, answer = token_grant(form, self.issuer())
+            self.log(f"{status} token {first(form, 'grant_type')}")
+            self.send_json(status, answer)
+            return
+        if path == "/auth/api/accounts/oauth/revoke":
+            form = urllib.parse.parse_qs(raw.decode("utf-8", "replace"))
+            AUTH.spend_refresh(first(form, "token"))
+            self.log("200 revoke")
+            self.send_json(200, {})
+            return
+        if path == "/chatgpt/v1/responses":
+            self.answer_responses(raw)
+            self.close_connection = True
+            return
         if mode in FAILURES:
             self.log(mode)
             self.fail(mode)
@@ -207,6 +436,47 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 prompt = sum(len(str(m.get("content", ""))) for m in request.get("messages", []))
                 self.wfile.write(usage_chunk(prompt // 4, len(text) // 4))
             self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def answer_responses(self, raw):
+        if not self.has_access_token():
+            self.log("401 responses")
+            self.send_json(401, {"detail": "Unauthorized"})
+            return
+        try:
+            request = json.loads(raw or b"{}")
+        except ValueError:
+            self.log("400 bad json")
+            self.send_json(400, {"error": {"message": "invalid JSON"}})
+            return
+        param = unsupported(request)
+        if param:
+            self.log(f"400 responses unsupported {param}")
+            self.send_json(400, {"error": {
+                "code": "subscription_sharing_unsupported_capability",
+                "message": f"Unsupported parameter: {param}", "param": param}})
+            return
+        if request.get("model") == "mock-limit":
+            self.log("429 responses limit")
+            self.send_json(429, {"error": {
+                "code": "subscription_sharing_usage_limit_exceeded",
+                "message": "Usage limit reached"}})
+            return
+        text, kind, found = reply(as_chat(request))
+        self.log(f"200 responses {kind} {'table' if found else 'fallback'}")
+        self.start_stream()
+        try:
+            self.wfile.write(responses_event("response.created",
+                                             response={"status": "in_progress"}))
+            for piece in pieces(text, 12 if kind == "card" else 4):
+                self.wfile.write(responses_event("response.output_text.delta", delta=piece))
+                self.wfile.flush()
+                time.sleep(0.04)
+            usage = {"input_tokens": len(raw) // 4, "output_tokens": len(text) // 4}
+            self.wfile.write(responses_event(
+                "response.completed", response={"status": "completed", "usage": usage}))
             self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
             pass

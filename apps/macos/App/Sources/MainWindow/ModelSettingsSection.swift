@@ -26,7 +26,9 @@ struct ModelSettingsSection: View {
       SectionHeading(SettingsSection.model.title)
       WindowCard {
         providerRow
-        if let preset = model.selectedPreset {
+        if let preset = model.selectedPreset, preset.wire == .chatGPT {
+          chatGPTRows
+        } else if let preset = model.selectedPreset {
           let isCustom = preset.id == ProviderPreset.customID
           if isCustom {
             CardDivider()
@@ -64,6 +66,50 @@ struct ModelSettingsSection: View {
     }
     .onChange(of: isKeyFocused) { _, focused in if !focused { model.commitKey() } }
     .onDisappear { model.commitKey() }
+    .onAppear { model.refreshChatGPT() }
+    .chatGPTPlanWelcome(model)
+  }
+
+  /// The ChatGPT plan: the account instead of a key, the account's models, the Test button;
+  /// no base URL and no options.
+  @ViewBuilder
+  private var chatGPTRows: some View {
+    CardDivider()
+    ChatGPTAccountRow(model: model)
+      .padding(.horizontal, WindowLayout.cardRowHorizontal)
+      .padding(.vertical, WindowLayout.cardRowVertical)
+    if case .signedIn(_, canUsePlan: true) = model.chatGPT {
+      CardDivider()
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: Spacing.input) {
+          rowTitle(ModelText.model)
+          Spacer(minLength: 0)
+          ChatGPTModelPicker(model: model)
+        }
+        if case .failed = model.modelList, let preset = model.selectedPreset {
+          StatusNote(line: ModelStatus.modelList(model.modelList, preset: preset))
+        }
+      }
+      .padding(.horizontal, WindowLayout.cardRowHorizontal)
+      .padding(.vertical, ModelCardLayout.rowVertical)
+      .frame(minHeight: ModelCardLayout.rowMinHeight)
+      CardDivider()
+      testRow
+      if case .checked(let report) = model.connection {
+        ForEach(
+          ModelStatus.checks(report, isCustom: false, hasListedModels: model.hasListedModels),
+          id: \.title
+        ) { check in
+          CardDivider()
+          SettingsRow(title: check.title, subtitle: subtitle(check.details)) {
+            CheckIcon(state: check.state)
+              .font(.system(size: Size.symbol))
+              .frame(width: Size.icon, height: Size.icon)
+          }
+          .textSelection(.enabled)
+        }
+      }
+    }
   }
 
   // MARK: Rows
@@ -302,7 +348,10 @@ struct ModelSettingsSection: View {
   private var note: some View {
     if let preset = model.selectedPreset {
       Label(
-        ModelStatus.privacyNote(preset, acceptsKey: model.acceptsKey), systemImage: "info.circle"
+        preset.wire == .chatGPT
+          ? ChatGPTText.privacyNote
+          : ModelStatus.privacyNote(preset, acceptsKey: model.acceptsKey),
+        systemImage: "info.circle"
       )
       .labelStyle(NoteLabelStyle())
       .font(WindowType.footnote.font)
@@ -333,7 +382,7 @@ struct ModelSettingsSection: View {
 
 // MARK: - Pieces
 
-/// The providers as segments: 「不使用 · OpenAI · Ollama · 自定义」.
+/// The providers as segments: 「不使用 · OpenAI · ChatGPT · Ollama · 自定义」.
 private struct ProviderPicker: View {
   let options: [String?]
   let selection: String?
@@ -471,7 +520,8 @@ private enum ModelCardLayout {
   static let rowMinHeight: CGFloat = 52
   static let rowVertical: CGFloat = 10
   static let segmentHeight: CGFloat = 26
-  static let segmentPadding: CGFloat = 14
+  // 12, not the mockup's 14: five segments must fit the narrowest window.
+  static let segmentPadding: CGFloat = 12
   static let segmentRadius: CGFloat = 6
   static let trackPadding: CGFloat = 2
   static let trackRadius: CGFloat = 8

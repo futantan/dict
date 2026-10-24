@@ -36,6 +36,7 @@ enum SettingsText {
         localized: "Custom (OpenAI-compatible)", table: "Settings",
         comment: "Model provider choice for any service with an OpenAI-compatible API")
     case "openai": "OpenAI"
+    case ProviderPreset.chatGPTID: "ChatGPT"
     case "ollama": "Ollama"
     case let id?: id
     }
@@ -89,6 +90,10 @@ extension ModelSetupIssue {
     case .missingKey:
       String(
         localized: "Enter an API key.", table: "Settings", comment: "The API key field is empty")
+    case .notSignedIn:
+      String(
+        localized: "Continue with ChatGPT to sign in.", table: "Settings",
+        comment: "The ChatGPT provider has no signed-in account")
     }
   }
 }
@@ -179,6 +184,21 @@ extension ConnectionFailure {
       return String(
         localized: "The service returned an empty answer.", table: "Settings",
         comment: "Connection test: no content came back")
+    case .signInRequired:
+      return ChatGPTText.reconnect
+    case .planUsageNotGranted:
+      return ChatGPTText.notGranted
+    case .planNotEligible:
+      return String(
+        localized:
+          "Your ChatGPT account can’t use its plan in this app. Your plan, workspace or region may not allow it.",
+        table: "Settings", comment: "Connection test: the ChatGPT plan is not available (403)")
+    case .planLimitReached:
+      return String(
+        localized:
+          "Usage limit reached. Review your plan or this app’s limit in ChatGPT settings.",
+        table: "Settings",
+        comment: "Connection test: the ChatGPT plan's usage is used up (OpenAI's wording)")
     case .malformedResponse:
       return String(
         localized:

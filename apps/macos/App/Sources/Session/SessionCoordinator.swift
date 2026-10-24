@@ -325,6 +325,9 @@ final class SessionCoordinator {
     case TranslationStrings.openSettingsAction:
       end()
       environment.openSettings()
+    case TranslationStrings.manageUsageAction:
+      end()
+      NSWorkspace.shared.open(ChatGPTEndpoints.manageUsage)
     default:
       if !environment.performPermissionAction(action) {
         Log.ui.error("unknown panel action \(action, privacy: .public)")

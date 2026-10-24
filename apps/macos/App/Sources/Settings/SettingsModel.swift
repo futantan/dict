@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import AppKit
 import DictCore
 import Foundation
 import Observation
@@ -74,6 +75,22 @@ enum ModelListStatus: Equatable {
   case failed(ConnectionFailure)
 }
 
+/// The ChatGPT account row (docs/reviews/chatgpt-login.md 4.9).
+enum ChatGPTStatus: Equatable {
+  /// No account; `previousEmail` is the last one signed in on this Mac, whose sign-in ended
+  /// or was signed out.
+  case signedOut(previousEmail: String?)
+  /// Waiting for the browser.
+  case signingIn
+  /// `canUsePlan` is false when the user left plan usage unticked on the consent page.
+  case signedIn(email: String?, canUsePlan: Bool)
+
+  var isSignedIn: Bool {
+    guard case .signedIn = self else { return false }
+    return true
+  }
+}
+
 /// State behind the Settings window: preferences saved on every change, the API key of the
 /// selected provider saved to the Keychain when the key field is committed.
 @MainActor
@@ -86,12 +103,19 @@ final class SettingsModel {
   private(set) var modelList = ModelListStatus.idle
   /// The last Keychain failure, shown under the key field.
   private(set) var keychainStatus: OSStatus?
+  private(set) var chatGPT = ChatGPTStatus.signedOut(previousEmail: nil)
+  /// Why the last ChatGPT sign-in failed, or that signing out was not confirmed.
+  private(set) var chatGPTNote: String?
+  /// The guidelines' one-time notice after the first sign-in with plan usage.
+  private(set) var showsPlanWelcome = false
 
   let presets: [ProviderPreset]
 
   typealias ModelFactory = @Sendable (ModelConfiguration, _ apiKey: String?) -> any TextModel
   typealias ModelLister =
     @Sendable (ModelEndpoint, ModelListStyle, _ apiKey: String?) async throws -> [String]
+  typealias ChatGPTSignInRunner = @Sendable (ChatGPTAccount) async throws -> ChatGPTCredential
+  typealias ChatGPTLister = @Sendable (ChatGPTAccount) async throws -> [String]
 
   @ObservationIgnored private let store: PreferencesStore
   @ObservationIgnored private let secrets: any SecretStore
@@ -100,20 +124,45 @@ final class SettingsModel {
   @ObservationIgnored private var savedKey = ""
   @ObservationIgnored private var testTask: Task<Void, Never>?
   @ObservationIgnored private var listTask: Task<Void, Never>?
+  @ObservationIgnored private var signInTask: Task<Void, Never>?
+  @ObservationIgnored private let defaults: UserDefaults
+  @ObservationIgnored let chatGPTAccount: ChatGPTAccount
+  @ObservationIgnored private let signIn: ChatGPTSignInRunner
+  @ObservationIgnored private let chatGPTLister: ChatGPTLister
+  /// A render set the account row; reading the Keychain must not replace it.
+  @ObservationIgnored private var pinsChatGPT = false
 
+  /// - Parameter chatGPT: the ChatGPT sign-in; by default the app's when `secrets` is the
+  ///   app's Keychain, else one kept in `secrets`, so tests never see a real sign-in.
   init(
     defaults: UserDefaults = .standard, secrets: any SecretStore = CachedSecretStore.app,
     presets: [ProviderPreset] = (try? ProviderPreset.all()) ?? [],
-    makeModel: @escaping ModelFactory = SettingsModel.chatCompletionsModel,
-    listModels: @escaping ModelLister = { try await DictCore.listModels($0, style: $1, apiKey: $2) }
+    makeModel: ModelFactory? = nil,
+    listModels: @escaping ModelLister = {
+      try await DictCore.listModels($0, style: $1, apiKey: $2)
+    },
+    chatGPT: ChatGPTAccount? = nil,
+    signIn: @escaping ChatGPTSignInRunner = SettingsModel.signInInBrowser,
+    listChatGPTModels: @escaping ChatGPTLister = {
+      try await DictCore.listChatGPTModels(endpoints: $0.endpoints, tokens: $0.session)
+    }
   ) {
     store = PreferencesStore(defaults: defaults)
+    self.defaults = defaults
     self.secrets = secrets
     self.presets = presets
-    self.makeModel = makeModel
+    let account =
+      chatGPT
+      ?? ((secrets as? CachedSecretStore) === CachedSecretStore.app
+        ? .app : ChatGPTAccount(endpoints: .production, secrets: secrets))
+    chatGPTAccount = account
+    self.makeModel = makeModel ?? { makeTextModel($0, apiKey: $1, chatGPT: account) }
     self.lister = listModels
+    self.signIn = signIn
+    chatGPTLister = listChatGPTModels
     preferences = store.load()
     loadKey()
+    refreshChatGPT()
   }
 
   nonisolated static func chatCompletionsModel(
@@ -121,6 +170,18 @@ final class SettingsModel {
   ) -> any TextModel {
     ChatCompletionsModel(
       endpoint: configuration.endpoint, rules: configuration.rules, apiKey: apiKey)
+  }
+
+  /// Signs in in the default browser, then brings Dict back to the front.
+  nonisolated static func signInInBrowser(_ account: ChatGPTAccount) async throws
+    -> ChatGPTCredential
+  {
+    let signIn = ChatGPTSignIn(
+      account: account, openURL: { url in _ = await MainActor.run { NSWorkspace.shared.open(url) } }
+    )
+    let credential = try await signIn.run()
+    await MainActor.run { NSApp.activate() }
+    return credential
   }
 
   // MARK: - Preferences
@@ -150,9 +211,15 @@ final class SettingsModel {
   func selectProvider(_ id: String?) {
     guard id != preferences.model.providerID else { return }
     commitKey()
+    cancelChatGPTSignIn()
     update { $0.model = ModelPreferences(providerID: id) }
     loadKey()
+    refreshChatGPT()
+    if isChatGPT && chatGPT.isSignedIn { listModels() }
   }
+
+  /// Whether the selected provider is the ChatGPT plan, signed in instead of a key.
+  var isChatGPT: Bool { selectedPreset?.wire == .chatGPT }
 
   /// Whether the selected provider takes a key: OpenAI needs one, a custom service may.
   var acceptsKey: Bool {
@@ -163,7 +230,7 @@ final class SettingsModel {
   /// The first problem with the current fields, judged with the key as typed.
   var setupIssue: ModelSetupIssue? {
     do {
-      _ = try preferences.model.configuration(presets: presets, hasKey: !trimmedDraft.isEmpty)
+      _ = try preferences.model.configuration(presets: presets, hasKey: hasTypedCredential)
       return nil
     } catch {
       return error
@@ -195,6 +262,12 @@ final class SettingsModel {
 
   private var trimmedDraft: String { keyDraft.trimmingCharacters(in: .whitespacesAndNewlines) }
 
+  /// A key is typed, or for ChatGPT an account is signed in.
+  private var hasTypedCredential: Bool { isChatGPT ? chatGPT.isSignedIn : !trimmedDraft.isEmpty }
+
+  /// A key is saved, or for ChatGPT an account is signed in.
+  private var hasSavedCredential: Bool { isChatGPT ? chatGPT.isSignedIn : apiKey != nil }
+
   private func loadKey() {
     savedKey = ""
     keyDraft = ""
@@ -219,7 +292,7 @@ final class SettingsModel {
   var canListModels: Bool {
     guard modelList != .loading else { return false }
     do {
-      _ = try preferences.model.listEndpoint(presets: presets, hasKey: !trimmedDraft.isEmpty)
+      _ = try preferences.model.listEndpoint(presets: presets, hasKey: hasTypedCredential)
       return true
     } catch {
       return false
@@ -233,7 +306,7 @@ final class SettingsModel {
     guard let preset = selectedPreset else { return }
     let endpoint: ModelEndpoint
     do {
-      endpoint = try preferences.model.listEndpoint(presets: presets, hasKey: apiKey != nil)
+      endpoint = try preferences.model.listEndpoint(presets: presets, hasKey: hasSavedCredential)
     } catch {
       modelList = .failed(.setup(error))
       return
@@ -244,11 +317,16 @@ final class SettingsModel {
     }
     let key = apiKey
     let lister = lister
+    let chatGPTLister = chatGPTLister
+    let account = chatGPTAccount
     modelList = .loading
     listTask = Task {
       let status: ModelListStatus
       do {
-        status = .loaded(try await lister(endpoint, preset.modelList, key))
+        status = .loaded(
+          preset.wire == .chatGPT
+            ? try await chatGPTLister(account)
+            : try await lister(endpoint, preset.modelList, key))
       } catch is CancellationError {
         return
       } catch {
@@ -256,6 +334,7 @@ final class SettingsModel {
       }
       guard !Task.isCancelled else { return }
       modelList = status
+      if preset.wire == .chatGPT, case .loaded(let names) = status { chooseChatGPTModel(names) }
       Log.model.info(
         "Model list for \(endpoint.providerID, privacy: .public): \(status.logLabel, privacy: .public)"
       )
@@ -265,6 +344,16 @@ final class SettingsModel {
   /// Uses a model from the list.
   func chooseModel(_ name: String) {
     update { $0.model.model = name }
+  }
+
+  /// Keeps the chosen ChatGPT model while the account lists it; otherwise OpenAI's default
+  /// model when listed, else the first. The plan has no fixed default.
+  private func chooseChatGPTModel(_ names: [String]) {
+    guard !names.contains(preferences.model.model) else { return }
+    let openAIDefault = presets.first { $0.id == "openai" }?.defaultModel
+    if let name = names.first(where: { $0 == openAIDefault }) ?? names.first {
+      chooseModel(name)
+    }
   }
 
   private func resetModelList() {
@@ -283,7 +372,8 @@ final class SettingsModel {
     testTask?.cancel()
     let configuration: ModelConfiguration
     do {
-      configuration = try preferences.model.configuration(presets: presets, hasKey: apiKey != nil)
+      configuration = try preferences.model.configuration(
+        presets: presets, hasKey: hasSavedCredential)
     } catch {
       connection = .failed(.setup(error))
       return
@@ -369,6 +459,81 @@ final class SettingsModel {
     testTask = nil
     connection = .idle
   }
+
+  // MARK: - ChatGPT
+
+  /// Reads the sign-in from the Keychain, unless one is in progress. A sign-in that ended
+  /// while the app was used (a refused refresh) shows as signed out here.
+  func refreshChatGPT() {
+    guard chatGPT != .signingIn, !pinsChatGPT else { return }
+    if let credential = chatGPTAccount.savedCredential {
+      chatGPT = .signedIn(email: credential.email, canUsePlan: credential.canUsePlan)
+    } else {
+      chatGPT = .signedOut(previousEmail: chatGPTAccount.lastEmail)
+    }
+  }
+
+  /// "Continue with ChatGPT": signs in in the browser, then lists the account's models.
+  func signInWithChatGPT() {
+    signInTask?.cancel()
+    chatGPT = .signingIn
+    chatGPTNote = nil
+    let account = chatGPTAccount
+    let signIn = signIn
+    signInTask = Task {
+      do {
+        let credential = try await signIn(account)
+        guard !Task.isCancelled else { return }
+        chatGPT = .signedIn(email: credential.email, canUsePlan: credential.canUsePlan)
+        resetConnection()
+        if credential.canUsePlan {
+          if !defaults.bool(forKey: Self.planWelcomeKey) { showsPlanWelcome = true }
+          if isChatGPT { listModels() }
+        }
+      } catch is CancellationError {
+        return
+      } catch {
+        guard !Task.isCancelled else { return }
+        chatGPT = .signedOut(previousEmail: nil)
+        refreshChatGPT()
+        chatGPTNote = ChatGPTText.signInFailure(error)
+        Log.ui.error("ChatGPT sign-in failed: \(ChatGPTText.logLabel(error), privacy: .public)")
+      }
+    }
+  }
+
+  /// Stops waiting for the browser.
+  func cancelChatGPTSignIn() {
+    guard let signInTask else { return }
+    signInTask.cancel()
+    self.signInTask = nil
+    if chatGPT == .signingIn { chatGPT = .signedOut(previousEmail: nil) }
+    refreshChatGPT()
+  }
+
+  /// Revokes the sign-in and forgets it. When OpenAI does not confirm, says where to
+  /// disconnect the app by hand.
+  func signOutOfChatGPT() {
+    cancelChatGPTSignIn()
+    let session = chatGPTAccount.session
+    chatGPTNote = nil
+    Task {
+      let confirmed = await session.signOut()
+      chatGPTNote = confirmed ? nil : ChatGPTText.signOutUnconfirmed
+      refreshChatGPT()
+      resetConnection()
+      resetModelList()
+      Log.ui.info("ChatGPT signed out, revocation confirmed \(confirmed, privacy: .public)")
+    }
+  }
+
+  /// "Got it" on the one-time notice.
+  func dismissPlanWelcome() {
+    showsPlanWelcome = false
+    defaults.set(true, forKey: Self.planWelcomeKey)
+  }
+
+  private static let planWelcomeKey = "chatGPTPlanWelcomeShown"
 }
 
 extension ConnectionReport {
@@ -404,6 +569,13 @@ extension ModelListStatus {
 
     /// Sets the model list directly, for renders of each state.
     func showModelList(_ status: ModelListStatus) { modelList = status }
+
+    /// Sets the ChatGPT account row directly, for renders of each state.
+    func showChatGPT(_ status: ChatGPTStatus, note: String? = nil) {
+      pinsChatGPT = true
+      chatGPT = status
+      chatGPTNote = note
+    }
   }
 
   extension ConnectionReport {

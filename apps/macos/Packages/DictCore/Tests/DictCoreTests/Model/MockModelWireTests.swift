@@ -122,3 +122,68 @@ struct MockModelWireTests {
     #expect(applied.changeCount == 2)
   }
 }
+
+/// Stops at the first redirect, as the browser hands it to the loopback listener.
+private final class NoRedirects: NSObject, URLSessionTaskDelegate {
+  func urlSession(
+    _ session: URLSession, task: URLSessionTask,
+    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest
+  ) async -> URLRequest? { nil }
+}
+
+/// The ChatGPT plan against the mock with the real client code: authorize, callback,
+/// exchange, the model list, a streamed translation and a strict-schema answer.
+struct MockChatGPTWireTests {
+  @Test func signInThenTranslateAndProofread() async throws {
+    let fake = try FakeModel()
+    let endpoints = ChatGPTEndpoints.mock(
+      baseURL: try #require(URL(string: "http://127.0.0.1:\(fake.port)/v1")))
+    let session = URLSession(configuration: .ephemeral)
+    let attempt = AuthorizationAttempt.make(port: 1455)
+    let url = attempt.url(endpoints, registration: .make(), appName: "Dict")
+
+    let (_, response) = try await session.data(from: url, delegate: NoRedirects())
+    let http = try #require(response as? HTTPURLResponse)
+    #expect(http.statusCode == 302)
+    let location = try #require(http.value(forHTTPHeaderField: "Location").flatMap(URL.init))
+    let code = try attempt.callback(location)
+    let clientID = try #require(code.clientID)
+    #expect(clientID == "oaiapp_mock")
+
+    let credential = try await exchangeAuthorizationCode(
+      code, clientID: clientID, attempt: attempt, endpoints: endpoints, session: session)
+    #expect(credential.canUsePlan)
+    #expect(credential.email == "mock@example.com")
+
+    let tokens = ChatGPTSession(
+      endpoints: endpoints, store: MemoryCredentialStore(), session: session)
+    try await tokens.signedIn(credential)
+    let names = try await listChatGPTModels(
+      endpoints: endpoints, tokens: tokens, session: session)
+    #expect(names == ["mock"])
+
+    let preset = try #require(try ProviderPreset.all().first { $0.id == "chatgpt" })
+    let model = ResponsesModel(
+      model: "mock", thinking: .off, rules: preset.thinkingRules, endpoints: endpoints,
+      tokens: tokens, session: session)
+    let request = PromptBuilder.translation(
+      "The quick brown fox jumps over the lazy dog.",
+      into: Locale.Language(identifier: "zh-Hans"), nonce: "0a1b2c3d")
+    var text = ""
+    var finish: FinishReason?
+    for try await event in model.stream(request) {
+      switch event {
+      case .text(let delta): text += delta
+      case .finished(let reason, _): finish = reason
+      case .thinking, .discardText: break
+      }
+    }
+    #expect(text == "[mock] 敏捷的棕色狐狸跳过了那只懒狗。")
+    #expect(finish == .complete)
+
+    let applied = try await Proofreader(model: model).proofread(
+      "Their going to the park tomorow, I think it will be fun.")
+    #expect(applied.changeCount == 2)
+    #expect(await tokens.signOut())
+  }
+}

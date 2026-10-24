@@ -5,6 +5,8 @@ import Foundation
 extension ProviderPreset {
   /// The id of the row the user fills in (any OpenAI-compatible service).
   public static let customID = "custom"
+  /// The ChatGPT plan, signed in with ChatGPT.
+  public static let chatGPTID = "chatgpt"
 
   /// The preset table shipped in `Resources/ProviderPresets.json`.
   public static func all() throws -> [ProviderPreset] {

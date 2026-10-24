@@ -4,17 +4,32 @@ import DictCore
 import Foundation
 
 /// The model to translate with, from the saved preferences and the provider's key in the
-/// Keychain; nil when no usable model is set up, so Apple Translation is used (architecture
-/// 6.5). The key itself is never logged. In a Debug build, `DICT_MOCK_MODEL` in
-/// `environment` replaces all of that with the local mock model (`mockModelBaseURL`).
+/// Keychain, or the ChatGPT sign-in; nil when no usable model is set up, so Apple
+/// Translation is used (architecture 6.5). The key itself is never logged. In a Debug
+/// build, `DICT_MOCK_MODEL` in `environment` replaces all of that with the local mock model
+/// (`mockModelBaseURL`); the ChatGPT provider then signs in to the mock (`ChatGPTAccount`).
 func configuredModel(
   _ preferences: ModelPreferences, presets: [ProviderPreset], secrets: any SecretStore,
+  chatGPT: ChatGPTAccount = .app,
   environment: [String: String] = ProcessInfo.processInfo.environment
 ) -> (configuration: ModelConfiguration, apiKey: String?)? {
-  if let baseURL = mockModelBaseURL(environment) {
+  let isChatGPT = preferences.providerID == ProviderPreset.chatGPTID
+  if let baseURL = mockModelBaseURL(environment), !isChatGPT {
     return mockModel(baseURL: baseURL, presets: presets)
   }
   guard let providerID = preferences.providerID else { return nil }
+  if isChatGPT {
+    do {
+      let configuration = try preferences.configuration(
+        presets: presets, hasKey: chatGPT.savedCredential != nil)
+      return (configuration, nil)
+    } catch {
+      Log.model.info(
+        "ChatGPT not usable (\(String(describing: error), privacy: .public)); using Apple Translation"
+      )
+      return nil
+    }
+  }
   var key: String?
   do {
     key = try secrets.secret(for: providerID)?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,6 +79,22 @@ private func mockModel(
   }
 }
 
+/// The client for `configuration`: Chat Completions with the key, or the ChatGPT plan with
+/// the shared sign-in.
+func makeTextModel(
+  _ configuration: ModelConfiguration, apiKey: String?, chatGPT: ChatGPTAccount = .app
+) -> any TextModel {
+  switch configuration.wire {
+  case .chatCompletions:
+    return ChatCompletionsModel(
+      endpoint: configuration.endpoint, rules: configuration.rules, apiKey: apiKey)
+  case .chatGPT:
+    return ResponsesModel(
+      model: configuration.endpoint.model, thinking: configuration.endpoint.thinking,
+      rules: configuration.rules, endpoints: chatGPT.endpoints, tokens: chatGPT.session)
+  }
+}
+
 /// The translation engine for the saved model preferences: the model when one is usable,
 /// otherwise Apple Translation alone.
 @MainActor
@@ -72,8 +103,7 @@ func makeTranslationEngine(
 ) -> TranslationEngine {
   let model = configuredModel(preferences, presets: presets, secrets: secrets).map {
     ModelTranslator(
-      model: ChatCompletionsModel(
-        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+      model: makeTextModel($0.configuration, apiKey: $0.apiKey))
   }
   return TranslationEngine(model: model)
 }
@@ -86,8 +116,7 @@ func makeTranslateOutEngine(
 ) -> TranslateOutEngine {
   let model = configuredModel(preferences, presets: presets, secrets: secrets).map {
     ModelTranslator(
-      model: ChatCompletionsModel(
-        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+      model: makeTextModel($0.configuration, apiKey: $0.apiKey))
   }
   return TranslateOutEngine(model: model)
 }
@@ -99,8 +128,7 @@ func makeProofreader(
 ) -> Proofreader? {
   configuredModel(preferences, presets: presets, secrets: secrets).map {
     Proofreader(
-      model: ChatCompletionsModel(
-        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+      model: makeTextModel($0.configuration, apiKey: $0.apiKey))
   }
 }
 
@@ -111,7 +139,6 @@ func makeCardMaker(
 ) -> CardMaker? {
   configuredModel(preferences, presets: presets, secrets: secrets).map {
     CardMaker(
-      model: ChatCompletionsModel(
-        endpoint: $0.configuration.endpoint, rules: $0.configuration.rules, apiKey: $0.apiKey))
+      model: makeTextModel($0.configuration, apiKey: $0.apiKey))
   }
 }

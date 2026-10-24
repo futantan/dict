@@ -127,8 +127,10 @@ Dict 是 macOS 15 及以上的原生菜单栏应用，面向日常要用第二�
 选区分类 `classify`、切句 `sentence(containing:in:)` 和 `writeAction` 已实现；`appContext` 目前只是调用即崩溃的存根（第 5 节）。
 
 `DictCore` 只用 iOS 上也有的系统框架。
-现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）和 SQLite3（系统 `libsqlite3`，`Lexicon` 和 `VocabStore` 用）。
-Keychain 读写（Security 框架）在 `DictApp` 的 `App/Sources/Settings/SecretStore.swift`，`DictCore` 不碰 Keychain。
+现在 import 的是 Foundation、NaturalLanguage、Synchronization（`DroppedParameters` 用的 `Mutex`，第 2.3 节）、SQLite3（系统 `libsqlite3`，`Lexicon` 和 `VocabStore` 用）和 CryptoKit（「用 ChatGPT 登录」的 PKCE 要 SHA-256，`ChatGPTAuth` 用）。
+Keychain 读写（Security 框架）在 `DictApp` 的 `App/Sources/Settings/SecretStore.swift`，`DictCore` 不碰 Keychain；ChatGPT 的凭据也经它存取（`ChatGPTAccount.swift`）。
+登录回调的回环监听用 Network 框架的 `NWListener`，在 `DictApp` 的 `ChatGPTSignIn.swift`；应用没有开沙盒，所以不需要 `com.apple.security.network.server`。
+设计与实现记录见 `Design/chatgpt-login.md`。
 它不 import AppKit、SwiftUI、ApplicationServices、Carbon、AVFoundation、Translation、Vision、Security。
 凡是需要这些框架的能力，`DictCore` 只定义协议或纯函数，实现放在 `DictApp`；以后 iOS 版提供自己的实现。
 

@@ -133,7 +133,8 @@ final class SettingsModel {
   @ObservationIgnored private var pinsChatGPT = false
 
   /// - Parameter chatGPT: the ChatGPT sign-in; by default the app's when `secrets` is the
-  ///   app's Keychain, else one kept in `secrets`, so tests never see a real sign-in.
+  ///   app's Keychain, else one kept in `secrets` (at the app's endpoints, so the mock's
+  ///   under `DICT_MOCK_MODEL`), so tests and demos never see a real sign-in.
   init(
     defaults: UserDefaults = .standard, secrets: any SecretStore = CachedSecretStore.app,
     presets: [ProviderPreset] = (try? ProviderPreset.all()) ?? [],
@@ -154,7 +155,7 @@ final class SettingsModel {
     let account =
       chatGPT
       ?? ((secrets as? CachedSecretStore) === CachedSecretStore.app
-        ? .app : ChatGPTAccount(endpoints: .production, secrets: secrets))
+        ? .app : ChatGPTAccount(endpoints: ChatGPTAccount.app.endpoints, secrets: secrets))
     chatGPTAccount = account
     self.makeModel = makeModel ?? { makeTextModel($0, apiKey: $1, chatGPT: account) }
     self.lister = listModels
@@ -215,7 +216,6 @@ final class SettingsModel {
     update { $0.model = ModelPreferences(providerID: id) }
     loadKey()
     refreshChatGPT()
-    if isChatGPT && chatGPT.isSignedIn { listModels() }
   }
 
   /// Whether the selected provider is the ChatGPT plan, signed in instead of a key.
@@ -470,6 +470,10 @@ final class SettingsModel {
       chatGPT = .signedIn(email: credential.email, canUsePlan: credential.canUsePlan)
     } else {
       chatGPT = .signedOut(previousEmail: chatGPTAccount.lastEmail)
+    }
+    // Signed in from an earlier run: the model menu needs the account's list.
+    if isChatGPT, case .signedIn(_, canUsePlan: true) = chatGPT, modelList == .idle {
+      listModels()
     }
   }
 

@@ -22,7 +22,7 @@ struct ChatGPTAccountRow: View {
           ProgressView().controlSize(.small)
           note(ChatGPTText.signingIn)
           Spacer(minLength: 0)
-          Button(ChatGPTText.cancel) { model.cancelChatGPTSignIn() }
+          CardButton(title: ChatGPTText.cancel) { model.cancelChatGPTSignIn() }
         }
       case .signedIn(let email, let canUsePlan):
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -37,7 +37,7 @@ struct ChatGPTAccountRow: View {
             }
           }
           Spacer(minLength: 0)
-          Button(ChatGPTText.signOut) { model.signOutOfChatGPT() }
+          CardButton(title: ChatGPTText.signOut) { model.signOutOfChatGPT() }
         }
         if !canUsePlan {
           note(ChatGPTText.notGranted)

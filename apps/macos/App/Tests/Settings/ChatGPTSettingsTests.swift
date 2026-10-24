@@ -19,6 +19,13 @@ private func credential(canUsePlan: Bool = true) -> ChatGPTCredential {
     scopes: canUsePlan ? Set(ChatGPTAuth.scopes) : ["openid", "email", "offline_access"])
 }
 
+/// Ends every request at once: nothing leaves the Mac.
+private struct SilentModel: TextModel {
+  func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
+    AsyncThrowingStream { $0.finish(throwing: ModelError.emptyResponse) }
+  }
+}
+
 private final class Wires: Sendable {
   let built = Mutex<[ModelWire]>([])
 }
@@ -42,7 +49,7 @@ struct ChatGPTSettingsTests {
       defaults: defaults, secrets: secrets,
       makeModel: { [wires] configuration, _ in
         wires.built.withLock { $0.append(configuration.wire) }
-        return ChatCompletionsModel(endpoint: configuration.endpoint, rules: [], apiKey: nil)
+        return SilentModel()
       },
       chatGPT: account,
       signIn: { account in
@@ -94,6 +101,17 @@ struct ChatGPTSettingsTests {
     model.selectProvider(ProviderPreset.chatGPTID)
     model.signInWithChatGPT()
     await settle(model)
+    #expect(model.preferences.model.model == "gpt-6.1-sol")
+  }
+
+  /// Launched already signed in, the menu gets the account's models without a click.
+  @Test func aSavedSignInListsTheModelsOnLaunch() async throws {
+    try await account.session.signedIn(credential())
+    PreferencesStore(defaults: defaults).save(
+      Preferences(model: ModelPreferences(providerID: "chatgpt", model: "gpt-6.1-sol")))
+    let model = makeModel()
+    await settle(model)
+    #expect(model.modelList == .loaded(["gpt-6.1-sol", "gpt-6-luna"]))
     #expect(model.preferences.model.model == "gpt-6.1-sol")
   }
 

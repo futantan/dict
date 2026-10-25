@@ -152,3 +152,6 @@ schemes:
     test:
       targets:
         - DictAppTests
+      # Tests read English text; the app's default UI language is Simplified Chinese.
+      commandLineArguments:
+        "-AppleLanguages (en)": true

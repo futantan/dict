@@ -120,3 +120,15 @@ extension SettingsText {
     localized: "Dict checks for a new version once a day.", table: "Settings",
     comment: "About: what the updater does")
 }
+
+extension SettingsText {
+  static let interfaceLanguage = String(
+    localized: "App language", table: "Settings",
+    comment: "Settings field label: the language of Dict's own text")
+  static let interfaceLanguageRelaunch = String(
+    localized: "Takes effect after Dict relaunches.", table: "Settings",
+    comment: "Under the app language picker after choosing a language other than the current one")
+  static let relaunchNow = String(
+    localized: "Relaunch Now", table: "Settings",
+    comment: "Button that quits Dict and opens it again in the chosen language")
+}

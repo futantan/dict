@@ -192,6 +192,17 @@
         }
       }
     },
+    "App language" : {
+      "comment" : "Settings field label: the language of Dict's own text",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "界面语言"
+          }
+        }
+      }
+    },
     "Australian English" : {
       "comment" : "Accent choice",
       "localizations" : {
@@ -1063,6 +1074,17 @@
         }
       }
     },
+    "Relaunch Now" : {
+      "comment" : "Button that quits Dict and opens it again in the chosen language",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即重新打开"
+          }
+        }
+      }
+    },
     "Required" : {
       "comment" : "Placeholder of a required field",
       "localizations" : {
@@ -1279,6 +1301,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "结构化输出"
+          }
+        }
+      }
+    },
+    "Takes effect after Dict relaunches." : {
+      "comment" : "Under the app language picker after choosing a language other than the current one",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新打开 Dict 后生效。"
           }
         }
       }

@@ -120,6 +120,8 @@ struct SettingsPage: View {
 
   @ViewBuilder
   private var general: some View {
+    InterfaceLanguageRow()
+    CardDivider()
     SwitchRow(
       title: SettingsText.launchAtLogin,
       subtitle: loginError ?? (login == .needsApproval ? SettingsText.loginNeedsApproval : nil),

@@ -35,6 +35,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
   #endif
 
   static func main() {
+    // Before anything is localized. The test host shares the dev build's defaults and runs
+    // with `-AppleLanguages (en)` (project.yml), so it leaves them alone.
+    if LaunchMode.current != .unitTests { InterfaceLanguage.applyAtLaunch(to: .standard) }
     let app = NSApplication.shared
     let delegate = AppDelegate()
     app.delegate = delegate

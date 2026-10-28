@@ -138,7 +138,7 @@ struct ChatCompletionsModelTests {
       }
       return StubReply(chunks: [delta("ok"), stopChunk, done])
     }
-    let first = try harness(model: "gpt-4.1-mini", dropped: dropped, reply: reply)
+    let first = try harness(model: "gpt-6-luna", dropped: dropped, reply: reply)
     #expect(try await collect(first.model.stream(request)).first == .text("ok"))
     let bodies = try #require(StubProtocol.record(first.host)?.bodies)
     #expect(bodies.count == 2)
